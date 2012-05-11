@@ -26,13 +26,10 @@ define(function () {
         // Setting up unique FPS.
         this._fps = options_default.fps;
 
-
-        // Setting up unique tracking ID.
-        this._ticker = null;
-
         // Setting up unique tracking data.
         this._tracking = {
-            currentFps: 0,
+            tickCount: 0,
+            currentFps: options_default.fps,
             currentFrame: 0,
             executionTime: 0,
             lastTickStart: 0
@@ -47,7 +44,6 @@ define(function () {
          * Self perpetuating tick method. Can only be stopped with the stop command. Designed to stop callback stacking.
          * @private
          * @todo Need to look into adding a skip-frame ability.
-         * @todo Should add a warning if FPS drops below requirements.
          */
         _tick: function () {
             var that = this,
@@ -55,21 +51,33 @@ define(function () {
 
             this._ticker = window.setTimeout(function () {
                 that._tick();
-                start = new Date().getTime();
-                that._tracking.currentFps = (1000 / (start - that._tracking.lastTickStart));
-                that._tracking.lastTickStart = start;
                 that._tracking.currentFrame++;
+                that._tracking.tickCount++;
 
+                start = new Date().getTime();
                 that._callback({
-                    fps: that._tracking.currentFps,
+                    expectedFps: that._fps,
+                    actualFps: that._tracking.currentFps,
                     frame: that._tracking.currentFrame,
-                    prevExecutionTime: that._tracking.executionTime
+                    executionTime: that._tracking.executionTime
                 });
                 end = new Date().getTime();
 
-                that._tracking.executionTime = ((start - that._tracking.lastTickStart) / 1000);
+                that._tracking.executionTime = ((end - start) / 1000);
 
             }, (1000 / this._fps));
+        },
+
+        /**
+         * Ticker interval to track the fps.
+         */
+        _tickTracking: function () {
+            var that = this;
+            this._tickerTracking = window.setTimeout(function () {
+                that._tickTracking();
+                that._tracking.currentFps = that._tracking.tickCount;
+                that._tracking.tickCount = 0;
+            }, 1000);
         },
 
         /**
@@ -85,6 +93,7 @@ define(function () {
 
             this._tracking.lastTickStart = new Date().getTime();
             this._tick();
+            this._tickTracking();
             return this;
         },
 
@@ -93,13 +102,14 @@ define(function () {
          * @return {Object} Ticker parent object
          */
         stop: function () {
-            if (this._ticker) {
+            if (!!this._ticker) {
                 window.clearTimeout(this._ticker);
-                this._ticker = null;
-                return this;
+                delete this._ticker;
+                delete this._tickerTracking;
             } else {
                 throw new Error('Cannot stop ticker: It isn\'t running.');
             }
+            return this;
         }
     };
 
