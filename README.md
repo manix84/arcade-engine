@@ -1,4 +1,4 @@
-js-games-engine
-===============
+arcade-engine
+=============
 
-Simple JavaScript games engine.
+An Arcade Game engine.
