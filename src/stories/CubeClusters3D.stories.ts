@@ -26,8 +26,15 @@ export default meta;
 
 type CubeClusterStoryArgs = {
   blockColor: string;
+  cubeSquash: number;
+  cubeTwitch: number;
+  cubeWiggle: number;
   explosionForce: number;
+  plasmaCoreThickness: number;
   plasmaColor: string;
+  plasmaGlow: number;
+  plasmaThickness: number;
+  plasmaWiggle: number;
   spinSpeed: number;
   onAssemble: () => void;
   onExplode: () => void;
@@ -411,7 +418,8 @@ const pushPlasmaRibbonVertex = (
 const createPlasmaRibbonData = (
   links: PlasmaLink[],
   blockById: Map<string, CubeBlock>,
-  time = 0
+  time = 0,
+  wiggle = 0.045
 ): Float32Array => {
   const data: number[] = [];
 
@@ -429,7 +437,7 @@ const createPlasmaRibbonData = (
       return;
     }
 
-    const amount = 0.045 + (1 - link.strength) * 0.045;
+    const amount = wiggle + (1 - link.strength) * wiggle;
     const phase = time * 0.018 + index * 1.913;
     const wobble = {
       x: Math.sin(phase) * amount,
@@ -461,9 +469,13 @@ const createPlasmaRibbonData = (
   return new Float32Array(data);
 };
 
-const getJitteredBlock = (block: CubeBlock, time: number, index: number): CubeBlock => {
+const getJitteredBlock = (
+  block: CubeBlock,
+  time: number,
+  index: number,
+  amount: number
+): CubeBlock => {
   const pulse = time * 0.018;
-  const amount = 0.035;
 
   return {
     ...block,
@@ -688,7 +700,7 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
 
   const drawPlasma = (projection: Mat4, time: number): void => {
     const pulse = 0.48 + Math.sin(time / 39) * 0.28 + Math.sin(time / 11) * 0.12;
-    const plasmaData = createPlasmaRibbonData(cluster.links, blockById, time);
+    const plasmaData = createPlasmaRibbonData(cluster.links, blockById, time, args.plasmaWiggle);
     const stride = 32;
 
     gl.useProgram(plasmaProgram.program);
@@ -705,13 +717,13 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
     gl.uniformMatrix4fv(plasmaProgram.uniforms.uProjection, false, projection);
     gl.uniform2f(plasmaProgram.uniforms.uViewport, canvas.width, canvas.height);
     gl.uniform3fv(plasmaProgram.uniforms.uColor, parseColor(args.plasmaColor));
-    gl.uniform1f(plasmaProgram.uniforms.uAlpha, Math.max(0.08, pulse * 0.72));
-    gl.uniform1f(plasmaProgram.uniforms.uThickness, 2.2);
+    gl.uniform1f(plasmaProgram.uniforms.uAlpha, Math.max(0.04, pulse * args.plasmaGlow));
+    gl.uniform1f(plasmaProgram.uniforms.uThickness, args.plasmaThickness);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
     gl.drawArrays(gl.TRIANGLES, 0, plasmaData.length / 8);
     gl.uniform3fv(plasmaProgram.uniforms.uColor, parseColor("#ffffff"));
-    gl.uniform1f(plasmaProgram.uniforms.uAlpha, Math.max(0.04, pulse * 0.26));
-    gl.uniform1f(plasmaProgram.uniforms.uThickness, 0.9);
+    gl.uniform1f(plasmaProgram.uniforms.uAlpha, Math.max(0.03, pulse * args.plasmaGlow * 0.36));
+    gl.uniform1f(plasmaProgram.uniforms.uThickness, args.plasmaCoreThickness);
     gl.drawArrays(gl.TRIANGLES, 0, plasmaData.length / 8);
   };
 
@@ -778,10 +790,13 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
     } else {
       drawPlasma(projection, now);
       blocks.forEach((block, index) => {
-        const jittered = getJitteredBlock(block, now, index);
+        const jittered = getJitteredBlock(block, now, index, args.cubeWiggle);
         const twitch = multiply(
-          multiply(rotateX(Math.sin(now / 80 + index) * 0.025), rotateY(Math.cos(now / 95 + index) * 0.03)),
-          scale3(1, 1 + Math.sin(now / 70 + index * 0.3) * 0.015, 1)
+          multiply(
+            rotateX(Math.sin(now / 80 + index) * args.cubeTwitch),
+            rotateY(Math.cos(now / 95 + index) * args.cubeTwitch * 1.2)
+          ),
+          scale3(1, 1 + Math.sin(now / 70 + index * 0.3) * args.cubeSquash, 1)
         );
 
         drawCube(jittered, projection, twitch);
@@ -821,16 +836,30 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
 export const VoxelInvader: Story = {
   args: {
     blockColor: "#4fd1c5",
+    cubeSquash: 0.015,
+    cubeTwitch: 0.025,
+    cubeWiggle: 0.035,
     explosionForce: 7,
+    plasmaCoreThickness: 0.9,
     plasmaColor: "#90cdf4",
+    plasmaGlow: 0.72,
+    plasmaThickness: 2.2,
+    plasmaWiggle: 0.045,
     spinSpeed: 0.45,
     onAssemble: fn(),
     onExplode: fn(),
   },
   argTypes: {
     blockColor: { control: "color" },
+    cubeSquash: { control: { type: "range", min: 0, max: 0.05, step: 0.001 } },
+    cubeTwitch: { control: { type: "range", min: 0, max: 0.08, step: 0.001 } },
+    cubeWiggle: { control: { type: "range", min: 0, max: 0.12, step: 0.005 } },
     explosionForce: { control: { type: "range", min: 2, max: 14, step: 1 } },
+    plasmaCoreThickness: { control: { type: "range", min: 0.2, max: 4, step: 0.1 } },
     plasmaColor: { control: "color" },
+    plasmaGlow: { control: { type: "range", min: 0.1, max: 1.5, step: 0.05 } },
+    plasmaThickness: { control: { type: "range", min: 0.5, max: 8, step: 0.1 } },
+    plasmaWiggle: { control: { type: "range", min: 0, max: 0.16, step: 0.005 } },
     spinSpeed: { control: { type: "range", min: 0, max: 1.5, step: 0.05 } },
   },
   render: createClusterShell,
