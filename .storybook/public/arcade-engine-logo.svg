@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="280" height="72" viewBox="0 0 280 72" role="img" aria-labelledby="title">
+  <title id="title">Arcade Engine</title>
+  <defs>
+    <linearGradient id="mark" x1="8" y1="8" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4fd1c5"/>
+      <stop offset="0.52" stop-color="#f6e05e"/>
+      <stop offset="1" stop-color="#fc8181"/>
+    </linearGradient>
+  </defs>
+  <rect width="280" height="72" rx="8" fill="#111318"/>
+  <rect x="8" y="8" width="56" height="56" rx="6" fill="#05070a" stroke="url(#mark)" stroke-width="3"/>
+  <path d="M36 14 42 30 58 36 42 42 36 58 30 42 14 36 30 30Z" fill="url(#mark)"/>
+  <path d="M26 21h20v6H26zM21 46h30v6H21z" fill="#f5f7fb"/>
+  <text x="78" y="33" fill="#f5f7fb" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" letter-spacing="1">ARCADE</text>
+  <text x="78" y="54" fill="#4fd1c5" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" letter-spacing="1">ENGINE</text>
+  <rect x="184" y="18" width="70" height="8" fill="#243241"/>
+  <rect x="184" y="18" width="47" height="8" fill="#f6e05e"/>
+  <rect x="184" y="34" width="70" height="8" fill="#243241"/>
+  <rect x="184" y="34" width="58" height="8" fill="#4fd1c5"/>
+  <rect x="184" y="50" width="70" height="8" fill="#243241"/>
+  <rect x="184" y="50" width="28" height="8" fill="#fc8181"/>
+</svg>

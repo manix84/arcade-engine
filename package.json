@@ -1,27 +1,68 @@
 {
   "name": "arcade-engine",
-  "private": true,
-  "version": "1.0.0",
+  "description": "A small browser arcade-game engine for canvas games.",
+  "version": "2.2.1",
   "license": "SEE LICENSE IN LICENSE.md",
   "type": "module",
+  "author": "Rob Taylor",
+  "homepage": "https://github.com/manix84/arcade-engine#readme",
+  "bugs": {
+    "url": "https://github.com/manix84/arcade-engine/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/manix84/arcade-engine.git"
+  },
+  "keywords": [
+    "arcade",
+    "browser",
+    "canvas",
+    "game-engine",
+    "typescript"
+  ],
+  "sideEffects": false,
   "scripts": {
+    "build": "node scripts/clean-dist.mjs && tsc --project tsconfig.build.json && node scripts/validate-package.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "prepare": "node scripts/install-git-hooks.mjs",
+    "hooks:install": "node scripts/install-git-hooks.mjs",
+    "pack:dry-run": "npm pack --dry-run",
+    "prepack": "npm run build",
     "precommit": "node scripts/pre-commit.mjs",
+    "storybook": "storybook dev -p 6006",
+    "build:storybook": "storybook build -o storybook-static",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "version:bump": "node scripts/smart-version-bump.mjs"
   },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
   },
-  "types": "./src/index.ts",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "LICENSE.md",
+    "PRIVACY.md",
+    "README.md",
+    "WHATSNEW.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@storybook/html-vite": "^10.4.1",
     "eslint": "^10.4.1",
     "globals": "^17.6.0",
     "jsdom": "^29.1.1",
+    "storybook": "^10.4.1",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.60.0",
     "vitest": "^4.1.6"

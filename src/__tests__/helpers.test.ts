@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import helpers from "../helpers";
+import helpers from "../helpers.js";
 
 describe("engine/helpers", () => {
   afterEach(() => {

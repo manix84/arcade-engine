@@ -1,0 +1,96 @@
+name: PR template check
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - reopened
+      - ready_for_review
+      - synchronize
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  validate:
+    name: Review PR body
+    runs-on: ubuntu-latest
+    steps:
+      - name: Review required template sections
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          node <<'NODE'
+          const { appendFileSync } = require("node:fs");
+
+          const body = process.env.PR_BODY ?? "";
+          const summary = process.env.GITHUB_STEP_SUMMARY;
+
+          const requiredText = [
+            "# 🔀 Pull Request",
+            "## 🧾 Summary",
+            "## 🧱 Package Impact",
+            "## 🧪 Verification",
+            "## 📸 Screenshots",
+          ];
+
+          const requiredChecks = [
+            { label: "`npm run typecheck`", pattern: /^- \[[ xX]\] `npm run typecheck`$/m },
+            { label: "`npm test`", pattern: /^- \[[ xX]\] `npm test`$/m },
+            { label: "`npm run build`", pattern: /^- \[[ xX]\] `npm run build`$/m },
+            { label: "`npm run build:storybook`", pattern: /^- \[[ xX]\] `npm run build:storybook`$/m },
+          ];
+
+          const missing = [
+            ...requiredText.filter((entry) => !body.includes(entry)),
+            ...requiredChecks.filter((entry) => !entry.pattern.test(body)).map((entry) => entry.label),
+          ];
+
+          const orderedSections = [
+            "# 🔀 Pull Request",
+            "## 🧾 Summary",
+            "## 🧱 Package Impact",
+            "## 🧪 Verification",
+            "## 📸 Screenshots",
+          ];
+
+          const outOfOrder = orderedSections.some((section, index) => {
+            if (index === 0) return false;
+            return body.indexOf(section) < body.indexOf(orderedSections[index - 1]);
+          });
+
+          if (missing.length === 0 && !outOfOrder) {
+            console.log("The PR body follows .github/pull_request_template.md.");
+            if (summary) {
+              appendFileSync(summary, "## 🔀 PR Template\n\nThe PR body follows `.github/pull_request_template.md`.\n");
+            }
+            process.exit(0);
+          }
+
+          console.warn("::warning title=PR template::The PR body does not follow .github/pull_request_template.md. This is advisory and will not fail the build.");
+
+          if (summary) {
+            const lines = [
+              "## 🔀 PR Template",
+              "",
+              "The PR body does not follow `.github/pull_request_template.md`.",
+              "",
+              "This is advisory only and does not fail the build.",
+              "",
+            ];
+
+            if (missing.length > 0) {
+              lines.push("### Missing Content", "");
+              for (const entry of missing) lines.push(`- ${entry}`);
+              lines.push("");
+            }
+
+            if (outOfOrder) {
+              lines.push("### Section Order", "", "Template sections are not in the expected order.", "");
+            }
+
+            appendFileSync(summary, `${lines.join("\n")}\n`);
+          }
+          NODE

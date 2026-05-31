@@ -8,6 +8,7 @@ export default tseslint.config(
       "coverage/**",
       "dist/**",
       "node_modules/**",
+      "storybook-static/**",
       "MainMenu.js",
       "src/**/*.js",
       "!src/test/**/*.js",
