@@ -8,7 +8,11 @@ const config: StorybookConfig = {
 
   stories: ["../src/stories/**/*.stories.ts"],
   staticDirs: ["./public"],
-  addons: ["@storybook/addon-vitest", "@storybook/addon-a11y"]
+  addons: [
+    "@storybook/addon-vitest",
+    "@storybook/addon-a11y",
+    "@storybook/addon-docs"
+  ]
 };
 
 export default config;

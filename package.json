@@ -1,7 +1,7 @@
 {
   "name": "arcade-engine",
   "description": "A small browser arcade-game engine for canvas games.",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "license": "SEE LICENSE IN LICENSE.md",
   "type": "module",
   "author": "Rob Taylor",
@@ -60,6 +60,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@storybook/addon-a11y": "^10.4.1",
+    "@storybook/addon-docs": "^10.4.1",
     "@storybook/addon-vitest": "^10.4.1",
     "@storybook/html-vite": "^10.4.1",
     "@types/node": "^25.9.1",
