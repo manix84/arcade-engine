@@ -9,6 +9,12 @@
   declaration files, and declaration maps into `dist`.
 - Added package exports, `types`, `files`, repository metadata, keywords,
   public publish config, and a dry-run pack script for npm publishing.
+- Added branded Storybook demos for the arena, helper math and geometry,
+  viewport utilities, debug vectors, tickers, and sound system.
+- Split broad demos into smaller Storybook sections so individual APIs are
+  discoverable from the sidebar.
+- Added a GitHub Pages workflow that deploys Storybook from `storybook-static`
+  without adding Storybook output to the npm package build.
 - Added local package metadata, TypeScript config, Vitest config, and a lockfile
   so the engine can be developed and tested independently.
 - Added a local `.gitignore` for dependency, build, and coverage output.

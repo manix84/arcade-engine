@@ -173,6 +173,21 @@ Preview the npm tarball contents:
 npm run pack:dry-run
 ```
 
+Run Storybook locally:
+
+```sh
+npm run storybook
+```
+
+Build the GitHub Pages Storybook output:
+
+```sh
+npm run build:storybook
+```
+
+Storybook builds to `storybook-static` and is not included in the npm package
+or the `dist` package build.
+
 ## 🧪 Tests
 
 The test suite uses Vitest with jsdom and lightweight browser API shims for
@@ -188,6 +203,19 @@ Current coverage includes:
 - Sound lifecycle, volume channels, global pause/resume/stop, playback-blocked
   callbacks, and spatial-audio cleanup.
 - Core helper math and event binding.
+
+## 📚 Storybook
+
+Storybook contains live demos for the engine surface:
+
+- `GameArena`
+- helper math, geometry, object, and event utilities
+- viewport scaling and debug vectors
+- requestAnimationFrame, FPS-capped, and fixed-step tickers
+- sound playback, global controls, channels, fades, and spatial panning
+
+The Storybook UI uses local Arcade Engine branding and is deployed to GitHub
+Pages from the `storybook-static` output.
 
 ## 🗺️ Migration Status
 

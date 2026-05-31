@@ -1,7 +1,7 @@
 {
   "name": "arcade-engine",
   "description": "A small browser arcade-game engine for canvas games.",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "license": "SEE LICENSE IN LICENSE.md",
   "type": "module",
   "author": "Rob Taylor",
@@ -29,6 +29,8 @@
     "pack:dry-run": "npm pack --dry-run",
     "prepack": "npm run build",
     "precommit": "node scripts/pre-commit.mjs",
+    "storybook": "storybook dev -p 6006",
+    "build:storybook": "storybook build -o storybook-static",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "version:bump": "node scripts/smart-version-bump.mjs"
@@ -56,9 +58,11 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@storybook/html-vite": "^10.4.1",
     "eslint": "^10.4.1",
     "globals": "^17.6.0",
     "jsdom": "^29.1.1",
+    "storybook": "^10.4.1",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.60.0",
     "vitest": "^4.1.6"

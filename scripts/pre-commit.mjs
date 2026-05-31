@@ -1,25 +1,189 @@
+import {
+  existsSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
-const checks = [
-  ["npm", ["run", "lint"]],
-  ["npm", ["run", "typecheck"]],
-  ["npm", ["test"]],
-  ["npm", ["run", "version:bump"]],
-];
+const repoRoot = resolve(".");
+const binSuffix = process.platform === "win32" ? ".cmd" : "";
+const lintExtensions = /\.(cjs|cts|js|jsx|mjs|mts|ts|tsx)$/i;
+const typecheckExtensions = /\.(cts|mts|ts|tsx)$/i;
+const testableExtensions = /\.(cjs|cts|js|jsx|mjs|mts|ts|tsx)$/i;
+const testFilePattern = /(?:^|\/)(?:__tests__\/.+|.+\.(?:test|spec))\.(?:cts|mts|ts|tsx|cjs|mjs|js|jsx)$/i;
 
-for (const [command, args] of checks) {
-  const label = [command, ...args].join(" ");
-
-  console.log(`\nPre-commit: ${label}`);
-
+function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
+    cwd: options.cwd ?? repoRoot,
     encoding: "utf8",
-    shell: process.platform === "win32",
-    stdio: "inherit",
+    stdio: options.stdio ?? "pipe",
   });
 
   if (result.status !== 0) {
-    console.error(`\nPre-commit failed: ${label}`);
-    process.exit(result.status ?? 1);
+    const detail = [result.stdout, result.stderr].filter(Boolean).join("\n");
+
+    throw new Error(detail || `${command} ${args.join(" ")} failed.`);
   }
+
+  return typeof result.stdout === "string" ? result.stdout.trim() : "";
 }
+
+function git(args, options = {}) {
+  return run("git", args, options);
+}
+
+function stagedFiles() {
+  const output = git([
+    "diff",
+    "--cached",
+    "--name-only",
+    "--diff-filter=ACMR",
+  ]);
+
+  return output ? output.split("\n").filter(Boolean) : [];
+}
+
+function stagedExistingFiles(files) {
+  return files.filter((file) => {
+    const result = spawnSync("git", ["cat-file", "-e", `:${file}`], {
+      cwd: repoRoot,
+    });
+
+    return result.status === 0;
+  });
+}
+
+function createStagedSnapshot() {
+  const tempDir = mkdtempSync(join(tmpdir(), "arcade-engine-pre-commit-"));
+
+  git(["checkout-index", "-a", "-f", `--prefix=${tempDir}/`]);
+
+  const nodeModulesPath = resolve(repoRoot, "node_modules");
+
+  if (existsSync(nodeModulesPath)) {
+    symlinkSync(
+      nodeModulesPath,
+      join(tempDir, "node_modules"),
+      process.platform === "win32" ? "junction" : "dir"
+    );
+  }
+
+  return tempDir;
+}
+
+function runLint(files, snapshotDir) {
+  const lintFiles = files.filter((file) => lintExtensions.test(file));
+
+  if (!lintFiles.length) {
+    console.log("Pre-commit lint skipped: no staged lintable files.");
+    return;
+  }
+
+  console.log(`Pre-commit lint: ${lintFiles.length} staged file(s).`);
+  run(resolve(repoRoot, "node_modules", ".bin", `eslint${binSuffix}`), lintFiles, {
+    cwd: snapshotDir,
+    stdio: "inherit",
+  });
+}
+
+function runTypecheck(files, snapshotDir) {
+  const typecheckFiles = files.filter((file) => typecheckExtensions.test(file));
+
+  if (!typecheckFiles.length) {
+    console.log("Pre-commit typecheck skipped: no staged TypeScript files.");
+    return;
+  }
+
+  const tempConfigPath = join(snapshotDir, "tsconfig.staged.json");
+
+  writeFileSync(
+    tempConfigPath,
+    `${JSON.stringify(
+      {
+        extends: "./tsconfig.json",
+        files: typecheckFiles,
+        include: [],
+        compilerOptions: {
+          noEmit: true,
+        },
+      },
+      null,
+      2
+    )}\n`
+  );
+
+  console.log(`Pre-commit typecheck: ${typecheckFiles.length} staged file(s).`);
+  run(
+    resolve(repoRoot, "node_modules", ".bin", `tsc${binSuffix}`),
+    ["--project", tempConfigPath],
+    {
+      cwd: snapshotDir,
+      stdio: "inherit",
+    }
+  );
+}
+
+function runTests(files, snapshotDir) {
+  const stagedTestFiles = files.filter((file) => testFilePattern.test(file));
+  const stagedRelatedFiles = files.filter(
+    (file) =>
+      testableExtensions.test(file) &&
+      !testFilePattern.test(file) &&
+      !/^\.storybook\//.test(file) &&
+      !/^scripts\//.test(file)
+  );
+  const vitest = resolve(repoRoot, "node_modules", ".bin", `vitest${binSuffix}`);
+
+  if (stagedTestFiles.length) {
+    console.log(`Pre-commit tests: ${stagedTestFiles.length} staged test file(s).`);
+    run(vitest, ["run", ...stagedTestFiles, "--passWithNoTests"], {
+      cwd: snapshotDir,
+      stdio: "inherit",
+    });
+    return;
+  }
+
+  if (stagedRelatedFiles.length) {
+    console.log(
+      `Pre-commit tests: related tests for ${stagedRelatedFiles.length} staged file(s).`
+    );
+    run(vitest, ["related", ...stagedRelatedFiles, "--run", "--passWithNoTests"], {
+      cwd: snapshotDir,
+      stdio: "inherit",
+    });
+    return;
+  }
+
+  console.log("Pre-commit tests skipped: no staged testable files.");
+}
+
+function runVersionBump() {
+  console.log("\nPre-commit: npm run version:bump");
+  run("npm", ["run", "version:bump"], {
+    cwd: repoRoot,
+    stdio: "inherit",
+  });
+}
+
+const files = stagedExistingFiles(stagedFiles());
+
+if (!files.length) {
+  console.log("Pre-commit checks skipped: no staged files.");
+  process.exit(0);
+}
+
+const snapshotDir = createStagedSnapshot();
+
+try {
+  runLint(files, snapshotDir);
+  runTypecheck(files, snapshotDir);
+  runTests(files, snapshotDir);
+} finally {
+  rmSync(snapshotDir, { force: true, recursive: true });
+}
+
+runVersionBump();

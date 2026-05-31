@@ -12,6 +12,8 @@
 
 - [ ] `npm run typecheck`
 - [ ] `npm test`
+- [ ] `npm run build`
+- [ ] `npm run build:storybook`
 
 ## 📸 Screenshots
 
