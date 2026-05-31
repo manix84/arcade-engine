@@ -20,6 +20,7 @@ function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
     cwd: options.cwd ?? repoRoot,
     encoding: "utf8",
+    shell: options.shell ?? process.platform === "win32",
     stdio: options.stdio ?? "pipe",
   });
 

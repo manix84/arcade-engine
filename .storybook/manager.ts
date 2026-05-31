@@ -6,7 +6,7 @@ addons.setConfig({
     base: "dark",
     brandTitle: "Arcade Engine",
     brandUrl: "https://github.com/manix84/arcade-engine",
-    brandImage: "/arcade-engine-logo.svg",
+    brandImage: "arcade-engine-logo.svg",
     brandTarget: "_self",
     colorPrimary: "#4fd1c5",
     colorSecondary: "#f6e05e",

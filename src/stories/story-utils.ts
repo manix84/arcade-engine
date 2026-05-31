@@ -5,7 +5,7 @@ export const createDemoShell = (title: string): HTMLDivElement => {
   shell.innerHTML = `
     <header class="ae-header">
       <div class="ae-brand">
-        <img src="/arcade-engine-mark.svg" alt="" />
+        <img src="arcade-engine-mark.svg" alt="" />
         <h1>${title}</h1>
       </div>
     </header>
