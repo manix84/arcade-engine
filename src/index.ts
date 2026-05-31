@@ -1,15 +1,15 @@
-export { drawDebugVectors } from "./debug-vectors";
-export { default as GameArena } from "./arena";
-export { default as helpers } from "./helpers";
-export { default as Sound } from "./Sound";
-export { default as Ticker } from "./Ticker";
+export { drawDebugVectors } from "./debug-vectors.js";
+export { default as GameArena } from "./arena.js";
+export { default as helpers } from "./helpers.js";
+export { default as Sound } from "./Sound.js";
+export { default as Ticker } from "./Ticker.js";
 export {
   getScaledViewportLimit,
   getViewportAreaScale,
   getViewportPaddedRadius,
   getViewportRadius,
-} from "./viewport";
-export type { DebugVectorColors, DebugVectorOptions } from "./debug-vectors";
+} from "./viewport.js";
+export type { DebugVectorColors, DebugVectorOptions } from "./debug-vectors.js";
 export type {
   AssetProgress,
   CircleOptions,
@@ -24,9 +24,9 @@ export type {
   SoundPlaybackBlockedDetails,
   SpriteFrame,
   TickerInstance,
-} from "./types";
+} from "./types.js";
 export type {
   ViewportAreaScaleOptions,
   ViewportDimensions,
   ViewportRadiusOptions,
-} from "./viewport";
+} from "./viewport.js";

@@ -1,5 +1,5 @@
 /* Converted from engine/Ticker.js (AMD) to ESM TypeScript. */
-import type { TickerInstance } from "./types";
+import type { TickerInstance } from "./types.js";
 
 type LegacyAnimationWindow = Window &
   typeof globalThis & {

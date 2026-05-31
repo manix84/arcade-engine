@@ -1,4 +1,4 @@
-import type { Heading } from "./types";
+import type { Heading } from "./types.js";
 
 export interface DebugVectorOptions {
   fillTurnArc?: boolean;

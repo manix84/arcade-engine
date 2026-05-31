@@ -33,6 +33,24 @@ Run tests:
 npm test
 ```
 
+Build the publishable package output:
+
+```sh
+npm run build
+```
+
+Preview the npm tarball:
+
+```sh
+npm run pack:dry-run
+```
+
+Install the tracked Git hooks locally:
+
+```sh
+npm run hooks:install
+```
+
 ## 🧪 Testing Expectations
 
 Add or update tests when a change affects:
@@ -73,6 +91,7 @@ Pull requests should include:
 - A short summary of the change.
 - Any package or compatibility impact.
 - Test commands run.
+- Build or package verification when package metadata or public exports change.
 - Screenshots only if visual behavior changes.
 
 The repository license applies to contributions. By submitting a contribution,

@@ -6,7 +6,7 @@ import type {
   GameArenaOptions,
   RenderTextOptions,
   SpriteFrame,
-} from "./types";
+} from "./types.js";
 
 type CanvasContext = CanvasRenderingContext2D | WebGLRenderingContext;
 type CanvasWithDebugGrid = HTMLCanvasElement & {

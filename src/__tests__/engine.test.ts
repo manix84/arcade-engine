@@ -5,10 +5,10 @@ import {
   getViewportAreaScale,
   getViewportPaddedRadius,
   getViewportRadius,
-} from "../index";
-import GameArena from "../arena";
-import Sound from "../Sound";
-import Ticker from "../Ticker";
+} from "../index.js";
+import GameArena from "../arena.js";
+import Sound from "../Sound.js";
+import Ticker from "../Ticker.js";
 
 const soundOptionsChangedEvent = "test:soundOptionsChanged";
 let volumeSettings = {

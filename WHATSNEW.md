@@ -5,6 +5,10 @@
 - Started modernizing the standalone Arcade Engine repository from the older
   AMD-style JavaScript modules to a TypeScript package.
 - Added a TypeScript package entry point at `src/index.ts`.
+- Added an npm package build that emits ESM JavaScript, source maps,
+  declaration files, and declaration maps into `dist`.
+- Added package exports, `types`, `files`, repository metadata, keywords,
+  public publish config, and a dry-run pack script for npm publishing.
 - Added local package metadata, TypeScript config, Vitest config, and a lockfile
   so the engine can be developed and tested independently.
 - Added a local `.gitignore` for dependency, build, and coverage output.
@@ -46,5 +50,4 @@
 
 - Decide whether the remaining legacy `Graphic`, `Fullscreen`, `keyboard`, and
   `MainMenu` modules should be ported, replaced by `GameArena`, or archived.
-- Decide when the package should stop being private.
 - Add CI once the package boundary is stable.

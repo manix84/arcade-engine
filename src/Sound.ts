@@ -3,7 +3,7 @@ import type {
   SoundChannel,
   SoundEngineConfiguration,
   SoundPlaybackBlockedDetails,
-} from "./types";
+} from "./types.js";
 
 interface SoundOptions {
   loop?: boolean;

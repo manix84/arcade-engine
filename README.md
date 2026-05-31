@@ -4,7 +4,7 @@ A small browser arcade-game engine for canvas games.
 
 This repository is currently being modernized from the older AMD/JavaScript
 engine to a standalone TypeScript package. The active package entry point is
-`src/index.ts`.
+`src/index.ts`, and published builds are emitted to `dist`.
 
 ## ✨ What It Provides
 
@@ -20,7 +20,13 @@ engine to a standalone TypeScript package. The active package entry point is
   fades, playback-blocked reporting, and optional browser spatial panning.
 - Geometry, heading, collision, viewport, and debug-vector helpers.
 
-## 📦 Package Entry
+## 📦 Installation
+
+```sh
+npm install arcade-engine
+```
+
+## 🚪 Package Entry
 
 ```ts
 import {
@@ -34,8 +40,8 @@ import {
 } from "arcade-engine";
 ```
 
-The repository is marked `private` while the package shape settles. The source is
-usable locally through TypeScript-aware tooling and bundlers.
+The npm package is ESM and publishes generated JavaScript, source maps,
+declaration files, and declaration maps from `dist`.
 
 ## 🧱 Core Modules
 
@@ -153,6 +159,18 @@ Run tests:
 
 ```sh
 npm test
+```
+
+Build the npm package output:
+
+```sh
+npm run build
+```
+
+Preview the npm tarball contents:
+
+```sh
+npm run pack:dry-run
 ```
 
 ## 🧪 Tests
