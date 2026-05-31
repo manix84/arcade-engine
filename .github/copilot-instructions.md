@@ -5,14 +5,18 @@
 When generating or updating a pull request summary, description, or body for
 this repository, follow `.github/PULL_REQUEST_TEMPLATE.md` exactly.
 
+If `.github/PULL_REQUEST_TEMPLATE.md` cannot be accessed, notify the user and
+do not generate a PR description until the template is available.
+
 - Preserve the template headings, emoji, ordering, and checklist structure.
 - Fill in each section with concise, concrete details from the pull request
   diff.
 - Keep the `## 🧾 Summary` section as short bullets describing what changed.
 - Use `## 🧱 Package Impact` for package, API, build, documentation,
   Storybook, workflow, or compatibility impact.
-- In `## 🧪 Verification`, mark only commands that are known to have been run.
-  Leave unchecked any commands that were not run or cannot be verified.
+- In `## 🧪 Verification`, mark only commands that are explicitly mentioned as
+  having been run in the PR description, commit messages, or comments. Leave
+  all others unchecked.
 - Use `## 📸 Screenshots` only for visual UI, Storybook, or canvas changes. If
   screenshots are not relevant, say `Not applicable.` under that heading.
 - Do not replace the template with a generic Copilot summary.
