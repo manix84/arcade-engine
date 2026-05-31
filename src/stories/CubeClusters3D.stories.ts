@@ -4,6 +4,7 @@ import {
   centerCubeCluster,
   createCubeClusterFromPattern,
   createExplosionBlocks,
+  createPlasmaLinks,
   getVisibleExplosionBlocks,
   stepExplosionBlocks,
 } from "../index.js";
@@ -29,6 +30,10 @@ type CubeClusterStoryArgs = {
   cubeSquash: number;
   cubeTwitch: number;
   cubeWiggle: number;
+  explodeFadeMaxTime: number;
+  explodeFadeMinTime: number;
+  fadeMaxTime: number;
+  fadeMinTime: number;
   explosionForce: number;
   plasmaCoreThickness: number;
   plasmaColor: string;
@@ -66,14 +71,21 @@ type ProgramInfo = {
 };
 
 type AnimatedBlock = ExplosionBlock & {
+  age: number;
+  fadeDelay: number;
+  fadeDuration: number;
   tumbleX: number;
   tumbleY: number;
   tumbleZ: number;
 };
 
+type FrameBlock = CubeBlock & {
+  opacity: number;
+};
+
 type Story = StoryObj<CubeClusterStoryArgs>;
 
-const invaderPattern = [
+const invaderFrames = [
   [
     "  #     #  ",
     "   #   #   ",
@@ -85,20 +97,26 @@ const invaderPattern = [
     "   ## ##   ",
   ],
   [
-    "           ",
     "  #     #  ",
-    "   #####   ",
-    "  #######  ",
-    " ######### ",
-    "  #######  ",
     "   #   #   ",
-    "           ",
+    "# ####### #",
+    "### ### ###",
+    "###########",
+    " ######### ",
+    "  #     #  ",
+    " #       # ",
   ],
 ];
 
 const visualCenterOffsetX = 1.7;
 const minCameraDistance = 2.4;
 const maxCameraDistance = 28;
+const frameHoldTime = 720;
+const frameSlideTime = 360;
+const defaultFadeMinTime = 90;
+const defaultFadeMaxTime = 320;
+const defaultExplodeFadeMinTime = 700;
+const defaultExplodeFadeMaxTime = 2200;
 
 const vertexShaderSource = `
 attribute vec3 aPosition;
@@ -362,6 +380,106 @@ const createProgram = (
   };
 };
 
+const smoothStep = (value: number): number => value * value * (3 - 2 * value);
+
+const clamp = (value: number, min: number, max: number): number =>
+  Math.max(min, Math.min(max, value));
+
+const getSeededUnit = (seed: string): number => {
+  let hash = 2166136261;
+
+  for (let index = 0; index < seed.length; index++) {
+    hash ^= seed.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return (hash >>> 0) / 4294967295;
+};
+
+const getStaggeredFadeProgress = (
+  transitionProgress: number,
+  id: string,
+  transitionKey: string,
+  minFadeTime: number,
+  maxFadeTime: number
+): number => {
+  const minDuration = clamp(minFadeTime / frameSlideTime, 0.05, 1);
+  const maxDuration = clamp(maxFadeTime / frameSlideTime, minDuration, 1);
+  const durationSeed = getSeededUnit(`${transitionKey}:${id}:duration`);
+  const startSeed = getSeededUnit(`${transitionKey}:${id}:start`);
+  const duration = minDuration + (maxDuration - minDuration) * durationSeed;
+  const start = (1 - duration) * startSeed;
+
+  return smoothStep(clamp((transitionProgress - start) / duration, 0, 1));
+};
+
+const getBlockDistance = (a: CubeBlock, b: CubeBlock): number =>
+  Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+
+const findNearestBlock = (block: CubeBlock, blocks: CubeBlock[]): CubeBlock => {
+  if (!blocks.length) {
+    return block;
+  }
+
+  return blocks.reduce((nearest, candidate) =>
+    getBlockDistance(block, candidate) < getBlockDistance(block, nearest) ? candidate : nearest
+  );
+};
+
+const buildInvaderFrameBlocks = (): CubeBlock[][] =>
+  invaderFrames.map((frame) =>
+    centerCubeCluster(createCubeClusterFromPattern([frame], {
+      depth: 0.65,
+      gap: 0.18,
+      layerGap: 0.18,
+      size: 0.88,
+    }).blocks).map((block) => ({
+      ...block,
+      color: undefined,
+      id: block.id.replace(/^0:/, ""),
+      x: block.x + visualCenterOffsetX,
+    }))
+  );
+
+const createSlidingFrameBlocks = (
+  fromBlocks: CubeBlock[],
+  toBlocks: CubeBlock[],
+  progress: number,
+  color: string,
+  transitionKey = "initial",
+  minFadeTime = defaultFadeMinTime,
+  maxFadeTime = defaultFadeMaxTime
+): FrameBlock[] => {
+  const eased = smoothStep(progress);
+  const fromById = new Map(fromBlocks.map((block) => [block.id, block]));
+  const toById = new Map(toBlocks.map((block) => [block.id, block]));
+  const ids = new Set([...fromById.keys(), ...toById.keys()]);
+  const blocks: FrameBlock[] = [];
+
+  ids.forEach((id) => {
+    const from = fromById.get(id);
+    const to = toById.get(id);
+    const start = from ?? findNearestBlock(to as CubeBlock, fromBlocks);
+    const end = to ?? findNearestBlock(from as CubeBlock, toBlocks);
+    const fadeProgress = from && to
+      ? 1
+      : getStaggeredFadeProgress(progress, id, transitionKey, minFadeTime, maxFadeTime);
+    const opacity = from && to ? 1 : from ? 1 - fadeProgress : fadeProgress;
+
+    blocks.push({
+      color,
+      id,
+      opacity,
+      size: (to ?? from)?.size,
+      x: start.x + (end.x - start.x) * eased,
+      y: start.y + (end.y - start.y) * eased,
+      z: start.z + (end.z - start.z) * eased,
+    });
+  });
+
+  return blocks.filter((block) => block.opacity > 0.02);
+};
+
 const getPlasmaSurfacePoints = (
   from: CubeBlock,
   to: CubeBlock
@@ -487,17 +605,30 @@ const getJitteredBlock = (
 
 const createAnimatedExplosionBlocks = (
   blocks: CubeBlock[],
-  force: number
-): AnimatedBlock[] =>
-  createExplosionBlocks(blocks, {
+  force: number,
+  minFadeTime = defaultExplodeFadeMinTime,
+  maxFadeTime = defaultExplodeFadeMaxTime
+): AnimatedBlock[] => {
+  const fadeMin = Math.max(1, Math.min(minFadeTime, maxFadeTime));
+  const fadeMax = Math.max(fadeMin, maxFadeTime);
+
+  return createExplosionBlocks(blocks, {
     force,
     spin: 0.32,
   }).map((block, index) => ({
     ...block,
+    age: 0,
+    fadeDelay: getSeededUnit(`explode:${block.id}:delay`) *
+      Math.max(0, (fadeMax - fadeMin) / 1000),
+    fadeDuration: (
+      fadeMin +
+      (fadeMax - fadeMin) * getSeededUnit(`explode:${block.id}:duration`)
+    ) / 1000,
     tumbleX: index * 0.37,
     tumbleY: index * 0.19,
     tumbleZ: index * 0.29,
   }));
+};
 
 const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
   const shell = createDemoShell("3D cube-cluster invader");
@@ -517,18 +648,16 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
     antialias: true,
     preserveDrawingBuffer: true,
   });
-  const cluster = createCubeClusterFromPattern(invaderPattern, {
-    color: args.blockColor,
-    depth: 0.65,
-    gap: 0.18,
-    layerGap: 0.18,
-    size: 0.88,
-  });
-  const blocks = centerCubeCluster(cluster.blocks).map((block) => ({
-    ...block,
-    x: block.x + visualCenterOffsetX,
-  }));
-  const blockById = new Map(blocks.map((block) => [block.id, block]));
+  const frameBlocks = buildInvaderFrameBlocks();
+  let renderedBlocks: FrameBlock[] = createSlidingFrameBlocks(
+    frameBlocks[0],
+    frameBlocks[1],
+    0,
+    args.blockColor,
+    "0:1",
+    args.fadeMinTime,
+    args.fadeMaxTime
+  );
   let lastFrameTime = performance.now();
   let animationFrame = 0;
   let explosionBlocks: AnimatedBlock[] = [];
@@ -592,8 +721,8 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
   gl.bufferData(gl.ARRAY_BUFFER, cubeEdges, gl.STATIC_DRAW);
   gl.enable(gl.DEPTH_TEST);
   gl.enable(gl.BLEND);
-  setValue(blockValue, blocks.length);
-  setValue(linkValue, cluster.links.length);
+  setValue(blockValue, renderedBlocks.length);
+  setValue(linkValue, createPlasmaLinks(renderedBlocks).length);
 
   const assemble = (): void => {
     isExploding = false;
@@ -604,7 +733,12 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
   controls.append(
     createButton("Explode", () => {
       args.onExplode();
-      explosionBlocks = createAnimatedExplosionBlocks(blocks, args.explosionForce);
+      explosionBlocks = createAnimatedExplosionBlocks(
+        renderedBlocks,
+        args.explosionForce,
+        args.explodeFadeMinTime,
+        args.explodeFadeMaxTime
+      );
       isExploding = true;
       setValue(statusValue, "exploding");
     }),
@@ -698,9 +832,15 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
     gl.depthMask(true);
   };
 
-  const drawPlasma = (projection: Mat4, time: number): void => {
+  const drawPlasma = (
+    projection: Mat4,
+    time: number,
+    blocks: FrameBlock[]
+  ): void => {
     const pulse = 0.48 + Math.sin(time / 39) * 0.28 + Math.sin(time / 11) * 0.12;
-    const plasmaData = createPlasmaRibbonData(cluster.links, blockById, time, args.plasmaWiggle);
+    const links = createPlasmaLinks(blocks);
+    const blockById = new Map(blocks.map((block) => [block.id, block]));
+    const plasmaData = createPlasmaRibbonData(links, blockById, time, args.plasmaWiggle);
     const stride = 32;
 
     gl.useProgram(plasmaProgram.program);
@@ -725,6 +865,7 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
     gl.uniform1f(plasmaProgram.uniforms.uAlpha, Math.max(0.03, pulse * args.plasmaGlow * 0.36));
     gl.uniform1f(plasmaProgram.uniforms.uThickness, args.plasmaCoreThickness);
     gl.drawArrays(gl.TRIANGLES, 0, plasmaData.length / 8);
+    setValue(linkValue, links.length);
   };
 
   const resizeCanvas = (): void => {
@@ -744,6 +885,13 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
 
     const now = performance.now();
     const delta = Math.min(0.05, (now - lastFrameTime) / 1000);
+    const frameCycleTime = frameHoldTime + frameSlideTime;
+    const frameIndex = Math.floor(now / frameCycleTime) % frameBlocks.length;
+    const nextFrameIndex = (frameIndex + 1) % frameBlocks.length;
+    const framePhase = now % frameCycleTime;
+    const frameProgress = framePhase < frameHoldTime
+      ? 0
+      : Math.min(1, (framePhase - frameHoldTime) / frameSlideTime);
     const aspect = canvas.width / canvas.height;
     const viewProjection = multiply(
       perspective(48 * (Math.PI / 180), aspect, 0.1, 100),
@@ -767,10 +915,21 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
     if (isExploding) {
       explosionBlocks = stepExplosionBlocks(explosionBlocks, delta, {
         drag: 0.985,
-        fadeSpeed: 0.42,
+        fadeSpeed: 0,
         gravity: -0.14,
       }).map((block, index) => ({
         ...block,
+        age: (explosionBlocks[index]?.age ?? 0) + delta,
+        fadeDelay: explosionBlocks[index]?.fadeDelay ?? 0,
+        fadeDuration: explosionBlocks[index]?.fadeDuration ?? 1,
+        opacity: 1 - clamp(
+          (
+            ((explosionBlocks[index]?.age ?? 0) + delta) -
+            (explosionBlocks[index]?.fadeDelay ?? 0)
+          ) / (explosionBlocks[index]?.fadeDuration ?? 1),
+          0,
+          1
+        ),
         tumbleX: (explosionBlocks[index]?.tumbleX ?? 0) + delta * (1.8 + index * 0.07),
         tumbleY: (explosionBlocks[index]?.tumbleY ?? 0) - delta * (1.3 + index * 0.05),
         tumbleZ: (explosionBlocks[index]?.tumbleZ ?? 0) + delta * (1.1 + index * 0.03),
@@ -788,8 +947,18 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
         setValue(statusValue, "vanished");
       }
     } else {
-      drawPlasma(projection, now);
-      blocks.forEach((block, index) => {
+      renderedBlocks = createSlidingFrameBlocks(
+        frameBlocks[frameIndex],
+        frameBlocks[nextFrameIndex],
+        frameProgress,
+        args.blockColor,
+        `${frameIndex}:${nextFrameIndex}`,
+        args.fadeMinTime,
+        args.fadeMaxTime
+      );
+      setValue(blockValue, renderedBlocks.length);
+      drawPlasma(projection, now, renderedBlocks);
+      renderedBlocks.forEach((block, index) => {
         const jittered = getJitteredBlock(block, now, index, args.cubeWiggle);
         const twitch = multiply(
           multiply(
@@ -839,13 +1008,17 @@ export const VoxelInvader: Story = {
     cubeSquash: 0.015,
     cubeTwitch: 0.025,
     cubeWiggle: 0.035,
-    explosionForce: 7,
-    plasmaCoreThickness: 0.9,
+    explodeFadeMaxTime: 550,
+    explodeFadeMinTime: 100,
+    fadeMaxTime: defaultFadeMaxTime,
+    fadeMinTime: defaultFadeMinTime,
+    explosionForce: 14,
+    plasmaCoreThickness: 4,
     plasmaColor: "#90cdf4",
-    plasmaGlow: 0.72,
+    plasmaGlow: 1.5,
     plasmaThickness: 2.2,
-    plasmaWiggle: 0.045,
-    spinSpeed: 0.45,
+    plasmaWiggle: 0,
+    spinSpeed: 0,
     onAssemble: fn(),
     onExplode: fn(),
   },
@@ -854,6 +1027,10 @@ export const VoxelInvader: Story = {
     cubeSquash: { control: { type: "range", min: 0, max: 0.05, step: 0.001 } },
     cubeTwitch: { control: { type: "range", min: 0, max: 0.08, step: 0.001 } },
     cubeWiggle: { control: { type: "range", min: 0, max: 0.12, step: 0.005 } },
+    explodeFadeMaxTime: { control: { type: "range", min: 300, max: 4000, step: 50 } },
+    explodeFadeMinTime: { control: { type: "range", min: 100, max: 3000, step: 50 } },
+    fadeMaxTime: { control: { type: "range", min: 90, max: frameSlideTime, step: 10 } },
+    fadeMinTime: { control: { type: "range", min: 20, max: frameSlideTime, step: 10 } },
     explosionForce: { control: { type: "range", min: 2, max: 14, step: 1 } },
     plasmaCoreThickness: { control: { type: "range", min: 0.2, max: 4, step: 0.1 } },
     plasmaColor: { control: "color" },
