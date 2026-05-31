@@ -141,6 +141,30 @@ void main() {
 }
 `;
 
+const plasmaVertexShaderSource = `
+attribute vec3 aStart;
+attribute vec3 aEnd;
+attribute float aSide;
+attribute float aAlong;
+uniform mat4 uProjection;
+uniform vec2 uViewport;
+uniform float uThickness;
+
+void main() {
+  vec4 startClip = uProjection * vec4(aStart, 1.0);
+  vec4 endClip = uProjection * vec4(aEnd, 1.0);
+  vec2 startNdc = startClip.xy / startClip.w;
+  vec2 endNdc = endClip.xy / endClip.w;
+  vec2 direction = (endNdc - startNdc) * uViewport;
+  float lengthPixels = max(length(direction), 0.001);
+  vec2 normal = vec2(-direction.y, direction.x) / lengthPixels;
+  vec4 clip = mix(startClip, endClip, aAlong);
+
+  clip.xy += normal * aSide * uThickness * clip.w / uViewport;
+  gl_Position = clip;
+}
+`;
+
 const cubeData = new Float32Array([
   -0.5, -0.5, 0.5, 0, 0, 1, 0.5, -0.5, 0.5, 0, 0, 1, 0.5, 0.5, 0.5, 0, 0, 1,
   -0.5, -0.5, 0.5, 0, 0, 1, 0.5, 0.5, 0.5, 0, 0, 1, -0.5, 0.5, 0.5, 0, 0, 1,
@@ -374,7 +398,17 @@ const getPlasmaSurfacePoints = (
   };
 };
 
-const createPlasmaData = (
+const pushPlasmaRibbonVertex = (
+  data: number[],
+  from: CubeBlock,
+  to: CubeBlock,
+  side: number,
+  along: number
+): void => {
+  data.push(from.x, from.y, from.z, to.x, to.y, to.z, side, along);
+};
+
+const createPlasmaRibbonData = (
   links: PlasmaLink[],
   blockById: Map<string, CubeBlock>,
   time = 0
@@ -403,14 +437,25 @@ const createPlasmaData = (
       z: Math.sin(phase * 0.73) * amount,
     };
 
-    data.push(
-      surface.from.x + wobble.x,
-      surface.from.y + wobble.y,
-      surface.from.z + wobble.z,
-      surface.to.x - wobble.y,
-      surface.to.y + wobble.x,
-      surface.to.z - wobble.z
-    );
+    const start = {
+      ...surface.from,
+      x: surface.from.x + wobble.x,
+      y: surface.from.y + wobble.y,
+      z: surface.from.z + wobble.z,
+    };
+    const end = {
+      ...surface.to,
+      x: surface.to.x - wobble.y,
+      y: surface.to.y + wobble.x,
+      z: surface.to.z - wobble.z,
+    };
+
+    pushPlasmaRibbonVertex(data, start, end, -1, 0);
+    pushPlasmaRibbonVertex(data, start, end, 1, 0);
+    pushPlasmaRibbonVertex(data, start, end, -1, 1);
+    pushPlasmaRibbonVertex(data, start, end, -1, 1);
+    pushPlasmaRibbonVertex(data, start, end, 1, 0);
+    pushPlasmaRibbonVertex(data, start, end, 1, 1);
   });
 
   return new Float32Array(data);
@@ -514,11 +559,18 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
     ["aPosition"],
     ["uProjection", "uColor", "uAlpha"]
   );
+  const plasmaProgram = createProgram(
+    gl,
+    plasmaVertexShaderSource,
+    lineFragmentShaderSource,
+    ["aStart", "aEnd", "aSide", "aAlong"],
+    ["uProjection", "uViewport", "uThickness", "uColor", "uAlpha"]
+  );
   const cubeBuffer = gl.createBuffer();
   const edgeBuffer = gl.createBuffer();
-  const lineBuffer = gl.createBuffer();
+  const plasmaBuffer = gl.createBuffer();
 
-  if (!cubeBuffer || !edgeBuffer || !lineBuffer) {
+  if (!cubeBuffer || !edgeBuffer || !plasmaBuffer) {
     throw new Error("Unable to create WebGL buffers.");
   }
 
@@ -636,23 +688,31 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
 
   const drawPlasma = (projection: Mat4, time: number): void => {
     const pulse = 0.48 + Math.sin(time / 39) * 0.28 + Math.sin(time / 11) * 0.12;
-    const plasmaData = createPlasmaData(cluster.links, blockById, time);
+    const plasmaData = createPlasmaRibbonData(cluster.links, blockById, time);
+    const stride = 32;
 
-    gl.useProgram(lineProgram.program);
-    gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffer);
+    gl.useProgram(plasmaProgram.program);
+    gl.bindBuffer(gl.ARRAY_BUFFER, plasmaBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, plasmaData, gl.DYNAMIC_DRAW);
-    gl.enableVertexAttribArray(lineProgram.attributes.aPosition);
-    gl.vertexAttribPointer(lineProgram.attributes.aPosition, 3, gl.FLOAT, false, 0, 0);
-    gl.uniformMatrix4fv(lineProgram.uniforms.uProjection, false, projection);
-    gl.uniform3fv(lineProgram.uniforms.uColor, parseColor(args.plasmaColor));
-    gl.uniform1f(lineProgram.uniforms.uAlpha, Math.max(0.1, pulse));
+    gl.enableVertexAttribArray(plasmaProgram.attributes.aStart);
+    gl.enableVertexAttribArray(plasmaProgram.attributes.aEnd);
+    gl.enableVertexAttribArray(plasmaProgram.attributes.aSide);
+    gl.enableVertexAttribArray(plasmaProgram.attributes.aAlong);
+    gl.vertexAttribPointer(plasmaProgram.attributes.aStart, 3, gl.FLOAT, false, stride, 0);
+    gl.vertexAttribPointer(plasmaProgram.attributes.aEnd, 3, gl.FLOAT, false, stride, 12);
+    gl.vertexAttribPointer(plasmaProgram.attributes.aSide, 1, gl.FLOAT, false, stride, 24);
+    gl.vertexAttribPointer(plasmaProgram.attributes.aAlong, 1, gl.FLOAT, false, stride, 28);
+    gl.uniformMatrix4fv(plasmaProgram.uniforms.uProjection, false, projection);
+    gl.uniform2f(plasmaProgram.uniforms.uViewport, canvas.width, canvas.height);
+    gl.uniform3fv(plasmaProgram.uniforms.uColor, parseColor(args.plasmaColor));
+    gl.uniform1f(plasmaProgram.uniforms.uAlpha, Math.max(0.08, pulse * 0.72));
+    gl.uniform1f(plasmaProgram.uniforms.uThickness, 2.2);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-    gl.lineWidth(2);
-    gl.drawArrays(gl.LINES, 0, plasmaData.length / 3);
-    gl.uniform3fv(lineProgram.uniforms.uColor, parseColor("#ffffff"));
-    gl.uniform1f(lineProgram.uniforms.uAlpha, Math.max(0.06, pulse * 0.42));
-    gl.lineWidth(1);
-    gl.drawArrays(gl.LINES, 0, plasmaData.length / 3);
+    gl.drawArrays(gl.TRIANGLES, 0, plasmaData.length / 8);
+    gl.uniform3fv(plasmaProgram.uniforms.uColor, parseColor("#ffffff"));
+    gl.uniform1f(plasmaProgram.uniforms.uAlpha, Math.max(0.04, pulse * 0.26));
+    gl.uniform1f(plasmaProgram.uniforms.uThickness, 0.9);
+    gl.drawArrays(gl.TRIANGLES, 0, plasmaData.length / 8);
   };
 
   const resizeCanvas = (): void => {
@@ -749,9 +809,10 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
     canvas.removeEventListener("wheel", handleWheel);
     gl.deleteBuffer(cubeBuffer);
     gl.deleteBuffer(edgeBuffer);
-    gl.deleteBuffer(lineBuffer);
+    gl.deleteBuffer(plasmaBuffer);
     gl.deleteProgram(cubeProgram.program);
     gl.deleteProgram(lineProgram.program);
+    gl.deleteProgram(plasmaProgram.program);
   });
 
   return shell;
