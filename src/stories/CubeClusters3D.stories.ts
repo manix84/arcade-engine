@@ -85,6 +85,14 @@ type FrameBlock = CubeBlock & {
   opacity: number;
 };
 
+type FpsCounter = {
+  frames: number;
+  history: number[];
+  lastUpdatedAt: number;
+  max: number | null;
+  min: number | null;
+};
+
 type FleetInvaderState = "assembled" | "exploding" | "waiting" | "reassembling";
 
 type FleetInvader = {
@@ -438,6 +446,189 @@ const getBlockDistance = (a: CubeBlock, b: CubeBlock): number =>
 const getPlasmaNeighborDistance = (voxelGap: number): number =>
   Math.hypot(voxelSize + voxelGap, voxelSize + voxelGap) + 0.08;
 
+const createFpsCounter = (): FpsCounter => ({
+  frames: 0,
+  history: [],
+  lastUpdatedAt: performance.now(),
+  max: null,
+  min: null,
+});
+
+const createFpsGraph = (): HTMLCanvasElement => {
+  const canvas = document.createElement("canvas");
+
+  canvas.width = 320;
+  canvas.height = 96;
+  canvas.style.width = "100%";
+  canvas.style.height = "96px";
+  canvas.style.marginTop = "4px";
+  canvas.style.border = "1px solid rgba(245, 247, 251, 0.14)";
+  canvas.style.borderRadius = "6px";
+  canvas.style.background = "#05070a";
+
+  return canvas;
+};
+
+const drawFpsGraph = (canvas: HTMLCanvasElement, counter: FpsCounter): void => {
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    return;
+  }
+
+  const width = canvas.width;
+  const height = canvas.height;
+  const padding = 10;
+  const graphWidth = width - padding * 2;
+  const graphHeight = height - padding * 2;
+  const maxFps = Math.max(60, counter.max ?? 0);
+  const average = counter.history.length
+    ? Math.round(counter.history.reduce((total, fps) => total + fps, 0) / counter.history.length)
+    : null;
+  const getY = (fps: number): number =>
+    padding + graphHeight - (Math.min(fps, maxFps) / maxFps) * graphHeight;
+  const drawLabel = (
+    label: string,
+    x: number,
+    y: number,
+    color: string,
+    align: CanvasTextAlign = "right"
+  ): void => {
+    context.font = "10px system-ui, sans-serif";
+    context.textAlign = align;
+    context.textBaseline = "middle";
+
+    const width = context.measureText(label).width + 8;
+    const height = 16;
+    const left = align === "right" ? x - width : x;
+    const clampedY = clamp(y, padding + height / 2, canvas.height - padding - height / 2);
+
+    context.fillStyle = "rgba(5, 7, 10, 0.78)";
+    context.fillRect(left, clampedY - height / 2, width, height);
+    context.fillStyle = color;
+    context.fillText(label, align === "right" ? x - 4 : x + 4, clampedY);
+  };
+
+  context.clearRect(0, 0, width, height);
+  context.fillStyle = "#05070a";
+  context.fillRect(0, 0, width, height);
+
+  context.strokeStyle = "rgba(245, 247, 251, 0.08)";
+  context.lineWidth = 1;
+  for (let index = 1; index < 4; index++) {
+    const y = padding + (graphHeight / 4) * index;
+
+    context.beginPath();
+    context.moveTo(padding, y);
+    context.lineTo(width - padding, y);
+    context.stroke();
+  }
+
+  if (counter.min !== null) {
+    const y = getY(counter.min);
+
+    context.strokeStyle = "rgba(252, 129, 129, 0.8)";
+    context.beginPath();
+    context.moveTo(padding, y);
+    context.lineTo(width - padding, y);
+    context.stroke();
+  }
+
+  if (counter.max !== null) {
+    const y = getY(counter.max);
+
+    context.strokeStyle = "rgba(246, 224, 94, 0.8)";
+    context.beginPath();
+    context.moveTo(padding, y);
+    context.lineTo(width - padding, y);
+    context.stroke();
+  }
+
+  if (average !== null) {
+    const y = getY(average);
+
+    context.strokeStyle = "rgba(144, 205, 244, 0.82)";
+    context.beginPath();
+    context.moveTo(padding, y);
+    context.lineTo(width - padding, y);
+    context.stroke();
+  }
+
+  if (counter.history.length >= 2) {
+    context.strokeStyle = "#4fd1c5";
+    context.lineWidth = 2;
+    context.beginPath();
+    counter.history.forEach((fps, index) => {
+      const x = padding + (index / Math.max(1, counter.history.length - 1)) * graphWidth;
+      const y = getY(fps);
+
+      if (index === 0) {
+        context.moveTo(x, y);
+      } else {
+        context.lineTo(x, y);
+      }
+    });
+    context.stroke();
+  }
+
+  if (counter.history.length) {
+    const latest = counter.history[counter.history.length - 1];
+    const latestY = getY(latest);
+
+    context.fillStyle = "#4fd1c5";
+    context.beginPath();
+    context.arc(width - padding, latestY, 3, 0, Math.PI * 2);
+    context.fill();
+    drawLabel(`${latest} fps`, width - padding, latestY, "#4fd1c5");
+  }
+
+  if (counter.max !== null) {
+    drawLabel(`max ${counter.max}`, width - padding, getY(counter.max), "#f6e05e");
+  }
+
+  if (average !== null) {
+    drawLabel(`avg ${average}`, width - padding, getY(average), "#90cdf4");
+  }
+
+  if (counter.min !== null) {
+    drawLabel(`min ${counter.min}`, width - padding, getY(counter.min), "#fc8181");
+  }
+};
+
+const updateFpsValues = (
+  counter: FpsCounter,
+  value: HTMLElement,
+  minValue: HTMLElement,
+  maxValue: HTMLElement,
+  averageValue: HTMLElement,
+  graph: HTMLCanvasElement,
+  now: number
+): void => {
+  counter.frames++;
+
+  const elapsed = now - counter.lastUpdatedAt;
+
+  if (elapsed < 250) {
+    return;
+  }
+
+  const fps = Math.round((counter.frames * 1000) / elapsed);
+
+  counter.min = counter.min === null ? fps : Math.min(counter.min, fps);
+  counter.max = counter.max === null ? fps : Math.max(counter.max, fps);
+  counter.history.push(fps);
+  counter.history = counter.history.slice(-80);
+  const average = Math.round(counter.history.reduce((total, sample) => total + sample, 0) / counter.history.length);
+
+  setValue(value, fps);
+  setValue(minValue, counter.min);
+  setValue(maxValue, counter.max);
+  setValue(averageValue, average);
+  drawFpsGraph(graph, counter);
+  counter.frames = 0;
+  counter.lastUpdatedAt = now;
+};
+
 const normalizeVector = (vector: { x: number; y: number; z: number }): { x: number; y: number; z: number } => {
   const length = Math.hypot(vector.x, vector.y, vector.z) || 1;
 
@@ -719,6 +910,11 @@ const createFleetShell = (args: CubeClusterStoryArgs): HTMLElement => {
   const invaderValue = createValue("invaders", "30");
   const explodingValue = createValue("exploding", "0");
   const reassemblingValue = createValue("reassembling", "0");
+  const fpsValue = createValue("fps", "0");
+  const minFpsValue = createValue("min fps", "0");
+  const maxFpsValue = createValue("max fps", "0");
+  const averageFpsValue = createValue("avg fps", "0");
+  const fpsGraph = createFpsGraph();
   const gl = canvas.getContext("webgl", {
     alpha: true,
     antialias: true,
@@ -739,6 +935,7 @@ const createFleetShell = (args: CubeClusterStoryArgs): HTMLElement => {
   }));
   let lastFrameTime = performance.now();
   let animationFrame = 0;
+  const fpsCounter = createFpsCounter();
 
   if (!gl) {
     throw new Error("WebGL is required for this story.");
@@ -746,9 +943,11 @@ const createFleetShell = (args: CubeClusterStoryArgs): HTMLElement => {
 
   appendStyles(shell);
   grid.className = "ae-grid";
+  grid.style.gridTemplateColumns = "minmax(0, 1fr)";
+  grid.style.maxWidth = "2360px";
   stage.className = "ae-stage";
   values.className = "ae-values";
-  stage.style.aspectRatio = "1024 / 620";
+  stage.style.aspectRatio = "2048 / 620";
   stage.style.minHeight = "480px";
   canvas.style.width = "100%";
   canvas.style.height = "100%";
@@ -929,6 +1128,7 @@ const createFleetShell = (args: CubeClusterStoryArgs): HTMLElement => {
     let reassemblingCount = 0;
 
     lastFrameTime = now;
+    updateFpsValues(fpsCounter, fpsValue, minFpsValue, maxFpsValue, averageFpsValue, fpsGraph, now);
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(0.02, 0.03, 0.04, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -1049,9 +1249,10 @@ const createFleetShell = (args: CubeClusterStoryArgs): HTMLElement => {
   };
 
   stage.appendChild(canvas);
-  values.append(invaderValue, explodingValue, reassemblingValue);
+  values.append(invaderValue, explodingValue, reassemblingValue, fpsValue, minFpsValue, maxFpsValue, averageFpsValue);
   visualPanel.appendChild(stage);
   statePanel.appendChild(values);
+  statePanel.appendChild(fpsGraph);
   grid.append(visualPanel, statePanel);
   shell.appendChild(grid);
   render();
@@ -1082,6 +1283,11 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
   const statusValue = createValue("state", "assembled");
   const blockValue = createValue("blocks", "0");
   const linkValue = createValue("plasma links", "0");
+  const fpsValue = createValue("fps", "0");
+  const minFpsValue = createValue("min fps", "0");
+  const maxFpsValue = createValue("max fps", "0");
+  const averageFpsValue = createValue("avg fps", "0");
+  const fpsGraph = createFpsGraph();
   const gl = canvas.getContext("webgl", {
     alpha: true,
     antialias: true,
@@ -1099,6 +1305,7 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
   );
   let lastFrameTime = performance.now();
   let animationFrame = 0;
+  const fpsCounter = createFpsCounter();
   let explosionBlocks: AnimatedBlock[] = [];
   let isExploding = false;
   let cameraYaw = 0.08;
@@ -1345,6 +1552,7 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
     const projection = multiply(viewProjection, cameraOrbit);
 
     lastFrameTime = now;
+    updateFpsValues(fpsCounter, fpsValue, minFpsValue, maxFpsValue, averageFpsValue, fpsGraph, now);
     if (!hasCameraControl) {
       cameraYaw += args.spinSpeed * delta;
     }
@@ -1421,10 +1629,11 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
   };
 
   stage.appendChild(canvas);
-  values.append(statusValue, blockValue, linkValue);
+  values.append(statusValue, blockValue, linkValue, fpsValue, minFpsValue, maxFpsValue, averageFpsValue);
   visualPanel.appendChild(stage);
   controlsPanel.appendChild(controls);
   statePanel.appendChild(values);
+  statePanel.appendChild(fpsGraph);
   grid.append(visualPanel, controlsPanel, statePanel);
   shell.appendChild(grid);
   render();
