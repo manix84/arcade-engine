@@ -8,6 +8,9 @@ this repository, follow `.github/PULL_REQUEST_TEMPLATE.md` exactly.
 If `.github/PULL_REQUEST_TEMPLATE.md` cannot be accessed, notify the user and
 do not generate a PR description until the template is available.
 
+- Pull request bodies are validated by `.github/workflows/pr-template-check.yml`.
+- Output that replaces the template with a generic summary is invalid, even if
+  the summary is accurate.
 - Preserve the template headings, emoji, ordering, and checklist structure.
 - Fill in each section with concise, concrete details from the pull request
   diff.
