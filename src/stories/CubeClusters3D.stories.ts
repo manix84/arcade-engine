@@ -90,6 +90,8 @@ const invaderPattern = [
 ];
 
 const visualCenterOffsetX = 1.7;
+const minCameraDistance = 2.4;
+const maxCameraDistance = 28;
 
 const vertexShaderSource = `
 attribute vec3 aPosition;
@@ -476,6 +478,7 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
   let isExploding = false;
   let cameraYaw = 0.08;
   let cameraPitch = -0.35;
+  let cameraDistance = 23;
   let hasCameraControl = false;
   let isDraggingCamera = false;
   let lastPointerX = 0;
@@ -579,10 +582,23 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
     }
   };
 
+  const handleWheel = (event: WheelEvent): void => {
+    event.preventDefault();
+    hasCameraControl = true;
+
+    const zoomFactor = Math.exp(event.deltaY * 0.0015);
+
+    cameraDistance = Math.max(
+      minCameraDistance,
+      Math.min(maxCameraDistance, cameraDistance * zoomFactor)
+    );
+  };
+
   canvas.addEventListener("pointerdown", handlePointerDown);
   canvas.addEventListener("pointermove", handlePointerMove);
   canvas.addEventListener("pointerup", handlePointerUp);
   canvas.addEventListener("pointercancel", handlePointerUp);
+  canvas.addEventListener("wheel", handleWheel, { passive: false });
 
   const drawCube = (
     block: CubeBlock | AnimatedBlock,
@@ -659,7 +675,7 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
     const aspect = canvas.width / canvas.height;
     const viewProjection = multiply(
       perspective(48 * (Math.PI / 180), aspect, 0.1, 100),
-      translate(0, 0, -23)
+      translate(0, 0, -cameraDistance)
     );
     const cameraOrbit = multiply(
       multiply(rotateX(cameraPitch), rotateY(cameraYaw)),
@@ -730,6 +746,7 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
     canvas.removeEventListener("pointermove", handlePointerMove);
     canvas.removeEventListener("pointerup", handlePointerUp);
     canvas.removeEventListener("pointercancel", handlePointerUp);
+    canvas.removeEventListener("wheel", handleWheel);
     gl.deleteBuffer(cubeBuffer);
     gl.deleteBuffer(edgeBuffer);
     gl.deleteBuffer(lineBuffer);
