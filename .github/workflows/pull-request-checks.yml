@@ -73,6 +73,10 @@ jobs:
 
   build:
     name: Build package
+    needs:
+      - lint
+      - typecheck
+      - test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -92,6 +96,10 @@ jobs:
 
   pack:
     name: Dry-run npm package
+    needs:
+      - lint
+      - typecheck
+      - test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -111,6 +119,10 @@ jobs:
 
   storybook:
     name: Dry-run Storybook build
+    needs:
+      - lint
+      - typecheck
+      - test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
