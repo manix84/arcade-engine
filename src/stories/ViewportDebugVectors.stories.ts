@@ -12,6 +12,8 @@ import {
   createNumberInput,
   createPanel,
   createValue,
+  drawTargetMarker,
+  drawTopDownShip,
   getNumberInputValue,
   onRemove,
   setValue,
@@ -70,6 +72,11 @@ export const ScalingAndVectors: Story = {
       context.translate(canvas.width / 2, canvas.height / 2);
       context.strokeStyle = "rgba(245, 247, 251, 0.18)";
       context.strokeRect(-viewport.width / 8, -viewport.height / 8, viewport.width / 4, viewport.height / 4);
+      drawTargetMarker(context, viewport.width / 8, -viewport.height / 8, {
+        color: "#90cdf4",
+        label: "viewport edge",
+        radius: 15,
+      });
       drawDebugVectors(
         context,
         0,
@@ -83,6 +90,13 @@ export const ScalingAndVectors: Story = {
         },
         { fillTurnArc: true, length: 120 }
       );
+      drawTopDownShip(context, 0, 0, {
+        accent: "#f6e05e",
+        heading: getNumberInputValue(heading),
+        label: "actor",
+        scale: 0.82,
+        thrust: 0.35,
+      });
       context.restore();
 
       setValue(radiusValue, getViewportRadius(viewport).toFixed(2));

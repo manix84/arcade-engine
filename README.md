@@ -19,6 +19,11 @@ engine to a standalone TypeScript package. The active package entry point is
 - HTML audio wrapper with global pause/resume/stop, music/effects channels,
   fades, playback-blocked reporting, and optional browser spatial panning.
 - Geometry, heading, collision, viewport, and debug-vector helpers.
+- Grid helpers for cell-based games like Tetris and board-based puzzle games.
+- Box movement and collision helpers for Space Invaders, Breakout, platform,
+  paddle, brick, shot, and enemy patterns.
+- 3D cube-cluster helpers for voxel-style characters, plasma links, and
+  deterministic block explosions.
 
 ## 📦 Installation
 
@@ -33,7 +38,10 @@ import {
   GameArena,
   Sound,
   Ticker,
+  createCubeClusterFromPattern,
+  detectBoxCollision,
   drawDebugVectors,
+  getGridCell,
   getScaledViewportLimit,
   getViewportPaddedRadius,
   helpers,
@@ -141,6 +149,108 @@ The default `helpers` export includes geometry and event helpers:
 Viewport helpers include `getViewportRadius`, `getViewportPaddedRadius`,
 `getViewportAreaScale`, and `getScaledViewportLimit`.
 
+### 🧩 Grid Helpers
+
+Grid helpers support fixed-cell games without changing the existing
+heading-based helpers.
+
+```ts
+import { getGridCell, getGridPosition, snapToGrid } from "arcade-engine";
+
+const board = {
+  columns: 10,
+  rows: 20,
+  cellWidth: 24,
+  cellHeight: 24,
+  originX: 8,
+  originY: 16,
+};
+
+const activeCell = getGridPosition(board, { posX: 82, posY: 118 });
+const renderCell = getGridCell(board, activeCell);
+const snapped = snapToGrid(board, { posX: 999, posY: -20 });
+```
+
+Useful helpers include:
+
+- `getGridSize(grid)`
+- `getGridCell(grid, position)`
+- `getGridCellCenter(grid, position)`
+- `getGridPosition(grid, coordinates)`
+- `isInsideGrid(grid, position)`
+- `clampGridPosition(grid, position)`
+- `snapToGrid(grid, coordinates)`
+
+### 🧱 Box Helpers
+
+Box helpers use top-left `posX`/`posY` coordinates and are designed for
+axis-aligned games such as Space Invaders, Breakout, and paddle games.
+
+```ts
+import { detectBoxCollision, keepBoxInside, moveBy } from "arcade-engine";
+
+const arena = { posX: 0, posY: 0, width: 320, height: 240 };
+const paddle = { posX: 280, posY: 220, width: 56, height: 12, velocityX: 80 };
+const ball = { posX: 42, posY: 96, width: 8, height: 8 };
+const brick = { posX: 40, posY: 88, width: 48, height: 16 };
+
+const movedPaddle = keepBoxInside(moveBy(paddle, 0.5), arena);
+const didHitBrick = detectBoxCollision(ball, brick);
+```
+
+Useful helpers include:
+
+- `clamp(value, min, max)`
+- `moveBy(entity, delta?)`
+- `detectBoxCollision(target, origin)`
+- `containsBox(bounds, target)`
+- `keepBoxInside(target, bounds)`
+- `getBoxCenter(box)`
+
+### 🧊 3D Cube Clusters
+
+Cube-cluster helpers describe loosely connected 3D blocks without tying the
+engine package to a renderer. Use them with Three.js, Babylon, raw WebGL, or a
+custom renderer.
+
+```ts
+import {
+  centerCubeCluster,
+  createCubeClusterFromPattern,
+  createExplosionBlocks,
+  stepExplosionBlocks,
+} from "arcade-engine";
+
+const invader = createCubeClusterFromPattern(
+  [
+    [" # # ", "#####", "# # #"],
+    ["  #  ", " ### ", "  #  "],
+  ],
+  { size: 1, gap: 0.2, layerGap: 0.2, color: "#4fd1c5" }
+);
+
+const blocks = centerCubeCluster(invader.blocks);
+let explosion = createExplosionBlocks(blocks, { force: 7 });
+
+explosion = stepExplosionBlocks(explosion, 1 / 60, {
+  drag: 0.985,
+  fadeSpeed: 0.42,
+});
+```
+
+Useful helpers include:
+
+- `createCubeClusterFromPattern(layers, options?)`
+- `createPlasmaLinks(blocks, maxDistance?)`
+- `centerCubeCluster(blocks)`
+- `getCubeClusterBounds(blocks)`
+- `getCubeClusterCenter(blocks)`
+- `createExplosionBlocks(blocks, options?)`
+- `stepExplosionBlocks(blocks, delta, options?)`
+- `getVisibleExplosionBlocks(blocks)`
+- `normalizeVector(vector)`
+- `getVectorDistance(a, b)`
+
 ## 🛠️ Local Development
 
 Install dependencies:
@@ -198,6 +308,8 @@ Current coverage includes:
 - Engine module imports.
 - Arena canvas creation, text, sprite, circle, fullscreen, and asset behavior.
 - Viewport calculations.
+- Grid and box helpers for cell-based and axis-aligned games.
+- 3D cube-cluster helpers for voxel character assembly and explosions.
 - Debug vector drawing.
 - Ticker scheduling and fixed-step behavior.
 - Sound lifecycle, volume channels, global pause/resume/stop, playback-blocked

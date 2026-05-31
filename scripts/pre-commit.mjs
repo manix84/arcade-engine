@@ -15,6 +15,7 @@ const lintExtensions = /\.(cjs|cts|js|jsx|mjs|mts|ts|tsx)$/i;
 const typecheckExtensions = /\.(cts|mts|ts|tsx)$/i;
 const testableExtensions = /\.(cjs|cts|js|jsx|mjs|mts|ts|tsx)$/i;
 const testFilePattern = /(?:^|\/)(?:__tests__\/.+|.+\.(?:test|spec))\.(?:cts|mts|ts|tsx|cjs|mjs|js|jsx)$/i;
+const storybookPattern = /^(?:\.storybook|src\/stories)\//;
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
@@ -134,14 +135,14 @@ function runTests(files, snapshotDir) {
     (file) =>
       testableExtensions.test(file) &&
       !testFilePattern.test(file) &&
-      !/^\.storybook\//.test(file) &&
+      !storybookPattern.test(file) &&
       !/^scripts\//.test(file)
   );
   const vitest = resolve(repoRoot, "node_modules", ".bin", `vitest${binSuffix}`);
 
   if (stagedTestFiles.length) {
     console.log(`Pre-commit tests: ${stagedTestFiles.length} staged test file(s).`);
-    run(vitest, ["run", ...stagedTestFiles, "--passWithNoTests"], {
+    run(vitest, ["run", "--project", "unit", ...stagedTestFiles, "--passWithNoTests"], {
       cwd: snapshotDir,
       stdio: "inherit",
     });
@@ -152,10 +153,14 @@ function runTests(files, snapshotDir) {
     console.log(
       `Pre-commit tests: related tests for ${stagedRelatedFiles.length} staged file(s).`
     );
-    run(vitest, ["related", ...stagedRelatedFiles, "--run", "--passWithNoTests"], {
-      cwd: snapshotDir,
-      stdio: "inherit",
-    });
+    run(
+      vitest,
+      ["related", ...stagedRelatedFiles, "--project", "unit", "--run", "--passWithNoTests"],
+      {
+        cwd: snapshotDir,
+        stdio: "inherit",
+      }
+    );
     return;
   }
 
