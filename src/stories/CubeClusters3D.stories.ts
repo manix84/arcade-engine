@@ -329,6 +329,49 @@ const createProgram = (
   };
 };
 
+const getPlasmaSurfacePoints = (
+  from: CubeBlock,
+  to: CubeBlock
+): { from: CubeBlock; to: CubeBlock } | null => {
+  const delta = {
+    x: to.x - from.x,
+    y: to.y - from.y,
+    z: to.z - from.z,
+  };
+  const distance = Math.hypot(delta.x, delta.y, delta.z);
+
+  if (!distance) {
+    return null;
+  }
+
+  const direction = {
+    x: delta.x / distance,
+    y: delta.y / distance,
+    z: delta.z / distance,
+  };
+  const fromInset = (from.size ?? 1) / 2 + 0.02;
+  const toInset = (to.size ?? 1) / 2 + 0.02;
+
+  if (distance <= fromInset + toInset) {
+    return null;
+  }
+
+  return {
+    from: {
+      ...from,
+      x: from.x + direction.x * fromInset,
+      y: from.y + direction.y * fromInset,
+      z: from.z + direction.z * fromInset,
+    },
+    to: {
+      ...to,
+      x: to.x - direction.x * toInset,
+      y: to.y - direction.y * toInset,
+      z: to.z - direction.z * toInset,
+    },
+  };
+};
+
 const createPlasmaData = (
   links: PlasmaLink[],
   blockById: Map<string, CubeBlock>,
@@ -344,6 +387,12 @@ const createPlasmaData = (
       return;
     }
 
+    const surface = getPlasmaSurfacePoints(from, to);
+
+    if (!surface) {
+      return;
+    }
+
     const amount = 0.045 + (1 - link.strength) * 0.045;
     const phase = time * 0.018 + index * 1.913;
     const wobble = {
@@ -353,12 +402,12 @@ const createPlasmaData = (
     };
 
     data.push(
-      from.x + wobble.x,
-      from.y + wobble.y,
-      from.z + wobble.z,
-      to.x - wobble.y,
-      to.y + wobble.x,
-      to.z - wobble.z
+      surface.from.x + wobble.x,
+      surface.from.y + wobble.y,
+      surface.from.z + wobble.z,
+      surface.to.x - wobble.y,
+      surface.to.y + wobble.x,
+      surface.to.z - wobble.z
     );
   });
 
@@ -425,7 +474,12 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
   let animationFrame = 0;
   let explosionBlocks: AnimatedBlock[] = [];
   let isExploding = false;
-  let rotationY = 0.08;
+  let cameraYaw = 0.08;
+  let cameraPitch = -0.35;
+  let hasCameraControl = false;
+  let isDraggingCamera = false;
+  let lastPointerX = 0;
+  let lastPointerY = 0;
 
   if (!gl) {
     throw new Error("WebGL is required for this story.");
@@ -440,6 +494,8 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
   stage.style.minHeight = "360px";
   canvas.style.width = "100%";
   canvas.style.height = "100%";
+  canvas.style.cursor = "grab";
+  canvas.style.touchAction = "none";
 
   const cubeProgram = createProgram(
     gl,
@@ -490,6 +546,43 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
       assemble();
     })
   );
+
+  const handlePointerDown = (event: PointerEvent): void => {
+    isDraggingCamera = true;
+    hasCameraControl = true;
+    lastPointerX = event.clientX;
+    lastPointerY = event.clientY;
+    canvas.style.cursor = "grabbing";
+    canvas.setPointerCapture(event.pointerId);
+  };
+
+  const handlePointerMove = (event: PointerEvent): void => {
+    if (!isDraggingCamera) {
+      return;
+    }
+
+    const deltaX = event.clientX - lastPointerX;
+    const deltaY = event.clientY - lastPointerY;
+
+    lastPointerX = event.clientX;
+    lastPointerY = event.clientY;
+    cameraYaw += deltaX * 0.008;
+    cameraPitch = Math.max(-1.05, Math.min(0.75, cameraPitch + deltaY * 0.008));
+  };
+
+  const handlePointerUp = (event: PointerEvent): void => {
+    isDraggingCamera = false;
+    canvas.style.cursor = "grab";
+
+    if (canvas.hasPointerCapture(event.pointerId)) {
+      canvas.releasePointerCapture(event.pointerId);
+    }
+  };
+
+  canvas.addEventListener("pointerdown", handlePointerDown);
+  canvas.addEventListener("pointermove", handlePointerMove);
+  canvas.addEventListener("pointerup", handlePointerUp);
+  canvas.addEventListener("pointercancel", handlePointerUp);
 
   const drawCube = (
     block: CubeBlock | AnimatedBlock,
@@ -568,10 +661,16 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
       perspective(48 * (Math.PI / 180), aspect, 0.1, 100),
       translate(0, 0, -23)
     );
-    const projection = multiply(viewProjection, multiply(rotateX(-0.35), rotateY(rotationY)));
+    const cameraOrbit = multiply(
+      multiply(rotateX(cameraPitch), rotateY(cameraYaw)),
+      translate(-visualCenterOffsetX, 0, 0)
+    );
+    const projection = multiply(viewProjection, cameraOrbit);
 
     lastFrameTime = now;
-    rotationY += args.spinSpeed * delta;
+    if (!hasCameraControl) {
+      cameraYaw += args.spinSpeed * delta;
+    }
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(0.02, 0.03, 0.04, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -627,6 +726,10 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
 
   onRemove(shell, () => {
     window.cancelAnimationFrame(animationFrame);
+    canvas.removeEventListener("pointerdown", handlePointerDown);
+    canvas.removeEventListener("pointermove", handlePointerMove);
+    canvas.removeEventListener("pointerup", handlePointerUp);
+    canvas.removeEventListener("pointercancel", handlePointerUp);
     gl.deleteBuffer(cubeBuffer);
     gl.deleteBuffer(edgeBuffer);
     gl.deleteBuffer(lineBuffer);
