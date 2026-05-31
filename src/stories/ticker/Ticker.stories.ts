@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/html-vite";
-import { expect, fn, userEvent, within } from "storybook/test";
+import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { Ticker } from "../../index.js";
 import {
   appendStyles,
@@ -164,9 +164,9 @@ const tickerPlay: Story["play"] = async ({ canvasElement }) => {
   const canvas = within(canvasElement);
 
   await userEvent.click(canvas.getByRole("button", { name: "Stop" }));
-  await expect(canvas.getByText("false")).toBeVisible();
+  await waitFor(() => expect(canvas.getByText("false")).toBeVisible());
   await userEvent.click(canvas.getByRole("button", { name: "Start" }));
-  await expect(canvas.getByText("true")).toBeVisible();
+  await waitFor(() => expect(canvas.getByText("true")).toBeVisible());
   await userEvent.click(canvas.getByRole("button", { name: "Clear" }));
 };
 

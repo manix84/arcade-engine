@@ -5,8 +5,10 @@ const config: StorybookConfig = {
     name: "@storybook/html-vite",
     options: {},
   },
+
   stories: ["../src/stories/**/*.stories.ts"],
   staticDirs: ["./public"],
+  addons: ["@storybook/addon-vitest", "@storybook/addon-a11y"]
 };
 
 export default config;
