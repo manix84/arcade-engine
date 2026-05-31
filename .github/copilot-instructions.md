@@ -3,9 +3,9 @@
 ## 🔀 Pull Request Descriptions
 
 When generating or updating a pull request summary, description, or body for
-this repository, follow `.github/PULL_REQUEST_TEMPLATE.md` exactly.
+this repository, follow `.github/pull_request_template.md` exactly.
 
-If `.github/PULL_REQUEST_TEMPLATE.md` cannot be accessed, notify the user and
+If `.github/pull_request_template.md` cannot be accessed, notify the user and
 do not generate a PR description until the template is available.
 
 - Pull request bodies are validated by `.github/workflows/pr-template-check.yml`.
