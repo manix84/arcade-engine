@@ -30,6 +30,7 @@ type CubeClusterStoryArgs = {
   cubeSquash: number;
   cubeTwitch: number;
   cubeWiggle: number;
+  disablePlasma: boolean;
   explodeFadeMaxTime: number;
   explodeFadeMinTime: number;
   fadeMaxTime: number;
@@ -41,6 +42,7 @@ type CubeClusterStoryArgs = {
   plasmaThickness: number;
   plasmaWiggle: number;
   spinSpeed: number;
+  voxelGap: number;
   onAssemble: () => void;
   onExplode: () => void;
 };
@@ -83,6 +85,20 @@ type FrameBlock = CubeBlock & {
   opacity: number;
 };
 
+type FleetInvaderState = "assembled" | "exploding" | "waiting" | "reassembling";
+
+type FleetInvader = {
+  column: number;
+  explosionBlocks: AnimatedBlock[];
+  id: string;
+  nextExplodeAt: number;
+  reassembleBlocks: AnimatedBlock[];
+  reassembleStartedAt: number;
+  row: number;
+  state: FleetInvaderState;
+  waitUntil: number;
+};
+
 type Story = StoryObj<CubeClusterStoryArgs>;
 
 const invaderFrames = [
@@ -117,6 +133,9 @@ const defaultFadeMinTime = 90;
 const defaultFadeMaxTime = 320;
 const defaultExplodeFadeMinTime = 700;
 const defaultExplodeFadeMaxTime = 2200;
+const voxelSize = 0.88;
+const defaultVoxelGap = 0.18;
+const plasmaStrandsPerLink = 5;
 
 const vertexShaderSource = `
 attribute vec3 aPosition;
@@ -416,6 +435,28 @@ const getStaggeredFadeProgress = (
 const getBlockDistance = (a: CubeBlock, b: CubeBlock): number =>
   Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 
+const getPlasmaNeighborDistance = (voxelGap: number): number =>
+  Math.hypot(voxelSize + voxelGap, voxelSize + voxelGap) + 0.08;
+
+const normalizeVector = (vector: { x: number; y: number; z: number }): { x: number; y: number; z: number } => {
+  const length = Math.hypot(vector.x, vector.y, vector.z) || 1;
+
+  return {
+    x: vector.x / length,
+    y: vector.y / length,
+    z: vector.z / length,
+  };
+};
+
+const crossVector = (
+  a: { x: number; y: number; z: number },
+  b: { x: number; y: number; z: number }
+): { x: number; y: number; z: number } => ({
+  x: a.y * b.z - a.z * b.y,
+  y: a.z * b.x - a.x * b.z,
+  z: a.x * b.y - a.y * b.x,
+});
+
 const findNearestBlock = (block: CubeBlock, blocks: CubeBlock[]): CubeBlock => {
   if (!blocks.length) {
     return block;
@@ -426,13 +467,13 @@ const findNearestBlock = (block: CubeBlock, blocks: CubeBlock[]): CubeBlock => {
   );
 };
 
-const buildInvaderFrameBlocks = (): CubeBlock[][] =>
+const buildInvaderFrameBlocks = (voxelGap = defaultVoxelGap): CubeBlock[][] =>
   invaderFrames.map((frame) =>
     centerCubeCluster(createCubeClusterFromPattern([frame], {
       depth: 0.65,
-      gap: 0.18,
-      layerGap: 0.18,
-      size: 0.88,
+      gap: voxelGap,
+      layerGap: voxelGap,
+      size: voxelSize,
     }).blocks).map((block) => ({
       ...block,
       color: undefined,
@@ -533,6 +574,19 @@ const pushPlasmaRibbonVertex = (
   data.push(from.x, from.y, from.z, to.x, to.y, to.z, side, along);
 };
 
+const pushPlasmaRibbonSegment = (
+  data: number[],
+  start: CubeBlock,
+  end: CubeBlock
+): void => {
+  pushPlasmaRibbonVertex(data, start, end, -1, 0);
+  pushPlasmaRibbonVertex(data, start, end, 1, 0);
+  pushPlasmaRibbonVertex(data, start, end, -1, 1);
+  pushPlasmaRibbonVertex(data, start, end, -1, 1);
+  pushPlasmaRibbonVertex(data, start, end, 1, 0);
+  pushPlasmaRibbonVertex(data, start, end, 1, 1);
+};
+
 const createPlasmaRibbonData = (
   links: PlasmaLink[],
   blockById: Map<string, CubeBlock>,
@@ -555,33 +609,48 @@ const createPlasmaRibbonData = (
       return;
     }
 
+    const direction = normalizeVector({
+      x: surface.to.x - surface.from.x,
+      y: surface.to.y - surface.from.y,
+      z: surface.to.z - surface.from.z,
+    });
+    const reference = Math.abs(direction.z) < 0.82
+      ? { x: 0, y: 0, z: 1 }
+      : { x: 0, y: 1, z: 0 };
+    const tangentA = normalizeVector(crossVector(direction, reference));
+    const tangentB = normalizeVector(crossVector(direction, tangentA));
+    const strandRadius = Math.min(from.size ?? 1, to.size ?? 1) * 0.36;
     const amount = wiggle + (1 - link.strength) * wiggle;
-    const phase = time * 0.018 + index * 1.913;
-    const wobble = {
-      x: Math.sin(phase) * amount,
-      y: Math.cos(phase * 1.37) * amount,
-      z: Math.sin(phase * 0.73) * amount,
-    };
 
-    const start = {
-      ...surface.from,
-      x: surface.from.x + wobble.x,
-      y: surface.from.y + wobble.y,
-      z: surface.from.z + wobble.z,
-    };
-    const end = {
-      ...surface.to,
-      x: surface.to.x - wobble.y,
-      y: surface.to.y + wobble.x,
-      z: surface.to.z - wobble.z,
-    };
+    for (let strand = 0; strand < plasmaStrandsPerLink; strand++) {
+      const seed = `${link.from}:${link.to}:${strand}`;
+      const surfaceAngle = getSeededUnit(`${seed}:surface`) * Math.PI * 2;
+      const surfaceDistance = strandRadius * (0.22 + getSeededUnit(`${seed}:distance`) * 0.78);
+      const endAngle = surfaceAngle + (getSeededUnit(`${seed}:twist`) - 0.5) * 0.85;
+      const phase = time * (0.02 + strand * 0.0017) + index * 1.913 + strand * 0.83;
+      const flicker = amount * (0.45 + getSeededUnit(`${seed}:flicker`) * 0.85);
+      const startOffsetA = Math.cos(surfaceAngle) * surfaceDistance;
+      const startOffsetB = Math.sin(surfaceAngle) * surfaceDistance;
+      const endOffsetA = Math.cos(endAngle) * surfaceDistance * 0.88;
+      const endOffsetB = Math.sin(endAngle) * surfaceDistance * 0.88;
+      const wobbleA = Math.sin(phase) * flicker;
+      const wobbleB = Math.cos(phase * 1.37) * flicker;
+      const wobbleDepth = Math.sin(phase * 0.73) * flicker * 0.35;
+      const start = {
+        ...surface.from,
+        x: surface.from.x + tangentA.x * (startOffsetA + wobbleA) + tangentB.x * (startOffsetB + wobbleB) + direction.x * wobbleDepth,
+        y: surface.from.y + tangentA.y * (startOffsetA + wobbleA) + tangentB.y * (startOffsetB + wobbleB) + direction.y * wobbleDepth,
+        z: surface.from.z + tangentA.z * (startOffsetA + wobbleA) + tangentB.z * (startOffsetB + wobbleB) + direction.z * wobbleDepth,
+      };
+      const end = {
+        ...surface.to,
+        x: surface.to.x + tangentA.x * (endOffsetA - wobbleB) + tangentB.x * (endOffsetB + wobbleA) - direction.x * wobbleDepth,
+        y: surface.to.y + tangentA.y * (endOffsetA - wobbleB) + tangentB.y * (endOffsetB + wobbleA) - direction.y * wobbleDepth,
+        z: surface.to.z + tangentA.z * (endOffsetA - wobbleB) + tangentB.z * (endOffsetB + wobbleA) - direction.z * wobbleDepth,
+      };
 
-    pushPlasmaRibbonVertex(data, start, end, -1, 0);
-    pushPlasmaRibbonVertex(data, start, end, 1, 0);
-    pushPlasmaRibbonVertex(data, start, end, -1, 1);
-    pushPlasmaRibbonVertex(data, start, end, -1, 1);
-    pushPlasmaRibbonVertex(data, start, end, 1, 0);
-    pushPlasmaRibbonVertex(data, start, end, 1, 1);
+      pushPlasmaRibbonSegment(data, start, end);
+    }
   });
 
   return new Float32Array(data);
@@ -615,19 +684,389 @@ const createAnimatedExplosionBlocks = (
   return createExplosionBlocks(blocks, {
     force,
     spin: 0.32,
-  }).map((block, index) => ({
-    ...block,
-    age: 0,
-    fadeDelay: getSeededUnit(`explode:${block.id}:delay`) *
-      Math.max(0, (fadeMax - fadeMin) / 1000),
-    fadeDuration: (
-      fadeMin +
-      (fadeMax - fadeMin) * getSeededUnit(`explode:${block.id}:duration`)
-    ) / 1000,
-    tumbleX: index * 0.37,
-    tumbleY: index * 0.19,
-    tumbleZ: index * 0.29,
+  }).map((block, index) => {
+    const zDirection = getSeededUnit(`explode:${block.id}:z`) > 0.5 ? 1 : -1;
+    const zForce = (0.35 + getSeededUnit(`explode:${block.id}:z-force`) * 0.65) * force;
+
+    return {
+      ...block,
+      age: 0,
+      fadeDelay: getSeededUnit(`explode:${block.id}:delay`) *
+        Math.max(0, (fadeMax - fadeMin) / 1000),
+      fadeDuration: (
+        fadeMin +
+        (fadeMax - fadeMin) * getSeededUnit(`explode:${block.id}:duration`)
+      ) / 1000,
+      tumbleX: index * 0.37,
+      tumbleY: index * 0.19,
+      tumbleZ: index * 0.29,
+      velocity: {
+        ...block.velocity,
+        z: block.velocity.z + zDirection * zForce,
+      },
+    };
+  });
+};
+
+const createFleetShell = (args: CubeClusterStoryArgs): HTMLElement => {
+  const shell = createDemoShell("3D cube-cluster invader fleet");
+  const grid = document.createElement("div");
+  const visualPanel = createPanel("Voxel Invader Fleet");
+  const statePanel = createPanel("State");
+  const stage = document.createElement("div");
+  const canvas = document.createElement("canvas");
+  const values = document.createElement("div");
+  const invaderValue = createValue("invaders", "30");
+  const explodingValue = createValue("exploding", "0");
+  const reassemblingValue = createValue("reassembling", "0");
+  const gl = canvas.getContext("webgl", {
+    alpha: true,
+    antialias: true,
+    preserveDrawingBuffer: true,
+  });
+  const frameBlocks = buildInvaderFrameBlocks(args.voxelGap);
+  const createdAt = performance.now();
+  const invaders: FleetInvader[] = Array.from({ length: 30 }, (_, index) => ({
+    column: index % 10,
+    explosionBlocks: [],
+    id: `fleet-${index}`,
+    nextExplodeAt: createdAt + 900 + getSeededUnit(`fleet:${index}:first`) * 4200,
+    reassembleBlocks: [],
+    reassembleStartedAt: 0,
+    row: Math.floor(index / 10),
+    state: "assembled",
+    waitUntil: 0,
   }));
+  let lastFrameTime = performance.now();
+  let animationFrame = 0;
+
+  if (!gl) {
+    throw new Error("WebGL is required for this story.");
+  }
+
+  appendStyles(shell);
+  grid.className = "ae-grid";
+  stage.className = "ae-stage";
+  values.className = "ae-values";
+  stage.style.aspectRatio = "1024 / 620";
+  stage.style.minHeight = "480px";
+  canvas.style.width = "100%";
+  canvas.style.height = "100%";
+
+  const cubeProgram = createProgram(
+    gl,
+    vertexShaderSource,
+    fragmentShaderSource,
+    ["aPosition", "aNormal"],
+    ["uProjection", "uModel", "uColor", "uAlpha", "uRim"]
+  );
+  const lineProgram = createProgram(
+    gl,
+    lineVertexShaderSource,
+    lineFragmentShaderSource,
+    ["aPosition"],
+    ["uProjection", "uColor", "uAlpha"]
+  );
+  const plasmaProgram = createProgram(
+    gl,
+    plasmaVertexShaderSource,
+    lineFragmentShaderSource,
+    ["aStart", "aEnd", "aSide", "aAlong"],
+    ["uProjection", "uViewport", "uThickness", "uColor", "uAlpha"]
+  );
+  const cubeBuffer = gl.createBuffer();
+  const edgeBuffer = gl.createBuffer();
+  const plasmaBuffer = gl.createBuffer();
+
+  if (!cubeBuffer || !edgeBuffer || !plasmaBuffer) {
+    throw new Error("Unable to create WebGL buffers.");
+  }
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, cubeBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, cubeData, gl.STATIC_DRAW);
+  gl.bindBuffer(gl.ARRAY_BUFFER, edgeBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, cubeEdges, gl.STATIC_DRAW);
+  gl.enable(gl.DEPTH_TEST);
+  gl.enable(gl.BLEND);
+
+  const getFleetOffset = (now: number): number => Math.sin(now / 1600) * 3.6;
+
+  const getInvaderBlocks = (
+    invader: FleetInvader,
+    now: number,
+    frameIndex: number,
+    nextFrameIndex: number,
+    frameProgress: number
+  ): FrameBlock[] => {
+    const columnSpacing = 10.9 + args.voxelGap * 4;
+    const rowSpacing = 8.4 + args.voxelGap * 3;
+    const x = (invader.column - 4.5) * columnSpacing + getFleetOffset(now);
+    const y = (1 - invader.row) * rowSpacing;
+    const blocks = createSlidingFrameBlocks(
+      frameBlocks[frameIndex],
+      frameBlocks[nextFrameIndex],
+      frameProgress,
+      args.blockColor,
+      `${frameIndex}:${nextFrameIndex}`,
+      args.fadeMinTime,
+      args.fadeMaxTime
+    );
+
+    return blocks.map((block) => ({
+      ...block,
+      id: `${invader.id}:${block.id}`,
+      x: block.x + x,
+      y: block.y + y,
+    }));
+  };
+
+  const scheduleNextExplosion = (invader: FleetInvader, now: number): void => {
+    invader.nextExplodeAt = now + 1800 + getSeededUnit(`${invader.id}:${now}:next`) * 5200;
+  };
+
+  const drawCube = (
+    block: CubeBlock | AnimatedBlock,
+    projection: Mat4,
+    tumble: Mat4 = identity()
+  ): void => {
+    const size = block.size ?? 1;
+    const model = multiply(multiply(translate(block.x, block.y, block.z), tumble), scale(size));
+
+    gl.useProgram(cubeProgram.program);
+    gl.bindBuffer(gl.ARRAY_BUFFER, cubeBuffer);
+    gl.enableVertexAttribArray(cubeProgram.attributes.aPosition);
+    gl.enableVertexAttribArray(cubeProgram.attributes.aNormal);
+    gl.vertexAttribPointer(cubeProgram.attributes.aPosition, 3, gl.FLOAT, false, 24, 0);
+    gl.vertexAttribPointer(cubeProgram.attributes.aNormal, 3, gl.FLOAT, false, 24, 12);
+    gl.uniformMatrix4fv(cubeProgram.uniforms.uProjection, false, projection);
+    gl.uniformMatrix4fv(cubeProgram.uniforms.uModel, false, model);
+    gl.uniform3fv(cubeProgram.uniforms.uColor, parseColor(block.color ?? args.blockColor));
+    gl.uniform1f(cubeProgram.uniforms.uAlpha, "opacity" in block ? block.opacity * 0.38 : 0.38);
+    gl.uniform1f(cubeProgram.uniforms.uRim, "opacity" in block ? block.opacity * 0.08 : 0.08);
+    gl.depthMask(false);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.drawArrays(gl.TRIANGLES, 0, cubeData.length / 6);
+
+    gl.useProgram(lineProgram.program);
+    gl.bindBuffer(gl.ARRAY_BUFFER, edgeBuffer);
+    gl.enableVertexAttribArray(lineProgram.attributes.aPosition);
+    gl.vertexAttribPointer(lineProgram.attributes.aPosition, 3, gl.FLOAT, false, 0, 0);
+    gl.uniformMatrix4fv(lineProgram.uniforms.uProjection, false, multiply(projection, model));
+    gl.uniform3fv(lineProgram.uniforms.uColor, parseColor("#e7fbff"));
+    gl.uniform1f(lineProgram.uniforms.uAlpha, "opacity" in block ? block.opacity * 0.34 : 0.34);
+    gl.drawArrays(gl.LINES, 0, cubeEdges.length / 3);
+    gl.depthMask(true);
+  };
+
+  const drawPlasma = (
+    projection: Mat4,
+    time: number,
+    blocks: FrameBlock[]
+  ): void => {
+    const pulse = 0.42 + Math.sin(time / 43) * 0.22 + Math.sin(time / 13) * 0.1;
+    const links = createPlasmaLinks(blocks, getPlasmaNeighborDistance(args.voxelGap));
+    const blockById = new Map(blocks.map((block) => [block.id, block]));
+    const plasmaData = createPlasmaRibbonData(links, blockById, time, args.plasmaWiggle);
+    const stride = 32;
+
+    gl.useProgram(plasmaProgram.program);
+    gl.bindBuffer(gl.ARRAY_BUFFER, plasmaBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, plasmaData, gl.DYNAMIC_DRAW);
+    gl.enableVertexAttribArray(plasmaProgram.attributes.aStart);
+    gl.enableVertexAttribArray(plasmaProgram.attributes.aEnd);
+    gl.enableVertexAttribArray(plasmaProgram.attributes.aSide);
+    gl.enableVertexAttribArray(plasmaProgram.attributes.aAlong);
+    gl.vertexAttribPointer(plasmaProgram.attributes.aStart, 3, gl.FLOAT, false, stride, 0);
+    gl.vertexAttribPointer(plasmaProgram.attributes.aEnd, 3, gl.FLOAT, false, stride, 12);
+    gl.vertexAttribPointer(plasmaProgram.attributes.aSide, 1, gl.FLOAT, false, stride, 24);
+    gl.vertexAttribPointer(plasmaProgram.attributes.aAlong, 1, gl.FLOAT, false, stride, 28);
+    gl.uniformMatrix4fv(plasmaProgram.uniforms.uProjection, false, projection);
+    gl.uniform2f(plasmaProgram.uniforms.uViewport, canvas.width, canvas.height);
+    gl.uniform3fv(plasmaProgram.uniforms.uColor, parseColor(args.plasmaColor));
+    gl.uniform1f(plasmaProgram.uniforms.uAlpha, Math.max(0.035, pulse * args.plasmaGlow * 0.74));
+    gl.uniform1f(plasmaProgram.uniforms.uThickness, args.plasmaThickness);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    gl.drawArrays(gl.TRIANGLES, 0, plasmaData.length / 8);
+    gl.uniform3fv(plasmaProgram.uniforms.uColor, parseColor("#ffffff"));
+    gl.uniform1f(plasmaProgram.uniforms.uAlpha, Math.max(0.02, pulse * args.plasmaGlow * 0.22));
+    gl.uniform1f(plasmaProgram.uniforms.uThickness, args.plasmaCoreThickness);
+    gl.drawArrays(gl.TRIANGLES, 0, plasmaData.length / 8);
+  };
+
+  const resizeCanvas = (): void => {
+    const pixelRatio = window.devicePixelRatio || 1;
+    const bounds = canvas.getBoundingClientRect();
+    const nextWidth = Math.max(1, Math.floor(bounds.width * pixelRatio));
+    const nextHeight = Math.max(1, Math.floor(bounds.height * pixelRatio));
+
+    if (canvas.width !== nextWidth || canvas.height !== nextHeight) {
+      canvas.width = nextWidth;
+      canvas.height = nextHeight;
+    }
+  };
+
+  const render = (): void => {
+    resizeCanvas();
+
+    const now = performance.now();
+    const delta = Math.min(0.05, (now - lastFrameTime) / 1000);
+    const frameCycleTime = frameHoldTime + frameSlideTime;
+    const frameIndex = Math.floor(now / frameCycleTime) % frameBlocks.length;
+    const nextFrameIndex = (frameIndex + 1) % frameBlocks.length;
+    const framePhase = now % frameCycleTime;
+    const frameProgress = framePhase < frameHoldTime
+      ? 0
+      : Math.min(1, (framePhase - frameHoldTime) / frameSlideTime);
+    const aspect = canvas.width / canvas.height;
+    const projection = multiply(
+      multiply(
+        perspective(38 * (Math.PI / 180), aspect, 0.1, 220),
+        translate(0, 0, -96)
+      ),
+      multiply(rotateX(-0.2), translate(0, -1.2, 0))
+    );
+    let explodingCount = 0;
+    let reassemblingCount = 0;
+
+    lastFrameTime = now;
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clearColor(0.02, 0.03, 0.04, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+    invaders.forEach((invader) => {
+      const targetBlocks = getInvaderBlocks(invader, now, frameIndex, nextFrameIndex, frameProgress);
+
+      if (invader.state === "assembled" && now >= invader.nextExplodeAt) {
+        invader.explosionBlocks = createAnimatedExplosionBlocks(
+          targetBlocks,
+          args.explosionForce,
+          args.explodeFadeMinTime,
+          args.explodeFadeMaxTime
+        );
+        invader.state = "exploding";
+      }
+
+      if (invader.state === "exploding") {
+        explodingCount++;
+        invader.explosionBlocks = stepExplosionBlocks(invader.explosionBlocks, delta, {
+          drag: 0.985,
+          fadeSpeed: 0,
+          gravity: -0.08,
+        }).map((block, index) => ({
+          ...block,
+          age: (invader.explosionBlocks[index]?.age ?? 0) + delta,
+          fadeDelay: invader.explosionBlocks[index]?.fadeDelay ?? 0,
+          fadeDuration: invader.explosionBlocks[index]?.fadeDuration ?? 1,
+          opacity: 1 - clamp(
+            (
+              ((invader.explosionBlocks[index]?.age ?? 0) + delta) -
+              (invader.explosionBlocks[index]?.fadeDelay ?? 0)
+            ) / (invader.explosionBlocks[index]?.fadeDuration ?? 1),
+            0,
+            1
+          ),
+          tumbleX: (invader.explosionBlocks[index]?.tumbleX ?? 0) + delta * (1.8 + index * 0.03),
+          tumbleY: (invader.explosionBlocks[index]?.tumbleY ?? 0) - delta * (1.3 + index * 0.02),
+          tumbleZ: (invader.explosionBlocks[index]?.tumbleZ ?? 0) + delta * (1.1 + index * 0.015),
+        }));
+        invader.explosionBlocks.forEach((block) => {
+          if (block.opacity > 0) {
+            drawCube(block, projection, multiply(multiply(rotateX(block.tumbleX), rotateY(block.tumbleY)), rotateZ(block.tumbleZ)));
+          }
+        });
+
+        if (!getVisibleExplosionBlocks(invader.explosionBlocks).length) {
+          invader.state = "waiting";
+          invader.waitUntil = now + 1000;
+          invader.reassembleBlocks = invader.explosionBlocks;
+        }
+
+        return;
+      }
+
+      if (invader.state === "waiting") {
+        if (now >= invader.waitUntil) {
+          invader.state = "reassembling";
+          invader.reassembleStartedAt = now;
+        }
+
+        return;
+      }
+
+      if (invader.state === "reassembling") {
+        reassemblingCount++;
+
+        const progress = smoothStep(clamp((now - invader.reassembleStartedAt) / 900, 0, 1));
+        const targetById = new Map(targetBlocks.map((block) => [block.id, block]));
+
+        invader.reassembleBlocks.forEach((startBlock) => {
+          const target = targetById.get(startBlock.id);
+
+          if (!target) {
+            return;
+          }
+
+          drawCube({
+            ...target,
+            opacity: progress,
+            x: startBlock.x + (target.x - startBlock.x) * progress,
+            y: startBlock.y + (target.y - startBlock.y) * progress,
+            z: startBlock.z + (target.z - startBlock.z) * progress,
+          }, projection);
+        });
+
+        if (progress >= 1) {
+          invader.state = "assembled";
+          invader.explosionBlocks = [];
+          invader.reassembleBlocks = [];
+          scheduleNextExplosion(invader, now);
+        }
+
+        return;
+      }
+
+      if (!args.disablePlasma) {
+        drawPlasma(projection, now, targetBlocks);
+      }
+      targetBlocks.forEach((block, index) => {
+        const jittered = getJitteredBlock(block, now, index, args.cubeWiggle);
+        const twitch = multiply(
+          multiply(
+            rotateX(Math.sin(now / 80 + index) * args.cubeTwitch),
+            rotateY(Math.cos(now / 95 + index) * args.cubeTwitch * 1.2)
+          ),
+          scale3(1, 1 + Math.sin(now / 70 + index * 0.3) * args.cubeSquash, 1)
+        );
+
+        drawCube(jittered, projection, twitch);
+      });
+    });
+
+    setValue(explodingValue, String(explodingCount));
+    setValue(reassemblingValue, String(reassemblingCount));
+    animationFrame = window.requestAnimationFrame(render);
+  };
+
+  stage.appendChild(canvas);
+  values.append(invaderValue, explodingValue, reassemblingValue);
+  visualPanel.appendChild(stage);
+  statePanel.appendChild(values);
+  grid.append(visualPanel, statePanel);
+  shell.appendChild(grid);
+  render();
+
+  onRemove(shell, () => {
+    window.cancelAnimationFrame(animationFrame);
+    gl.deleteBuffer(cubeBuffer);
+    gl.deleteBuffer(edgeBuffer);
+    gl.deleteBuffer(plasmaBuffer);
+    gl.deleteProgram(cubeProgram.program);
+    gl.deleteProgram(lineProgram.program);
+    gl.deleteProgram(plasmaProgram.program);
+  });
+
+  return shell;
 };
 
 const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
@@ -648,7 +1087,7 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
     antialias: true,
     preserveDrawingBuffer: true,
   });
-  const frameBlocks = buildInvaderFrameBlocks();
+  const frameBlocks = buildInvaderFrameBlocks(args.voxelGap);
   let renderedBlocks: FrameBlock[] = createSlidingFrameBlocks(
     frameBlocks[0],
     frameBlocks[1],
@@ -722,7 +1161,9 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
   gl.enable(gl.DEPTH_TEST);
   gl.enable(gl.BLEND);
   setValue(blockValue, renderedBlocks.length);
-  setValue(linkValue, createPlasmaLinks(renderedBlocks).length);
+  setValue(linkValue, args.disablePlasma
+    ? 0
+    : createPlasmaLinks(renderedBlocks, getPlasmaNeighborDistance(args.voxelGap)).length);
 
   const assemble = (): void => {
     isExploding = false;
@@ -838,7 +1279,7 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
     blocks: FrameBlock[]
   ): void => {
     const pulse = 0.48 + Math.sin(time / 39) * 0.28 + Math.sin(time / 11) * 0.12;
-    const links = createPlasmaLinks(blocks);
+    const links = createPlasmaLinks(blocks, getPlasmaNeighborDistance(args.voxelGap));
     const blockById = new Map(blocks.map((block) => [block.id, block]));
     const plasmaData = createPlasmaRibbonData(links, blockById, time, args.plasmaWiggle);
     const stride = 32;
@@ -957,7 +1398,11 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
         args.fadeMaxTime
       );
       setValue(blockValue, renderedBlocks.length);
-      drawPlasma(projection, now, renderedBlocks);
+      if (args.disablePlasma) {
+        setValue(linkValue, 0);
+      } else {
+        drawPlasma(projection, now, renderedBlocks);
+      }
       renderedBlocks.forEach((block, index) => {
         const jittered = getJitteredBlock(block, now, index, args.cubeWiggle);
         const twitch = multiply(
@@ -1005,20 +1450,22 @@ const createClusterShell = (args: CubeClusterStoryArgs): HTMLElement => {
 export const VoxelInvader: Story = {
   args: {
     blockColor: "#4fd1c5",
-    cubeSquash: 0.015,
+    cubeSquash: 0.05,
     cubeTwitch: 0.025,
     cubeWiggle: 0.035,
+    disablePlasma: false,
     explodeFadeMaxTime: 550,
     explodeFadeMinTime: 100,
     fadeMaxTime: defaultFadeMaxTime,
     fadeMinTime: defaultFadeMinTime,
-    explosionForce: 14,
-    plasmaCoreThickness: 4,
+    explosionForce: 8,
+    plasmaCoreThickness: 0.2,
     plasmaColor: "#90cdf4",
     plasmaGlow: 1.5,
-    plasmaThickness: 2.2,
+    plasmaThickness: 0.5,
     plasmaWiggle: 0,
     spinSpeed: 0,
+    voxelGap: defaultVoxelGap,
     onAssemble: fn(),
     onExplode: fn(),
   },
@@ -1027,6 +1474,7 @@ export const VoxelInvader: Story = {
     cubeSquash: { control: { type: "range", min: 0, max: 0.05, step: 0.001 } },
     cubeTwitch: { control: { type: "range", min: 0, max: 0.08, step: 0.001 } },
     cubeWiggle: { control: { type: "range", min: 0, max: 0.12, step: 0.005 } },
+    disablePlasma: { control: "boolean" },
     explodeFadeMaxTime: { control: { type: "range", min: 300, max: 4000, step: 50 } },
     explodeFadeMinTime: { control: { type: "range", min: 100, max: 3000, step: 50 } },
     fadeMaxTime: { control: { type: "range", min: 90, max: frameSlideTime, step: 10 } },
@@ -1038,6 +1486,23 @@ export const VoxelInvader: Story = {
     plasmaThickness: { control: { type: "range", min: 0.5, max: 8, step: 0.1 } },
     plasmaWiggle: { control: { type: "range", min: 0, max: 0.16, step: 0.005 } },
     spinSpeed: { control: { type: "range", min: 0, max: 1.5, step: 0.05 } },
+    voxelGap: { control: { type: "range", min: 0, max: 0.6, step: 0.01 } },
   },
   render: createClusterShell,
+};
+
+export const InvaderFleet: Story = {
+  args: {
+    ...VoxelInvader.args,
+    cubeSquash: 0.025,
+    cubeTwitch: 0.012,
+    cubeWiggle: 0.012,
+    explosionForce: 5,
+    plasmaGlow: 0.85,
+    plasmaThickness: 0.35,
+    plasmaWiggle: 0.018,
+    voxelGap: 0.08,
+  },
+  argTypes: VoxelInvader.argTypes,
+  render: createFleetShell,
 };
