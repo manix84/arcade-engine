@@ -17,7 +17,30 @@ const meta = {
 
 export default meta;
 
-type Story = StoryObj;
+type FindHeadingArgs = {
+  targetSpeedX: number;
+  targetSpeedY: number;
+  targetRadiusX: number;
+  targetRadiusY: number;
+};
+
+type BaseStory = StoryObj;
+type FindHeadingStory = StoryObj<FindHeadingArgs>;
+type RotateToStory = StoryObj<RotateToArgs>;
+type SpawnArcStory = StoryObj<SpawnArcArgs>;
+
+type RotateToArgs = {
+  currentSpeed: number;
+  destinationSpeed: number;
+  stepSize: number;
+};
+
+type SpawnArcArgs = {
+  sampleCount: number;
+  showSamples: boolean;
+  spawnArc: number;
+  spawnRadius: number;
+};
 
 const visualHeadingTo = (target: { posX: number; posY: number }, origin?: { posX: number; posY: number }): number =>
   (helpers.findHeading(target, origin) + 180) % 360;
@@ -92,12 +115,24 @@ const drawGrid = (context: CanvasRenderingContext2D, canvas: HTMLCanvasElement):
   }
 };
 
-export const FindHeading: Story = {
-  render: () =>
+export const FindHeading: FindHeadingStory = {
+  args: {
+    targetRadiusX: 190,
+    targetRadiusY: 120,
+    targetSpeedX: 45,
+    targetSpeedY: 37,
+  },
+  argTypes: {
+    targetRadiusX: { control: { type: "range", min: 40, max: 260, step: 5 } },
+    targetRadiusY: { control: { type: "range", min: 40, max: 200, step: 5 } },
+    targetSpeedX: { control: { type: "range", min: 18, max: 100, step: 1 } },
+    targetSpeedY: { control: { type: "range", min: 18, max: 100, step: 1 } },
+  },
+  render: (args: FindHeadingArgs) =>
     createGeometryShell("helpers.findHeading", (context, canvas, frame, values) => {
       const target = {
-        posX: Math.sin(frame / 45) * 190,
-        posY: Math.cos(frame / 37) * 120,
+        posX: Math.sin(frame / args.targetSpeedX) * args.targetRadiusX,
+        posY: Math.cos(frame / args.targetSpeedY) * args.targetRadiusY,
       };
       const heading = helpers.findHeading(target);
       const visualHeading = visualHeadingTo(target);
@@ -129,11 +164,25 @@ export const FindHeading: Story = {
     }),
 };
 
-export const RotateTo: Story = {
-  render: () =>
+export const RotateTo: RotateToStory = {
+  args: {
+    currentSpeed: 0.9,
+    destinationSpeed: 1.8,
+    stepSize: 18,
+  },
+  argTypes: {
+    currentSpeed: { control: { type: "range", min: 0.2, max: 4, step: 0.1 } },
+    destinationSpeed: { control: { type: "range", min: 0.2, max: 5, step: 0.1 } },
+    stepSize: { control: { type: "range", min: 1, max: 45, step: 1 } },
+  },
+  render: (args: RotateToArgs) =>
     createGeometryShell("helpers.rotateTo", (context, canvas, frame, values) => {
-      const destination = (frame * 1.8) % 360;
-      const current = helpers.rotateTo(destination, (frame * 0.9 + 190) % 360, 18);
+      const destination = (frame * args.destinationSpeed) % 360;
+      const current = helpers.rotateTo(
+        destination,
+        (frame * args.currentSpeed + 190) % 360,
+        args.stepSize
+      );
       const toPoint = (heading: number, length: number) => ({
         x: Math.sin(heading * (Math.PI / 180)) * length,
         y: -Math.cos(heading * (Math.PI / 180)) * length,
@@ -169,16 +218,28 @@ export const RotateTo: Story = {
       values.replaceChildren(
         createValue("destination", helpers.float(destination)),
         createValue("current step", helpers.float(current)),
-        createValue("step size", 18)
+        createValue("step size", args.stepSize)
       );
     }),
 };
 
-export const SpawnArc: Story = {
-  render: () =>
+export const SpawnArc: SpawnArcStory = {
+  args: {
+    sampleCount: 12,
+    showSamples: true,
+    spawnArc: 95,
+    spawnRadius: 145,
+  },
+  argTypes: {
+    sampleCount: { control: { type: "range", min: 0, max: 40, step: 1 } },
+    showSamples: { control: "boolean" },
+    spawnArc: { control: { type: "range", min: 20, max: 180, step: 5 } },
+    spawnRadius: { control: { type: "range", min: 70, max: 230, step: 5 } },
+  },
+  render: (args: SpawnArcArgs) =>
     createGeometryShell("helpers.getSpawnCoords", (context, canvas, frame, values) => {
-      const spawnArc = 95;
-      const spawnRadius = 145;
+      const spawnArc = args.spawnArc;
+      const spawnRadius = args.spawnRadius;
       const arcInnerRadius = spawnRadius - 22;
       const arcOuterRadius = spawnRadius + 22;
       const target = {
@@ -186,9 +247,11 @@ export const SpawnArc: Story = {
         posX: Math.sin(frame / 65) * 60,
         posY: Math.cos(frame / 53) * 50,
       };
-      const points = Array.from({ length: 12 }, () =>
-        helpers.getSpawnCoords(target, { spawnArc, spawnRadius })
-      );
+      const points = args.showSamples
+        ? Array.from({ length: args.sampleCount }, () =>
+            helpers.getSpawnCoords(target, { spawnArc, spawnRadius })
+          )
+        : [];
       const arcStart = (target.heading - spawnArc / 2 - 90) * (Math.PI / 180);
       const arcEnd = (target.heading + spawnArc / 2 - 90) * (Math.PI / 180);
 
@@ -232,12 +295,13 @@ export const SpawnArc: Story = {
       values.replaceChildren(
         createValue("heading", helpers.float(target.heading)),
         createValue("spawn arc", `${spawnArc}°`),
-        createValue("spawn radius", spawnRadius)
+        createValue("spawn radius", spawnRadius),
+        createValue("samples", points.length)
       );
     }),
 };
 
-export const CollisionAndAreaExit: Story = {
+export const CollisionAndAreaExit: BaseStory = {
   render: () =>
     createGeometryShell("helpers.detectCollision / detectAreaExit", (context, canvas, frame, values) => {
       const origin = { posX: 0, posY: 0, radius: 52 };

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/html-vite";
+import { expect, fn, userEvent, within } from "storybook/test";
 import { Ticker } from "../../index.js";
 import {
   appendStyles,
@@ -17,13 +18,24 @@ const meta = {
 
 export default meta;
 
-type Story = StoryObj;
+type TickerStoryArgs = {
+  autoStart: boolean;
+  color: string;
+  label: string;
+  trackSpeed: number;
+  onClear: () => void;
+  onStart: () => void;
+  onStop: () => void;
+};
+
+type Story = StoryObj<TickerStoryArgs>;
 
 const drawTickerTrack = (
   canvas: HTMLCanvasElement,
   frame: number,
   color: string,
-  label: string
+  label: string,
+  trackSpeed: number
 ): void => {
   const context = canvas.getContext("2d");
 
@@ -32,11 +44,11 @@ const drawTickerTrack = (
   }
 
   const trackWidth = canvas.width - 56;
-  const x = 28 + ((frame * 7) % trackWidth);
+  const x = 28 + ((frame * trackSpeed) % trackWidth);
   const y = canvas.height / 2 + Math.sin(frame / 8) * 48;
-  const previousX = 28 + (((frame - 1) * 7) % trackWidth);
+  const previousX = 28 + (((frame - 1) * trackSpeed) % trackWidth);
   const previousY = canvas.height / 2 + Math.sin((frame - 1) / 8) * 48;
-  const dx = x < previousX ? 7 : x - previousX;
+  const dx = x < previousX ? trackSpeed : x - previousX;
   const dy = x < previousX ? 0 : y - previousY;
   const heading = ((Math.atan2(dx, -dy) * 180) / Math.PI + 360) % 360;
 
@@ -71,8 +83,7 @@ const drawTickerTrack = (
 const createTickerStory = (
   title: string,
   ticker: Ticker,
-  color: string,
-  label: string
+  args: TickerStoryArgs
 ): HTMLElement => {
   const shell = createDemoShell(title);
   const grid = document.createElement("div");
@@ -101,19 +112,24 @@ const createTickerStory = (
 
   ticker.addSchedule((frame) => {
     setValue(frameValue, frame);
-    drawTickerTrack(canvas, frame, color, label);
+    drawTickerTrack(canvas, frame, args.color, args.label, args.trackSpeed);
     update();
   }, 1);
 
   controls.append(
     createButton("Start", () => {
+      args.onStart();
       ticker.start();
       update();
     }),
-    createButton("Stop", () => ticker.stop(update)),
+    createButton("Stop", () => {
+      args.onStop();
+      ticker.stop(update);
+    }),
     createButton("Clear", () => {
+      args.onClear();
       ticker.clearTicks();
-      drawTickerTrack(canvas, 0, color, label);
+      drawTickerTrack(canvas, 0, args.color, args.label, args.trackSpeed);
       update();
     })
   );
@@ -123,8 +139,10 @@ const createTickerStory = (
   statePanel.append(values, controls);
   grid.append(panel, statePanel);
   shell.appendChild(grid);
-  drawTickerTrack(canvas, 0, color, label);
-  ticker.start();
+  drawTickerTrack(canvas, 0, args.color, args.label, args.trackSpeed);
+  if (args.autoStart) {
+    ticker.start();
+  }
   update();
   onRemove(shell, () => {
     if (ticker.isRunning) {
@@ -135,20 +153,65 @@ const createTickerStory = (
   return shell;
 };
 
+const tickerArgTypes: Story["argTypes"] = {
+  autoStart: { control: "boolean" },
+  color: { control: "color" },
+  label: { control: "text" },
+  trackSpeed: { control: { type: "range", min: 1, max: 18, step: 1 } },
+};
+
+const tickerPlay: Story["play"] = async ({ canvasElement }) => {
+  const canvas = within(canvasElement);
+
+  await userEvent.click(canvas.getByRole("button", { name: "Stop" }));
+  await expect(canvas.getByText("false")).toBeVisible();
+  await userEvent.click(canvas.getByRole("button", { name: "Start" }));
+  await expect(canvas.getByText("true")).toBeVisible();
+  await userEvent.click(canvas.getByRole("button", { name: "Clear" }));
+};
+
 export const RequestAnimationFrame: Story = {
-  render: () => createTickerStory("Ticker requestAnimationFrame", new Ticker(), "#90cdf4", "raf"),
+  args: {
+    autoStart: true,
+    color: "#90cdf4",
+    label: "raf",
+    trackSpeed: 7,
+    onClear: fn(),
+    onStart: fn(),
+    onStop: fn(),
+  },
+  argTypes: tickerArgTypes,
+  play: tickerPlay,
+  render: (args) => createTickerStory("Ticker requestAnimationFrame", new Ticker(), args),
 };
 
 export const RenderFpsCap: Story = {
-  render: () => createTickerStory("Ticker fps cap", new Ticker({ fps: 30 }), "#f6e05e", "30fps"),
+  args: {
+    autoStart: true,
+    color: "#f6e05e",
+    label: "30fps",
+    trackSpeed: 7,
+    onClear: fn(),
+    onStart: fn(),
+    onStop: fn(),
+  },
+  argTypes: tickerArgTypes,
+  play: tickerPlay,
+  render: (args) => createTickerStory("Ticker fps cap", new Ticker({ fps: 30 }), args),
 };
 
 export const FixedStepSimulation: Story = {
-  render: () =>
-    createTickerStory(
-      "Ticker fixed-step simulation",
-      new Ticker({ fixedStepFps: 50, maxCatchUpFrames: 4 }),
-      "#4fd1c5",
-      "50hz"
-    ),
+  args: {
+    autoStart: true,
+    color: "#4fd1c5",
+    label: "50hz",
+    trackSpeed: 7,
+    onClear: fn(),
+    onStart: fn(),
+    onStop: fn(),
+  },
+  argTypes: tickerArgTypes,
+  play: tickerPlay,
+  render: (args) =>
+    createTickerStory("Ticker fixed-step simulation", new Ticker({ fixedStepFps: 50, maxCatchUpFrames: 4 }), args),
 };

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/html-vite";
+import { fn } from "storybook/test";
 import { Sound } from "../../index.js";
 import {
   appendStyles,
@@ -19,7 +20,52 @@ const meta = {
 
 export default meta;
 
-type Story = StoryObj;
+type MasterSoundArgs = {
+  effectsMuted: boolean;
+  effectsVolume: number;
+  masterVolume: number;
+  musicVolume: number;
+  onLoopMusic: () => void;
+  onMuteEffects: () => void;
+  onPauseAll: () => void;
+  onPlayEffect: () => void;
+  onResumePaused: () => void;
+  onStopAll: () => void;
+};
+
+type MasterSoundStory = StoryObj<MasterSoundArgs>;
+type MusicStory = StoryObj<MusicArgs>;
+type SoundEffectsStory = StoryObj<SoundEffectsArgs>;
+type SpatialAudioStory = StoryObj<SpatialAudioArgs>;
+
+type SoundEffectsArgs = {
+  effectsVolume: number;
+  onEffectsDown: () => void;
+  onEffectsUp: () => void;
+  onImpact: () => void;
+  onLaser: () => void;
+};
+
+type MusicArgs = {
+  musicVolume: number;
+  onFadeInLoop: () => void;
+  onFadeOut: () => void;
+  onMusicDown: () => void;
+  onMusicUp: () => void;
+  onPause: () => void;
+  onResume: () => void;
+};
+
+type SpatialAudioArgs = {
+  autoMove: boolean;
+  listenerRange: number;
+  onMoveSource: () => void;
+  onPlayGlobal: () => void;
+  onSourceLeft: () => void;
+  onSourceRight: () => void;
+  onStartSpatialLoop: () => void;
+  onStopAll: () => void;
+};
 
 type SoundScene = {
   canvas: HTMLCanvasElement;
@@ -110,8 +156,26 @@ const destroyUrls = (urls: string[]): void => {
   urls.forEach((url) => URL.revokeObjectURL(url));
 };
 
-export const MasterSound: Story = {
-  render: () => {
+export const MasterSound: MasterSoundStory = {
+  args: {
+    effectsMuted: false,
+    effectsVolume: 0.8,
+    masterVolume: 0.8,
+    musicVolume: 0.6,
+    onLoopMusic: fn(),
+    onMuteEffects: fn(),
+    onPauseAll: fn(),
+    onPlayEffect: fn(),
+    onResumePaused: fn(),
+    onStopAll: fn(),
+  },
+  argTypes: {
+    effectsMuted: { control: "boolean" },
+    effectsVolume: { control: { type: "range", min: 0, max: 1, step: 0.1 } },
+    masterVolume: { control: { type: "range", min: 0, max: 1, step: 0.1 } },
+    musicVolume: { control: { type: "range", min: 0, max: 1, step: 0.1 } },
+  },
+  render: (args: MasterSoundArgs) => {
     const { canvas, controls, log, shell, values } = createSoundScene(
       "Sound: Master Sound",
       "Global Mix"
@@ -136,10 +200,10 @@ export const MasterSound: Story = {
     const mutedValue = createValue("effects muted", "false");
     const stateValue = createValue("global state", "ready");
     let animationFrame = 0;
-    let masterVolume = 0.8;
-    let effectsVolume = 0.8;
-    let musicVolume = 0.6;
-    let effectsMuted = false;
+    let masterVolume = args.masterVolume;
+    let effectsVolume = args.effectsVolume;
+    let musicVolume = args.musicVolume;
+    let effectsMuted = args.effectsMuted;
     let pulse = 0;
 
     Sound.configure({
@@ -200,27 +264,32 @@ export const MasterSound: Story = {
 
     controls.append(
       createButton("Play Effect", () => {
+        args.onPlayEffect();
         pulse = 1;
         effect.play();
         setValue(stateValue, "effect playing");
         appendLog(log, "effect play");
       }),
       createButton("Loop Music", () => {
+        args.onLoopMusic();
         music.fadeInLoop(500);
         setValue(stateValue, "music loop");
         appendLog(log, "music fade in loop");
       }),
       createButton("Pause All", () => {
+        args.onPauseAll();
         Sound.pauseAll();
         setValue(stateValue, "paused");
         appendLog(log, "pause all");
       }),
       createButton("Resume Paused", () => {
+        args.onResumePaused();
         Sound.resumePaused();
         setValue(stateValue, "resumed");
         appendLog(log, "resume paused");
       }),
       createButton("Stop All", () => {
+        args.onStopAll();
         Sound.stopAll();
         setValue(stateValue, "stopped");
         appendLog(log, "stop all");
@@ -234,6 +303,7 @@ export const MasterSound: Story = {
         refresh();
       }),
       createButton("Mute Effects", () => {
+        args.onMuteEffects();
         effectsMuted = !effectsMuted;
         refresh();
       })
@@ -252,8 +322,18 @@ export const MasterSound: Story = {
   },
 };
 
-export const SoundEffects: Story = {
-  render: () => {
+export const SoundEffects: SoundEffectsStory = {
+  args: {
+    effectsVolume: 0.8,
+    onEffectsDown: fn(),
+    onEffectsUp: fn(),
+    onImpact: fn(),
+    onLaser: fn(),
+  },
+  argTypes: {
+    effectsVolume: { control: { type: "range", min: 0, max: 1, step: 0.1 } },
+  },
+  render: (args: SoundEffectsArgs) => {
     const { canvas, controls, log, shell, values } = createSoundScene(
       "Sound: Sound Effects",
       "Effect Bursts"
@@ -279,7 +359,7 @@ export const SoundEffects: Story = {
     const stateValue = createValue("state", "ready");
     const bursts: Array<{ age: number; x: number; y: number }> = [];
     let animationFrame = 0;
-    let effectsVolume = 0.8;
+    let effectsVolume = args.effectsVolume;
     let shots = 0;
 
     Sound.configure({
@@ -302,6 +382,11 @@ export const SoundEffects: Story = {
       setValue(shotsValue, shots);
       setValue(stateValue, kind);
       appendLog(log, `${kind} effect`);
+      if (kind === "laser") {
+        args.onLaser();
+      } else {
+        args.onImpact();
+      }
       sound.play();
     };
 
@@ -355,11 +440,13 @@ export const SoundEffects: Story = {
       createButton("Laser", () => playEffect("laser")),
       createButton("Impact", () => playEffect("hit")),
       createButton("Effects +", () => {
+        args.onEffectsUp();
         effectsVolume = Math.min(1, effectsVolume + 0.1);
         Sound.refreshAllVolumes();
         setValue(channelValue, effectsVolume.toFixed(1));
       }),
       createButton("Effects -", () => {
+        args.onEffectsDown();
         effectsVolume = Math.max(0, effectsVolume - 0.1);
         Sound.refreshAllVolumes();
         setValue(channelValue, effectsVolume.toFixed(1));
@@ -378,8 +465,20 @@ export const SoundEffects: Story = {
   },
 };
 
-export const Music: Story = {
-  render: () => {
+export const Music: MusicStory = {
+  args: {
+    musicVolume: 0.6,
+    onFadeInLoop: fn(),
+    onFadeOut: fn(),
+    onMusicDown: fn(),
+    onMusicUp: fn(),
+    onPause: fn(),
+    onResume: fn(),
+  },
+  argTypes: {
+    musicVolume: { control: { type: "range", min: 0, max: 1, step: 0.1 } },
+  },
+  render: (args: MusicArgs) => {
     const { canvas, controls, log, shell, values } = createSoundScene(
       "Sound: Music",
       "Loop And Fade"
@@ -396,7 +495,7 @@ export const Music: Story = {
     const fadeValue = createValue("fade", "ready");
     const loopValue = createValue("loop", "stopped");
     let animationFrame = 0;
-    let musicVolume = 0.6;
+    let musicVolume = args.musicVolume;
     let phase = 0;
 
     Sound.configure({ getVolume: (channel) => (channel === "music" ? musicVolume : 0.6) });
@@ -444,32 +543,38 @@ export const Music: Story = {
 
     controls.append(
       createButton("Fade In Loop", () => {
+        args.onFadeInLoop();
         music.fadeInLoop(700);
         setValue(fadeValue, "fade in");
         setValue(loopValue, "looping");
         appendLog(log, "fade in loop");
       }),
       createButton("Fade Out", () => {
+        args.onFadeOut();
         music.fadeOutAndDestroy(900);
         setValue(fadeValue, "fade out");
         setValue(loopValue, "destroying");
         appendLog(log, "fade out and destroy");
       }),
       createButton("Pause", () => {
+        args.onPause();
         Sound.pauseAll();
         setValue(loopValue, "paused");
         appendLog(log, "pause all");
       }),
       createButton("Resume", () => {
+        args.onResume();
         Sound.resumePaused();
         setValue(loopValue, "looping");
         appendLog(log, "resume paused");
       }),
       createButton("Music +", () => {
+        args.onMusicUp();
         musicVolume = Math.min(1, musicVolume + 0.1);
         refresh();
       }),
       createButton("Music -", () => {
+        args.onMusicDown();
         musicVolume = Math.max(0, musicVolume - 0.1);
         refresh();
       })
@@ -488,8 +593,22 @@ export const Music: Story = {
   },
 };
 
-export const SpatialAndGlobalAudio: Story = {
-  render: () => {
+export const SpatialAndGlobalAudio: SpatialAudioStory = {
+  args: {
+    autoMove: true,
+    listenerRange: 260,
+    onMoveSource: fn(),
+    onPlayGlobal: fn(),
+    onSourceLeft: fn(),
+    onSourceRight: fn(),
+    onStartSpatialLoop: fn(),
+    onStopAll: fn(),
+  },
+  argTypes: {
+    autoMove: { control: "boolean" },
+    listenerRange: { control: { type: "range", min: 120, max: 320, step: 10 } },
+  },
+  render: (args: SpatialAudioArgs) => {
     const { canvas, controls, log, shell, values } = createSoundScene(
       "Sound: Spatial And Global Audio",
       "Listener Space"
@@ -513,7 +632,7 @@ export const SpatialAndGlobalAudio: Story = {
     const panValue = createValue("pan", "0.00");
     const positionValue = createValue("position", "0, 0");
     let animationFrame = 0;
-    let isMoving = true;
+    let isMoving = args.autoMove;
     let sourceX = 230;
     let sourceY = 0;
     let sourceHeading = 270;
@@ -527,9 +646,9 @@ export const SpatialAndGlobalAudio: Story = {
     const spatialSound = new Sound(spatialUrl, { channel: "effects", loop: true });
 
     const refreshSpatial = (): void => {
-      spatialSound.setPan(sourceX / 260);
-      spatialSound.setSpatialPosition(sourceX, sourceY, 260, 170);
-      setValue(panValue, (sourceX / 260).toFixed(2));
+      spatialSound.setPan(sourceX / args.listenerRange);
+      spatialSound.setSpatialPosition(sourceX, sourceY, args.listenerRange, 170);
+      setValue(panValue, (sourceX / args.listenerRange).toFixed(2));
       setValue(positionValue, `${Math.round(sourceX)}, ${Math.round(sourceY)}`);
     };
 
@@ -560,7 +679,7 @@ export const SpatialAndGlobalAudio: Story = {
       context.translate(canvas.width / 2, canvas.height / 2);
       context.strokeStyle = "rgba(144, 205, 244, 0.36)";
       context.beginPath();
-      context.arc(0, 0, 260, 0, Math.PI * 2);
+      context.arc(0, 0, args.listenerRange, 0, Math.PI * 2);
       context.stroke();
       context.strokeStyle = "#f6e05e";
       context.beginPath();
@@ -585,33 +704,39 @@ export const SpatialAndGlobalAudio: Story = {
 
     controls.append(
       createButton("Play Global", () => {
+        args.onPlayGlobal();
         globalSound.play();
         setValue(modeValue, "global");
         appendLog(log, "global sound");
       }),
       createButton("Start Spatial Loop", () => {
+        args.onStartSpatialLoop();
         spatialSound.loop();
         setValue(modeValue, "spatial loop");
         appendLog(log, "spatial loop");
       }),
       createButton("Stop All", () => {
+        args.onStopAll();
         Sound.stopAll();
         setValue(modeValue, "stopped");
         appendLog(log, "stop all");
       }),
       createButton("Move Source", () => {
+        args.onMoveSource();
         isMoving = !isMoving;
         appendLog(log, isMoving ? "source moving" : "source locked");
       }),
       createButton("Left", () => {
+        args.onSourceLeft();
         isMoving = false;
-        sourceX = Math.max(-260, sourceX - 40);
+        sourceX = Math.max(-args.listenerRange, sourceX - 40);
         sourceHeading = 270;
         refreshSpatial();
       }),
       createButton("Right", () => {
+        args.onSourceRight();
         isMoving = false;
-        sourceX = Math.min(260, sourceX + 40);
+        sourceX = Math.min(args.listenerRange, sourceX + 40);
         sourceHeading = 90;
         refreshSpatial();
       })
