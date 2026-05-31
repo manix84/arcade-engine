@@ -5,6 +5,8 @@ import {
   createDemoShell,
   createPanel,
   createValue,
+  drawTargetMarker,
+  drawTopDownShip,
   onRemove,
   setValue,
 } from "../story-utils.js";
@@ -16,6 +18,9 @@ const meta = {
 export default meta;
 
 type Story = StoryObj;
+
+const visualHeadingTo = (target: { posX: number; posY: number }, origin?: { posX: number; posY: number }): number =>
+  (helpers.findHeading(target, origin) + 180) % 360;
 
 const createGeometryShell = (
   title: string,
@@ -95,6 +100,7 @@ export const FindHeading: Story = {
         posY: Math.cos(frame / 37) * 120,
       };
       const heading = helpers.findHeading(target);
+      const visualHeading = visualHeadingTo(target);
 
       drawGrid(context, canvas);
       context.strokeStyle = "#f6e05e";
@@ -103,10 +109,18 @@ export const FindHeading: Story = {
       context.moveTo(0, 0);
       context.lineTo(target.posX, target.posY);
       context.stroke();
-      context.fillStyle = "#4fd1c5";
-      context.beginPath();
-      context.arc(target.posX, target.posY, 14, 0, Math.PI * 2);
-      context.fill();
+      drawTopDownShip(context, 0, 0, {
+        accent: "#4fd1c5",
+        heading: visualHeading,
+        label: "ship",
+        scale: 0.82,
+        thrust: 0.35,
+      });
+      drawTargetMarker(context, target.posX, target.posY, {
+        color: "#f6e05e",
+        label: "target",
+        radius: 20,
+      });
       context.restore();
       values.replaceChildren(
         createValue("target", `${helpers.float(target.posX)}, ${helpers.float(target.posY)}`),
@@ -139,6 +153,18 @@ export const RotateTo: Story = {
       context.moveTo(0, 0);
       context.lineTo(currentPoint.x, currentPoint.y);
       context.stroke();
+      drawTopDownShip(context, 0, 0, {
+        accent: "#4fd1c5",
+        heading: current,
+        label: "current turn",
+        scale: 0.82,
+        thrust: 0.25,
+      });
+      drawTargetMarker(context, destinationPoint.x, destinationPoint.y, {
+        color: "#fc8181",
+        label: "desired",
+        radius: 18,
+      });
       context.restore();
       values.replaceChildren(
         createValue("destination", helpers.float(destination)),
@@ -151,33 +177,62 @@ export const RotateTo: Story = {
 export const SpawnArc: Story = {
   render: () =>
     createGeometryShell("helpers.getSpawnCoords", (context, canvas, frame, values) => {
+      const spawnArc = 95;
+      const spawnRadius = 145;
+      const arcInnerRadius = spawnRadius - 22;
+      const arcOuterRadius = spawnRadius + 22;
       const target = {
         heading: (frame * 1.2) % 360,
         posX: Math.sin(frame / 65) * 60,
         posY: Math.cos(frame / 53) * 50,
       };
-      const points = Array.from({ length: 16 }, () =>
-        helpers.getSpawnCoords(target, { spawnArc: 95, spawnRadius: 145 })
+      const points = Array.from({ length: 12 }, () =>
+        helpers.getSpawnCoords(target, { spawnArc, spawnRadius })
       );
+      const arcStart = (target.heading - spawnArc / 2 - 90) * (Math.PI / 180);
+      const arcEnd = (target.heading + spawnArc / 2 - 90) * (Math.PI / 180);
 
       drawGrid(context, canvas);
-      context.fillStyle = "#f6e05e";
+      context.save();
+      context.translate(target.posX, target.posY);
+      context.fillStyle = "rgba(79, 209, 197, 0.12)";
+      context.strokeStyle = "rgba(79, 209, 197, 0.72)";
+      context.lineWidth = 2;
       context.beginPath();
-      context.arc(target.posX, target.posY, 16, 0, Math.PI * 2);
+      context.arc(0, 0, arcOuterRadius, arcStart, arcEnd);
+      context.arc(0, 0, arcInnerRadius, arcEnd, arcStart, true);
+      context.closePath();
       context.fill();
+      context.stroke();
+      context.strokeStyle = "rgba(246, 224, 94, 0.8)";
+      context.lineWidth = 3;
+      context.beginPath();
+      context.arc(0, 0, spawnRadius, arcStart, arcEnd);
+      context.stroke();
+      context.restore();
 
-      points.forEach((point) => {
-        context.fillStyle = "rgba(79, 209, 197, 0.72)";
+      drawTopDownShip(context, target.posX, target.posY, {
+        accent: "#f6e05e",
+        heading: target.heading,
+        label: "spawner",
+        scale: 0.72,
+        thrust: 0.35,
+      });
+
+      points.forEach((point, index) => {
+        const pulse = 0.5 + Math.sin(frame / 12 + index) * 0.35;
+
+        context.fillStyle = `rgba(245, 247, 251, ${0.55 + pulse * 0.35})`;
         context.beginPath();
-        context.arc(point.posX, point.posY, 5, 0, Math.PI * 2);
+        context.arc(point.posX, point.posY, 3 + pulse * 2, 0, Math.PI * 2);
         context.fill();
       });
 
       context.restore();
       values.replaceChildren(
         createValue("heading", helpers.float(target.heading)),
-        createValue("spawn arc", "95°"),
-        createValue("spawn radius", 145)
+        createValue("spawn arc", `${spawnArc}°`),
+        createValue("spawn radius", spawnRadius)
       );
     }),
 };
@@ -205,6 +260,13 @@ export const CollisionAndAreaExit: Story = {
       context.arc(origin.posX, origin.posY, origin.radius, 0, Math.PI * 2);
       context.fill();
       context.stroke();
+      drawTopDownShip(context, origin.posX, origin.posY, {
+        accent: "#4fd1c5",
+        heading: (frame * 1.2) % 360,
+        label: "player",
+        scale: 0.82,
+        thrust: 0.25,
+      });
       context.fillStyle = isColliding
         ? "rgba(252, 129, 129, 0.30)"
         : "rgba(246, 224, 94, 0.22)";
@@ -213,6 +275,12 @@ export const CollisionAndAreaExit: Story = {
       context.arc(target.posX, target.posY, target.radius, 0, Math.PI * 2);
       context.fill();
       context.stroke();
+      drawTopDownShip(context, target.posX, target.posY, {
+        accent: isColliding ? "#fc8181" : "#f6e05e",
+        heading: visualHeadingTo(origin, target),
+        label: "enemy",
+        scale: 0.62,
+      });
       context.restore();
       values.replaceChildren(
         createValue("collision", String(isColliding)),

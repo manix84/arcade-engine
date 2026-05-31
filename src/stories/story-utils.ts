@@ -100,20 +100,147 @@ export const createDemoSprite = (): HTMLCanvasElement => {
   colors.forEach((color, index) => {
     const x = index * 16;
 
+    context.fillStyle = "rgba(245, 247, 251, 0.9)";
+    context.fillRect(x + 7, 1, 2, 2);
+    context.fillRect(x + 6, 3, 4, 2);
     context.fillStyle = color;
-    context.fillRect(x + 5, 5, 6, 6);
-    context.fillRect(x + 3, 11, 10, 5);
-    context.fillRect(x + 1, 16, 14, 3);
-    context.fillStyle = "#111318";
-    context.fillRect(x + 7, 7, 2, 2);
+    context.fillRect(x + 5, 5, 6, 7);
+    context.fillRect(x + 3, 12, 10, 3);
+    context.fillStyle = "#90cdf4";
+    context.fillRect(x + 7, 6, 2, 3);
+    context.fillStyle = "#f6e05e";
+    context.fillRect(x + 2, 16, 3, 4);
+    context.fillRect(x + 11, 16, 3, 4);
+    context.fillStyle = index % 2 === 0 ? "#fc8181" : "#4fd1c5";
+    context.fillRect(x + 6, 15, 4, 5);
   });
 
   return canvas;
 };
 
-export const createToneUrl = (): string => {
+export const drawTopDownShip = (
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  options: {
+    accent?: string;
+    heading?: number;
+    label?: string;
+    scale?: number;
+    thrust?: number;
+  } = {}
+): void => {
+  const accent = options.accent ?? "#4fd1c5";
+  const heading = options.heading ?? 0;
+  const scale = options.scale ?? 1;
+  const thrust = options.thrust ?? 0;
+
+  context.save();
+  context.translate(x, y);
+  context.rotate(heading * (Math.PI / 180));
+  context.scale(scale, scale);
+
+  if (thrust > 0) {
+    context.fillStyle = `rgba(246, 224, 94, ${Math.min(0.85, 0.2 + thrust * 0.45)})`;
+    context.beginPath();
+    context.moveTo(-8, 18);
+    context.lineTo(0, 30 + thrust * 18);
+    context.lineTo(8, 18);
+    context.closePath();
+    context.fill();
+  }
+
+  context.fillStyle = "#f5f7fb";
+  context.beginPath();
+  context.moveTo(0, -26);
+  context.lineTo(15, 16);
+  context.lineTo(5, 11);
+  context.lineTo(0, 24);
+  context.lineTo(-5, 11);
+  context.lineTo(-15, 16);
+  context.closePath();
+  context.fill();
+
+  context.fillStyle = accent;
+  context.beginPath();
+  context.moveTo(0, -17);
+  context.lineTo(7, 7);
+  context.lineTo(0, 13);
+  context.lineTo(-7, 7);
+  context.closePath();
+  context.fill();
+
+  context.fillStyle = "#05070a";
+  context.beginPath();
+  context.arc(0, -7, 4, 0, Math.PI * 2);
+  context.fill();
+  context.restore();
+
+  if (options.label) {
+    context.fillStyle = "#cbd5e1";
+    context.font = "13px monospace";
+    context.textAlign = "center";
+    context.fillText(options.label, x, y + 42 * scale);
+    context.textAlign = "start";
+  }
+};
+
+export const drawTargetMarker = (
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  options: {
+    color?: string;
+    label?: string;
+    radius?: number;
+  } = {}
+): void => {
+  const color = options.color ?? "#f6e05e";
+  const radius = options.radius ?? 18;
+
+  context.save();
+  context.translate(x, y);
+  context.strokeStyle = color;
+  context.lineWidth = 2;
+  context.beginPath();
+  context.arc(0, 0, radius, 0, Math.PI * 2);
+  context.moveTo(-radius - 8, 0);
+  context.lineTo(-radius / 2, 0);
+  context.moveTo(radius / 2, 0);
+  context.lineTo(radius + 8, 0);
+  context.moveTo(0, -radius - 8);
+  context.lineTo(0, -radius / 2);
+  context.moveTo(0, radius / 2);
+  context.lineTo(0, radius + 8);
+  context.stroke();
+  context.restore();
+
+  if (options.label) {
+    context.fillStyle = color;
+    context.font = "13px monospace";
+    context.textAlign = "center";
+    context.fillText(options.label, x, y + radius + 22);
+    context.textAlign = "start";
+  }
+};
+
+export const createToneUrl = (
+  options: {
+    durationSeconds?: number;
+    frequency?: number;
+    gain?: number;
+    modulationFrequency?: number;
+    release?: number;
+    waveform?: "sine" | "soft-square" | "triangle";
+  } = {}
+): string => {
   const sampleRate = 22050;
-  const durationSeconds = 0.35;
+  const durationSeconds = options.durationSeconds ?? 0.35;
+  const frequency = options.frequency ?? 440;
+  const gain = options.gain ?? 0.28;
+  const modulationFrequency = options.modulationFrequency ?? 0;
+  const release = options.release ?? 0.18;
+  const waveform = options.waveform ?? "sine";
   const sampleCount = Math.floor(sampleRate * durationSeconds);
   const dataSize = sampleCount * 2;
   const buffer = new ArrayBuffer(44 + dataSize);
@@ -149,9 +276,24 @@ export const createToneUrl = (): string => {
   writeUint32(dataSize);
 
   for (let i = 0; i < sampleCount; i++) {
-    const envelope = 1 - i / sampleCount;
-    const sample =
-      Math.sin((i / sampleRate) * Math.PI * 2 * 440) * envelope * 0.5;
+    const seconds = i / sampleRate;
+    const progress = i / sampleCount;
+    const attack = Math.min(1, seconds / 0.045);
+    const decay = Math.min(1, (durationSeconds - seconds) / release);
+    const envelope = Math.sin(Math.min(1, progress) * Math.PI) * attack * decay;
+    const modulatedFrequency =
+      modulationFrequency > 0
+        ? frequency + Math.sin(seconds * Math.PI * 2 * modulationFrequency) * frequency * 0.045
+        : frequency;
+    const phase = seconds * Math.PI * 2 * modulatedFrequency;
+    const wave =
+      waveform === "soft-square"
+        ? Math.tanh(Math.sin(phase) * 2.2)
+        : waveform === "triangle"
+          ? (2 / Math.PI) * Math.asin(Math.sin(phase))
+          : Math.sin(phase);
+    const overtone = Math.sin(phase * 2) * 0.12 + Math.sin(phase * 3) * 0.05;
+    const sample = (wave + overtone) * envelope * gain;
 
     view.setInt16(offset, sample * 32767, true);
     offset += 2;

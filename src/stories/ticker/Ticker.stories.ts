@@ -6,6 +6,7 @@ import {
   createDemoShell,
   createPanel,
   createValue,
+  drawTopDownShip,
   onRemove,
   setValue,
 } from "../story-utils.js";
@@ -30,8 +31,14 @@ const drawTickerTrack = (
     return;
   }
 
-  const x = 28 + ((frame * 7) % (canvas.width - 56));
+  const trackWidth = canvas.width - 56;
+  const x = 28 + ((frame * 7) % trackWidth);
   const y = canvas.height / 2 + Math.sin(frame / 8) * 48;
+  const previousX = 28 + (((frame - 1) * 7) % trackWidth);
+  const previousY = canvas.height / 2 + Math.sin((frame - 1) / 8) * 48;
+  const dx = x < previousX ? 7 : x - previousX;
+  const dy = x < previousX ? 0 : y - previousY;
+  const heading = ((Math.atan2(dx, -dy) * 180) / Math.PI + 360) % 360;
 
   context.fillStyle = "#05070a";
   context.fillRect(0, 0, canvas.width, canvas.height);
@@ -49,10 +56,13 @@ const drawTickerTrack = (
   context.moveTo(24, canvas.height / 2);
   context.lineTo(canvas.width - 24, canvas.height / 2);
   context.stroke();
-  context.fillStyle = color;
-  context.beginPath();
-  context.arc(x, y, 18, 0, Math.PI * 2);
-  context.fill();
+  drawTopDownShip(context, x, y, {
+    accent: color,
+    heading,
+    label,
+    scale: 0.8,
+    thrust: 0.4 + Math.sin(frame / 4) * 0.25,
+  });
   context.fillStyle = "#f5f7fb";
   context.font = "16px monospace";
   context.fillText(`${label} ${frame}`, 18, 28);

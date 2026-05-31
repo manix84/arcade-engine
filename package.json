@@ -1,7 +1,7 @@
 {
   "name": "arcade-engine",
   "description": "A small browser arcade-game engine for canvas games.",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "license": "SEE LICENSE IN LICENSE.md",
   "type": "module",
   "author": "Rob Taylor",

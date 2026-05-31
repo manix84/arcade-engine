@@ -12,10 +12,10 @@ import {
   appendStyles,
   createButton,
   createDemoShell,
-  createDemoSprite,
   createPanel,
   createToneUrl,
   createValue,
+  drawTopDownShip,
   onRemove,
   setValue,
 } from "./story-utils.js";
@@ -44,7 +44,6 @@ export const AnimatedArcadeLoop: Story = {
     const spawnValue = createValue("spawn budget");
     const headingValue = createValue("heading");
     const soundValue = createValue("sound");
-    const sprite = createDemoSprite();
     const toneUrl = createToneUrl();
     const arena = new GameArena(stage, {
       debugGridColor: "rgba(245, 247, 251, 0.10)",
@@ -105,9 +104,16 @@ export const AnimatedArcadeLoop: Story = {
         });
       }
 
-      player.heading = (player.heading + 2.4) % 360;
+      const previousPlayerX = player.posX;
+      const previousPlayerY = player.posY;
+
       player.posX = helpers.float(Math.sin(frame / 45) * 90);
       player.posY = helpers.float(Math.cos(frame / 55) * 52);
+      player.heading =
+        ((Math.atan2(player.posX - previousPlayerX, -(player.posY - previousPlayerY)) * 180) /
+          Math.PI +
+          360) %
+        360;
 
       enemies.forEach((enemy, index) => {
         enemy.angle = (enemy.angle + enemy.speed) % 360;
@@ -121,6 +127,11 @@ export const AnimatedArcadeLoop: Story = {
         arena.drawCircle(enemy.posX, enemy.posY, enemy.radius, {
           backgroundColor: hit ? "#fc8181" : "rgba(79, 209, 197, 0.22)",
           borderColor: hit ? "#fff7ae" : "#4fd1c5",
+        });
+        drawTopDownShip(context, enemy.posX, enemy.posY, {
+          accent: hit ? "#fc8181" : "#4fd1c5",
+          heading: enemy.heading,
+          scale: 0.24 + enemy.radius / 90,
         });
         drawDebugVectors(
           context,
@@ -137,15 +148,12 @@ export const AnimatedArcadeLoop: Story = {
         );
       });
 
-      arena.renderSprite(sprite, {
-        frameHeight: 16,
-        frameWidth: 16,
-        frameX: Math.floor(frame / 8) % 4,
-        frameY: 0,
-        posX: player.posX - 16,
-        posY: player.posY - 16,
-        renderHeight: 32,
-        renderWidth: 32,
+      drawTopDownShip(context, player.posX, player.posY, {
+        accent: "#f6e05e",
+        heading: Number.isFinite(player.heading) ? player.heading : 0,
+        label: "player",
+        scale: 0.9,
+        thrust: 0.55,
       });
       drawDebugVectors(
         context,

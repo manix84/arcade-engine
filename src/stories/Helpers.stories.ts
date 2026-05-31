@@ -7,6 +7,8 @@ import {
   createNumberInput,
   createPanel,
   createValue,
+  drawTargetMarker,
+  drawTopDownShip,
   getNumberInputValue,
   setValue,
 } from "./story-utils.js";
@@ -18,6 +20,9 @@ const meta = {
 export default meta;
 
 type Story = StoryObj;
+
+const visualHeadingTo = (target: { posX: number; posY: number }, origin?: { posX: number; posY: number }): number =>
+  (helpers.findHeading(target, origin) + 180) % 360;
 
 export const MathCollisionAndEvents: Story = {
   render: () => {
@@ -135,6 +140,13 @@ export const MathCollisionAndEvents: Story = {
       context.arc(origin.posX, origin.posY, origin.radius, 0, Math.PI * 2);
       context.fill();
       context.stroke();
+      drawTopDownShip(context, origin.posX, origin.posY, {
+        accent: "#4fd1c5",
+        heading: visualHeadingTo(target, origin),
+        label: "origin",
+        scale: 0.78,
+        thrust: isColliding ? 0.75 : 0.25,
+      });
 
       context.fillStyle = isColliding
         ? "rgba(252, 129, 129, 0.24)"
@@ -144,6 +156,12 @@ export const MathCollisionAndEvents: Story = {
       context.arc(target.posX, target.posY, target.radius, 0, Math.PI * 2);
       context.fill();
       context.stroke();
+      drawTopDownShip(context, target.posX, target.posY, {
+        accent: isColliding ? "#fc8181" : "#f6e05e",
+        heading: visualHeadingTo(origin, target),
+        label: "target",
+        scale: 0.58,
+      });
 
       context.strokeStyle = "#f5f7fb";
       context.beginPath();
@@ -155,6 +173,11 @@ export const MathCollisionAndEvents: Story = {
       context.beginPath();
       context.arc(spawn.posX, spawn.posY, 7, 0, Math.PI * 2);
       context.fill();
+      drawTargetMarker(context, spawn.posX, spawn.posY, {
+        color: "#90cdf4",
+        label: "spawn",
+        radius: 9,
+      });
       context.restore();
     };
 
