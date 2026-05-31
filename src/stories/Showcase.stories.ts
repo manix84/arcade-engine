@@ -28,6 +28,9 @@ export default meta;
 
 type Story = StoryObj;
 
+const visualHeadingTo = (target: { posX: number; posY: number }, origin?: { posX: number; posY: number }): number =>
+  (helpers.findHeading(target, origin) + 180) % 360;
+
 export const AnimatedArcadeLoop: Story = {
   render: () => {
     const shell = createDemoShell("Arcade Engine Showcase");
@@ -130,7 +133,7 @@ export const AnimatedArcadeLoop: Story = {
         });
         drawTopDownShip(context, enemy.posX, enemy.posY, {
           accent: hit ? "#fc8181" : "#4fd1c5",
-          heading: enemy.heading,
+          heading: visualHeadingTo(player, enemy),
           scale: 0.24 + enemy.radius / 90,
         });
         drawDebugVectors(
@@ -175,7 +178,7 @@ export const AnimatedArcadeLoop: Story = {
         stroke: "#05070a",
         strokeWidth: 4,
       });
-      arena.renderText("CANVAS • TICKER • HELPERS • SOUND", 0, arena.height / 2 - 44, {
+      arena.renderText("CANVAS / TICKER / HELPERS / SOUND", 0, arena.height / 2 - 44, {
         align: "center",
         color: "#f6e05e",
         size: 14,

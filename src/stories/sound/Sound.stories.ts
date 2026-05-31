@@ -314,6 +314,7 @@ export const MasterSound: MasterSoundStory = {
     onRemove(shell, () => {
       window.cancelAnimationFrame(animationFrame);
       Sound.destroyAll();
+      Sound.setMuted(false);
       Sound.configure();
       destroyUrls([effectUrl, musicUrl]);
     });
