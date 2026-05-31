@@ -15,6 +15,13 @@ export default defineConfig({
     preserveSymlinks: true,
   },
   test: {
+    coverage: {
+      thresholds: {
+        statements: 100,
+        functions: 100,
+        lines: 100,
+      },
+    },
     projects: [
       {
         extends: true,
