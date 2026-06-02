@@ -304,6 +304,31 @@ describe("engine modules", () => {
     ticker.stop();
   });
 
+  it("keeps fractional render cap time across browser frames", () => {
+    const animationFrames: FrameRequestCallback[] = [];
+    const requestAnimationFrameSpy = vi.mocked(window.requestAnimationFrame);
+
+    requestAnimationFrameSpy.mockImplementation((callback) => {
+      animationFrames.push(callback);
+      return animationFrames.length;
+    });
+
+    const ticker = new Ticker({ fps: 120 });
+    const scheduled = vi.fn();
+    const browserFrameMs = 1000 / 144;
+
+    ticker.addSchedule(scheduled, 1);
+    ticker.start();
+
+    for (let frame = 0; frame <= 144; frame++) {
+      animationFrames.shift()?.(frame * browserFrameMs);
+    }
+
+    expect(scheduled).toHaveBeenCalledTimes(120);
+
+    ticker.stop();
+  });
+
   it("runs fixed-step schedules at a stable simulation rate across render frames", () => {
     const animationFrames: FrameRequestCallback[] = [];
     const requestAnimationFrameSpy = vi.mocked(window.requestAnimationFrame);

@@ -11,6 +11,19 @@ body {
     sans-serif;
 }
 
+#storybook-root,
+.sb-story,
+.sb-main-fullscreen,
+.sb-main-padded,
+.sb-main-centered {
+  min-height: 100vh;
+}
+
+.sb-main-centered {
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
 body::selection {
   background: #f6e05e;
   color: #05070a;
