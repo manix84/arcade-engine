@@ -59,6 +59,13 @@ viewport scaling, padded radii, movement vectors, and a depth variant.
 [Helpers.stories.ts](Helpers.stories.ts) is the broad helper overview. More
 focused helper stories live in [helpers/README.md](helpers/README.md).
 
+### Systems
+
+[systems/Systems.stories.ts](systems/Systems.stories.ts) documents newer
+system-level helpers for input actions, local multiplayer, sprite animation,
+follow cameras, and spatial-audio math. See
+[systems/README.md](systems/README.md).
+
 ### Audio
 
 [sound/Sound.stories.ts](sound/Sound.stories.ts) demonstrates sound lifecycle,
