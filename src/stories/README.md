@@ -85,6 +85,10 @@ styles that can be built from the engine's 2.5D and canvas helpers:
 - 2D side scroller.
 - 2.5D side scroller.
 
+The first-person and side-scroller stories use exported arcade-motion helpers
+for camera framing, looped scenery, and jump arcs. Story code owns the drawing;
+the reusable movement math belongs to the engine.
+
 ## 🧪 Interactions
 
 Some stories include Storybook `play` functions and interaction tests. These

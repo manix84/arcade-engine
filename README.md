@@ -31,6 +31,8 @@ Storybook is documentation and demo output only; it builds to
   shading.
 - 2.5D projection helpers for perspective lanes, isometric tiles, depth loops,
   and pseudo-3D arcade camera effects.
+- Arcade motion helpers for first-person camera framing, side-scroller loops,
+  jump arcs, and spatial audio pan/depth calculations.
 - 3D cube-cluster helpers for voxel-style pickups, modular level pieces,
   plasma links, deterministic explosions, and fading debris.
 
@@ -51,7 +53,9 @@ import {
   detectBoxCollision,
   drawDebugVectors,
   fillCanvasWithTrail,
+  getFirstPersonCamera,
   getGridCell,
+  getLoopedScrollerPosition,
   getPerspectiveScale,
   getScaledViewportLimit,
   helpers,
@@ -194,6 +198,19 @@ These helpers do not require WebGL. They are useful for pseudo-3D racing,
 starfields, first-person lanes, isometric rooms, 2.5D side scrollers, and
 layered arcade scenes drawn to a normal canvas.
 
+### 🏃 Arcade Motion
+
+Arcade motion helpers move common demo math into the engine package:
+
+- `getFirstPersonCamera(viewport, options?)` calculates center and horizon
+  framing from viewport size, look input, and optional bobbing.
+- `getLoopedScrollerPosition(options)` wraps side-scroller scenery and platform
+  positions across a repeat range.
+- `getSideScrollerJumpY(options)` calculates a simple jump/bob arc.
+- `getSpatialAudioPan(options)` clamps source position into browser pan range.
+- `getSpatialAudioDepth(options)` turns source distance into a visual depth
+  value for 2.5D audio scenes.
+
 ### 🧊 3D Cube Clusters
 
 Cube clusters describe block models as data rather than binding the engine to a
@@ -312,6 +329,7 @@ Active package modules:
 - `src/box-collision.ts`
 - `src/canvas-rendering.ts`
 - `src/arcade-3d.ts`
+- `src/arcade-motion.ts`
 - `src/cube-cluster.ts`
 - `src/types.ts`
 

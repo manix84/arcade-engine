@@ -9,6 +9,13 @@ export {
   wrapDepth,
 } from "./arcade-3d.js";
 export {
+  getFirstPersonCamera,
+  getLoopedScrollerPosition,
+  getSideScrollerJumpY,
+  getSpatialAudioDepth,
+  getSpatialAudioPan,
+} from "./arcade-motion.js";
+export {
   clamp,
   containsBox,
   detectBoxCollision,
@@ -99,4 +106,13 @@ export type {
   LoopedDepthOptions,
   PerspectiveProjectionOptions,
 } from "./arcade-3d.js";
+export type {
+  ArcadeLookInput,
+  FirstPersonCamera,
+  FirstPersonCameraOptions,
+  LoopedScrollerPositionOptions,
+  SideScrollerJumpOptions,
+  SpatialAudioDepthOptions,
+  SpatialAudioPanOptions,
+} from "./arcade-motion.js";
 export type { RgbColor } from "./canvas-rendering.js";

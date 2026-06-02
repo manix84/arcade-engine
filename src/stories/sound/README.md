@@ -60,7 +60,8 @@ the arena.
 
 `SpatialAndGlobalAudioDepth` presents the same concept with 2.5D visual depth.
 The spatial behavior still comes from the engine `Sound` module; the depth view
-helps users understand source distance and direction.
+helps users understand source distance and direction. The story uses exported
+arcade-motion helpers for pan clamping and visual depth math.
 
 ## 🧹 Cleanup
 

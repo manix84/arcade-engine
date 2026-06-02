@@ -81,6 +81,17 @@ legacy JavaScript files.
 - Modern replacements are documented through `GameArena`, `Ticker`, canvas
   rendering helpers, debug vectors, and helper/event APIs.
 
+Verification notes:
+
+- Verified with `npm run lint`, `npm run typecheck`, `npm test`,
+  `npm run build`, `npm run build:storybook`, and `npm run pack:dry-run`.
+- Unit tests passed with 99 assertions after adding the public export-surface
+  regression test.
+- The package dry run confirmed the removed legacy files are not part of the
+  published tarball.
+- The local tool shell needs `PATH=/usr/local/bin:$PATH`; the dry run used
+  `npm_config_cache=/private/tmp/arcade-engine-npm-cache`.
+
 ## 🎮 Stage 3: Engine Capability Coverage
 
 Goal: prove the engine can support the kinds of games shown in Storybook without
@@ -90,16 +101,35 @@ the demos hiding all of the useful work.
 
 - Review each Storybook demo and identify behavior that should be engine-owned.
 - Expand helpers where useful for:
-  - First-person player movement.
-  - 2D side scrollers.
-  - 2.5D side scrollers.
+  - First-person player movement. Stage 3 added camera framing helpers.
+  - 2D side scrollers. Stage 3 added loop and jump helpers.
+  - 2.5D side scrollers. Stage 3 reused loop helpers with projection helpers.
   - Arcade camera projection.
-  - Spatial/global audio scenes.
+  - Spatial/global audio scenes. Stage 3 added pan and visual depth helpers.
   - Collision and area exit flows.
   - Spawn arcs and heading helpers.
 - Add focused tests for new helpers.
 - Keep stories as visual documentation of engine APIs, not standalone toy
   implementations.
+
+### Current Status
+
+- `src/arcade-motion.ts` owns reusable first-person camera, side-scroller, jump,
+  and spatial-audio math from the demos.
+- Arcade camera and spatial audio stories now call exported helpers for reusable
+  behavior and keep only presentation drawing in Storybook.
+- Focused tests cover the new helpers and the public export surface.
+
+Verification notes:
+
+- Verified with `npm run lint`, `npm run typecheck`, `npm test`,
+  `npm run build`, `npm run build:storybook`, and `npm run pack:dry-run`.
+- Unit tests passed with 103 assertions after adding focused arcade-motion
+  helper coverage.
+- The package dry run confirmed `dist/arcade-motion.*` files are included in
+  the published tarball.
+- The local tool shell needs `PATH=/usr/local/bin:$PATH`; the dry run used
+  `npm_config_cache=/private/tmp/arcade-engine-npm-cache`.
 
 ## 📚 Stage 4: Documentation And Demo Polish
 

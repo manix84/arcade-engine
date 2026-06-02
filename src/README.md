@@ -130,6 +130,20 @@ These helpers are not tied to WebGL. They support canvas-rendered arcade camera
 styles such as racers, starfields, first-person corridors, isometric rooms, and
 2.5D side scrollers.
 
+## 🏃 Arcade Motion
+
+[arcade-motion.ts](arcade-motion.ts) contains reusable movement and camera math
+that used to live only in Storybook demos:
+
+- First-person camera center/horizon framing.
+- Looped side-scroller positions.
+- Simple side-scroller jump arcs.
+- Spatial audio pan clamping.
+- Spatial audio visual depth calculation.
+
+Use these helpers when a game needs the same arcade camera, side-scroller, or
+spatial-audio behavior without copying story-specific formulas.
+
 ## 🧊 Cube Clusters
 
 [cube-cluster.ts](cube-cluster.ts) describes voxel-style block structures as

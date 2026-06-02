@@ -3,10 +3,15 @@ import {
   colorWithAlpha,
   fillCanvasWithTrail,
   getDepthProgress,
+  getFirstPersonCamera,
   getIsometricTileCorners,
   getIsometricWallSide,
+  getLoopedScrollerPosition,
   getLoopedDepth,
   getPerspectiveScale,
+  getSideScrollerJumpY,
+  getSpatialAudioDepth,
+  getSpatialAudioPan,
   parseHexColor,
   projectIsometricPoint,
   projectPerspectivePoint,
@@ -36,6 +41,83 @@ describe("arcade 3D helpers", () => {
         speed: 5,
       })
     ).toBe(3);
+  });
+
+  it("creates repeatable side-scroller positions", () => {
+    expect(
+      getLoopedScrollerPosition({
+        elapsedSeconds: 2,
+        index: 3,
+        offset: -70,
+        range: 900,
+        spacing: 116,
+        speed: 150,
+      })
+    ).toBe(-22);
+    expect(() =>
+      getLoopedScrollerPosition({
+        elapsedSeconds: 0,
+        index: 0,
+        range: 0,
+        spacing: 1,
+        speed: 1,
+      })
+    ).toThrow("Loop range must be greater than 0.");
+  });
+
+  it("calculates first-person camera framing from viewport and look input", () => {
+    expect(
+      getFirstPersonCamera(
+        { height: 300, width: 400 },
+        {
+          bobAmount: 6,
+          bobSpeed: 1.5,
+          centerDrift: 78,
+          elapsedSeconds: Math.PI / 3,
+          horizonDrift: 34,
+          horizonRatio: 0.47,
+          look: { x: 0.5, y: -0.25 },
+          speed: 1,
+        }
+      )
+    ).toEqual({
+      centerX: 239,
+      horizon: 138.5,
+    });
+  });
+
+  it("calculates side-scroller jump arcs", () => {
+    expect(
+      getSideScrollerJumpY({
+        elapsedSeconds: Math.PI / 10,
+        groundY: 220,
+        height: 54,
+        speed: 5,
+      })
+    ).toBe(166);
+    expect(
+      getSideScrollerJumpY({
+        elapsedSeconds: Math.PI / 5,
+        groundY: 220,
+        height: 54,
+        speed: 5,
+      })
+    ).toBe(220);
+  });
+
+  it("calculates spatial audio pan and visual depth", () => {
+    expect(getSpatialAudioPan({ listenerRange: 300, sourceX: 150 })).toBe(0.5);
+    expect(getSpatialAudioPan({ listenerRange: 300, sourceX: 999 })).toBe(1);
+    expect(getSpatialAudioPan({ listenerRange: 300, sourceX: -999 })).toBe(-1);
+    expect(() =>
+      getSpatialAudioPan({ listenerRange: 0, sourceX: 10 })
+    ).toThrow("Listener range must be greater than 0.");
+    expect(
+      getSpatialAudioDepth({ baseDepth: 7, distanceScale: 12, sourceY: -144 })
+    ).toBe(19);
+    expect(() =>
+      getSpatialAudioDepth({ distanceScale: 0, sourceY: 10 })
+    ).toThrow("Distance scale must be greater than 0.");
   });
 
   it("calculates normalized depth progress", () => {
