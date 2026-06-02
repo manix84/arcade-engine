@@ -204,14 +204,14 @@ npm run pack:dry-run
 
 Latest verification: June 2, 2026.
 
-- Version checked: `2.23.1`.
+- Version checked: `2.24.0`.
 - Lint: passed.
 - Typecheck: passed.
 - Unit tests: passed with 119 tests across 20 files.
 - Package build: passed and validated `dist`.
 - Storybook build: passed.
 - Package dry-run: passed.
-- Dry-run package contents: 82 files, 76.3 kB packed, 331.7 kB unpacked.
+- Dry-run package contents: 83 files, 77.4 kB packed, 334.4 kB unpacked.
 - `dist` contains ESM JavaScript, source maps, declaration files, and
   declaration maps.
 - `dist/multiplayer.*`, `dist/input.*`, `dist/animation.*`,
