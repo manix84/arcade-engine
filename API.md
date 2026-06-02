@@ -280,8 +280,8 @@ const explosion = createExplosionBlocks(blocks, { force: 6 });
 
 The package exports TypeScript types for public data shapes, including:
 
-- Arena, sound, ticker, input, animation, camera, coordinate, heading, sprite,
-  and render options.
+- Arena, sound, ticker, input, multiplayer, animation, camera, coordinate,
+  heading, sprite, and render options.
 - Grid, box, viewport, debug-vector, canvas color, projection, arcade-motion,
   spatial-audio, cube-cluster, and explosion types.
 

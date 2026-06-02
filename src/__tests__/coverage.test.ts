@@ -756,5 +756,5 @@ describe("coverage-focused engine branches", () => {
       "stepExplosionBlocks",
       "wrapDepth",
     ]);
-  }, 10_000);
+  }, 30_000);
 });

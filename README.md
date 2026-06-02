@@ -258,6 +258,8 @@ Storybook contains live demos for the engine surface:
 - **Core**: `GameArena`, ticker behavior, viewport scaling, and debug vectors.
 - **Helpers**: math, geometry, object cloning, event binding, collisions,
   rotation, spawning, and 2.5D variants.
+- **Systems**: input actions, local multiplayer, sprite animation, follow
+  cameras, and spatial-audio math.
 - **Audio**: master controls, effects, music, spatial panning, and global
   playback behavior.
 - **3D**: cube-cluster pickups and modular level pieces.
@@ -281,6 +283,7 @@ More local documentation is available in:
 - [src/README.md](src/README.md)
 - [src/stories/README.md](src/stories/README.md)
 - [src/stories/helpers/README.md](src/stories/helpers/README.md)
+- [src/stories/systems/README.md](src/stories/systems/README.md)
 - [src/stories/sound/README.md](src/stories/sound/README.md)
 - [src/stories/ticker/README.md](src/stories/ticker/README.md)
 
@@ -319,8 +322,9 @@ The test suite uses Vitest with jsdom and lightweight browser API shims for
 canvas, media elements, animation frames, and storage.
 
 Coverage includes package imports, arena behavior, viewport calculations, grid
-and box helpers, 2.5D projection math, cube clusters, debug vectors, ticker
-scheduling, sound lifecycle, and helper math/events.
+and box helpers, input and multiplayer helpers, 2.5D projection math, cube
+clusters, debug vectors, ticker scheduling, sound lifecycle, and helper
+math/events.
 
 ## 🗺️ Migration Status
 
@@ -331,6 +335,7 @@ Active package modules:
 - `src/Ticker.ts`
 - `src/Sound.ts`
 - `src/input.ts`
+- `src/multiplayer.ts`
 - `src/animation.ts`
 - `src/camera.ts`
 - `src/helpers.ts`

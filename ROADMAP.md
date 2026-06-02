@@ -173,6 +173,8 @@ Verification notes:
 - Added sprite animation helpers for frame timing and sprite-sheet frame data.
 - Added 2D follow-camera helpers with smoothing, dead zones, and world bounds.
 - Added spatial audio gain/mix helpers for listener/source calculations.
+- Added Systems Storybook stories for input actions, local multiplayer,
+  sprite animation, follow cameras, and spatial-audio math.
 
 ## 📦 Stage 5: Release Candidate
 
@@ -197,6 +199,35 @@ npm run pack:dry-run
 - Confirm `storybook-static` is excluded from the npm package.
 - Confirm README, license, privacy, and what's-new docs are included.
 - Tag or publish only after the verification baseline is clean.
+
+### Current Status
+
+Latest verification: June 2, 2026.
+
+- Version checked: `2.23.0`.
+- Lint: passed.
+- Typecheck: passed.
+- Unit tests: passed with 119 tests across 20 files.
+- Package build: passed and validated `dist`.
+- Storybook build: passed.
+- Package dry-run: passed.
+- Dry-run package contents: 82 files, 76.3 kB packed, 331.7 kB unpacked.
+- `dist` contains ESM JavaScript, source maps, declaration files, and
+  declaration maps.
+- `dist/multiplayer.*`, `dist/input.*`, `dist/animation.*`,
+  `dist/camera.*`, and `dist/spatial-audio.*` are included.
+- `storybook-static` is excluded from the npm package.
+- `README.md`, `API.md`, `LICENSE.md`, `PRIVACY.md`, and `WHATSNEW.md` are
+  included in the npm package.
+
+Verification notes:
+
+- The local tool shell needs `PATH=/usr/local/bin:$PATH` so npm can find Node.
+- Vitest needs local socket access in this environment.
+- The package dry run used `npm_config_cache=/private/tmp/arcade-engine-npm-cache`
+  to avoid unrelated permissions in the user npm cache.
+- Storybook emitted chunk-size and plugin-timing warnings during the static
+  build, but completed successfully.
 
 ## 🔭 Post-Release Backlog
 
@@ -247,7 +278,6 @@ Stage 5 release candidate unless a real game depends on them immediately.
 - Gamepad connection/disconnection event helpers.
 - Pointer gesture helpers for drag, swipe, tap, and virtual sticks.
 - Touch-safe UI helpers for mobile/tablet arcade controls.
-- Storybook demos for local co-op, local PvP, and remote-intent simulation.
 - Optional rollback/prediction helpers if a real game needs tighter remote PvP
   behavior.
 

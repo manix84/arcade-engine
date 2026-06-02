@@ -59,6 +59,8 @@
   hyperspace gate, first-person player, 2D side scroller, and 2.5D side
   scroller styles.
 - Added cube-cluster demos for destructible pickups and modular level pieces.
+- Added systems demos for input actions, local multiplayer, sprite animation,
+  follow cameras, and spatial-audio math.
 - Added a GitHub Pages workflow that deploys Storybook from `storybook-static`
   without adding Storybook output to the npm package build.
 
