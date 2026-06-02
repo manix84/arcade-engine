@@ -204,7 +204,7 @@ npm run pack:dry-run
 
 Latest verification: June 2, 2026.
 
-- Version checked: `2.23.0`.
+- Version checked: `2.23.1`.
 - Lint: passed.
 - Typecheck: passed.
 - Unit tests: passed with 119 tests across 20 files.
