@@ -329,6 +329,7 @@ Legacy JavaScript modules still present for review:
 ## 🤝 Project Docs
 
 - [🗒️ What's New](WHATSNEW.md)
+- [🗺️ Finish Roadmap](ROADMAP.md)
 - [🔐 Privacy](PRIVACY.md)
 - [⚖️ Licence](LICENSE.md)
 - [🤝 Contributing](CONTRIBUTING.md)
