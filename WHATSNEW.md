@@ -31,12 +31,18 @@
 - Added a richer `Sound` wrapper with music/effects channels, global
   pause/resume/stop helpers, fade helpers, playback-blocked callbacks, and
   optional browser spatial panning.
+- Added input action helpers for mapping keyboard, mouse, touch, pointer, and
+  gamepad inputs to game actions.
+- Added sprite animation helpers for frame timing and sprite-sheet frame data.
+- Added follow-camera helpers for 2D worlds.
 - Added grid helpers for board and tile games.
 - Added axis-aligned box helpers for paddle, brick, shot, enemy, and platform
   patterns.
 - Added canvas rendering helpers for trails, lines, polygons, and color work.
 - Added 2.5D projection helpers for perspective, isometric, and looped-depth
   arcade scenes.
+- Added arcade-motion and spatial-audio math helpers for first-person framing,
+  side scrollers, jump arcs, pan, gain, and listener/source mixes.
 - Added 3D cube-cluster helpers for voxel-style models, plasma links, bounds,
   centers, and deterministic block explosions.
 - Added shared `types.ts` contracts for public engine options and data shapes.

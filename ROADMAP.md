@@ -163,6 +163,14 @@ Verification notes:
 - The local tool shell needs `PATH=/usr/local/bin:$PATH`; the dry run used
   `npm_config_cache=/private/tmp/arcade-engine-npm-cache`.
 
+### Pre-Stage 5 Additions
+
+- Added input action mapping and an input controller so games can map raw
+  keyboard, mouse, touch, pointer, and gamepad input to semantic actions.
+- Added sprite animation helpers for frame timing and sprite-sheet frame data.
+- Added 2D follow-camera helpers with smoothing, dead zones, and world bounds.
+- Added spatial audio gain/mix helpers for listener/source calculations.
+
 ## 📦 Stage 5: Release Candidate
 
 Goal: prepare the package for publishing.
@@ -186,3 +194,60 @@ npm run pack:dry-run
 - Confirm `storybook-static` is excluded from the npm package.
 - Confirm README, license, privacy, and what's-new docs are included.
 - Tag or publish only after the verification baseline is clean.
+
+## 🔭 Post-Release Backlog
+
+These items would make Arcade Engine more capable, but they should not block the
+Stage 5 release candidate unless a real game depends on them immediately.
+
+### Entity And Pool Helpers
+
+- Bullet, projectile, particle, pickup, and enemy object pools.
+- Spawn/despawn helpers for high-volume arcade objects.
+- Reuse-focused APIs that avoid unnecessary garbage during fast loops.
+
+### Timers And Cooldowns
+
+- Cooldown helpers for fire rates, invulnerability windows, and ability timers.
+- Countdown and elapsed-time helpers that work cleanly with `Ticker`.
+- Small state helpers for one-shot, repeating, and delayed actions.
+
+### Collision Response
+
+- Bounce and reflect helpers for balls, shots, paddles, and walls.
+- Separation helpers for overlapping boxes or circles.
+- Optional collision result objects with side, normal, overlap, and response
+  hints.
+
+### Enemy Movement And Paths
+
+- Patrol helpers for looping, ping-pong, and waypoint movement.
+- Steering helpers for simple chase, flee, orbit, and intercept behavior.
+- Wave movement helpers for arcade shooter enemies.
+
+### Particles And Effects
+
+- Burst, trail, and fade helpers for canvas particles.
+- Small effect presets for pickups, impacts, explosions, and engine thrust.
+- Data-first helpers that can be rendered by canvas, WebGL, or another renderer.
+
+### Scene And State Helpers
+
+- Lightweight scene lifecycle helpers for menu, play, pause, game over, and
+  transition states.
+- Stack or switch helpers that coordinate cleanup with `Ticker`, input, and
+  sound.
+- Optional transition timing helpers for fades and wipes.
+
+### Input Follow-Ups
+
+- Gamepad connection/disconnection event helpers.
+- Pointer gesture helpers for drag, swipe, tap, and virtual sticks.
+- Touch-safe UI helpers for mobile/tablet arcade controls.
+
+### Audio Follow-Ups
+
+- Mixer helpers for ducking, crossfades, and bus-style channel groups.
+- Distance curve presets for spatial sound.
+- Storybook demos that combine `Sound`, `getSpatialAudioMix`, and visible
+  listener/source telemetry.

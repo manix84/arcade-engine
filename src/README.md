@@ -78,6 +78,32 @@ Audio must still be started by user gestures when browsers require it.
 These helpers work with simple `posX`, `posY`, `radius`, and `heading` style
 objects used by many arcade games.
 
+## 🎮 Input Actions
+
+[input.ts](input.ts) maps raw keyboard, mouse, touch, pointer, and gamepad input
+to semantic actions and provides a small controller with explicit start/stop
+cleanup.
+
+Use it when a game wants to reason about `jump`, `fire`, or `moveLeft` instead
+of browser key names, mouse buttons, touch events, or gamepad button/axis
+numbers.
+
+## 🎞️ Sprite Animation
+
+[animation.ts](animation.ts) calculates animation frame indices and sprite-sheet
+frame data for `GameArena.renderSprite`.
+
+Use it when a sprite sheet needs stable timing without embedding animation
+state inside rendering code.
+
+## 📷 Camera
+
+[camera.ts](camera.ts) calculates 2D follow-camera positions with optional
+dead-zone, smoothing, and world-bound clamping.
+
+Use it for side scrollers, top-down arenas, and larger worlds where the canvas
+viewport follows a player or focus object.
+
 ## 🧭 Viewport And Debug Vectors
 
 [viewport.ts](viewport.ts) calculates radius, padded radius, area scale, and
@@ -143,6 +169,14 @@ that used to live only in Storybook demos:
 
 Use these helpers when a game needs the same arcade camera, side-scroller, or
 spatial-audio behavior without copying story-specific formulas.
+
+## 🔊 Spatial Audio Math
+
+[spatial-audio.ts](spatial-audio.ts) calculates distance gain and combined
+listener/source pan/gain data.
+
+Use it with `Sound.setPan`, channel volume decisions, or custom positional
+audio UI.
 
 ## 🧊 Cube Clusters
 

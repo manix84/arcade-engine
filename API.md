@@ -52,6 +52,52 @@ const heading = helpers.findHeading(enemy, player);
 enemy.heading = helpers.rotateTo(heading.angle, enemy.heading, 3);
 ```
 
+## 🎮 Input Actions
+
+| Export | Use It For |
+| --- | --- |
+| `getInputCode` | Normalize keyboard, mouse, pointer, touch, gamepad, or string input into an input code. |
+| `getInputActions` | Resolve an input event or input code to semantic actions. |
+| `getInputActionState` | Convert currently pressed inputs into an action-state object. |
+| `getGamepadInputCodes` | Read pressed gamepad buttons and active axes. |
+| `createInputController` | Track keyboard, mouse, touch, pointer, and gamepad inputs through start/stop lifecycle helpers. |
+| `createKeyboardInputController` | Backwards-compatible alias for `createInputController`. |
+
+```ts
+const input = createInputController({
+  fire: ["Space", "MouseLeft", "TouchPrimary", "Gamepad0"],
+  moveLeft: ["ArrowLeft", "KeyA", "GamepadAxisLeftXNegative"],
+});
+
+input.start();
+input.updateGamepads();
+
+if (input.isPressed("fire")) {
+  // Fire a shot.
+}
+```
+
+## 🎞️ Sprite Animation
+
+| Export | Use It For |
+| --- | --- |
+| `getSpriteFrameIndex` | Frame timing from elapsed seconds, animation FPS, and frame count. |
+| `getSpriteSheetFrame` | Convert a frame index into `GameArena.renderSprite` frame data. |
+| `getAnimatedSpriteFrame` | Get timed sprite frame data in one call. |
+
+```ts
+const frame = getAnimatedSpriteFrame({
+  columns: 4,
+  elapsedSeconds,
+  fps: 12,
+  frameCount: 8,
+  frameHeight: 16,
+  frameWidth: 16,
+});
+
+arena.renderSprite(spriteImage, frame);
+```
+
 ## 🧩 Grid And Box Helpers
 
 | Export | Use It For |
@@ -84,6 +130,23 @@ const hit = detectBoxCollision(ball, brick);
 | `getViewportAreaScale` | Scale values against viewport area. |
 | `getScaledViewportLimit` | Responsive spawn/entity limits. |
 | `drawDebugVectors` | Canvas overlays for heading, velocity, and target vectors. |
+
+## 📷 Camera
+
+| Export | Use It For |
+| --- | --- |
+| `getFollowCamera` | 2D camera follow behavior with optional dead zone, smoothing, and world bounds. |
+
+```ts
+const camera = getFollowCamera({
+  current: previousCamera,
+  deadZone: { width: 80, height: 48 },
+  smoothing: 0.2,
+  target: player,
+  viewport,
+  worldBounds,
+});
+```
 
 ## 🎨 Canvas Rendering
 
@@ -139,6 +202,24 @@ const camera = getFirstPersonCamera(viewport, {
 });
 ```
 
+## 🔊 Spatial Audio Math
+
+| Export | Use It For |
+| --- | --- |
+| `getDistanceGain` | Convert listener/source distance into a gain value. |
+| `getSpatialAudioMix` | Calculate distance, pan, and gain for a source relative to a listener. |
+
+```ts
+const mix = getSpatialAudioMix({
+  listener: player,
+  listenerRange: 240,
+  maxDistance: 480,
+  source: pickup,
+});
+
+sound.setPan(mix.pan);
+```
+
 ## 🧊 Cube Clusters
 
 | Export | Use It For |
@@ -165,8 +246,9 @@ const explosion = createExplosionBlocks(blocks, { force: 6 });
 
 The package exports TypeScript types for public data shapes, including:
 
-- Arena, sound, ticker, coordinate, heading, sprite, and render options.
+- Arena, sound, ticker, input, animation, camera, coordinate, heading, sprite,
+  and render options.
 - Grid, box, viewport, debug-vector, canvas color, projection, arcade-motion,
-  cube-cluster, and explosion types.
+  spatial-audio, cube-cluster, and explosion types.
 
 Use these types when building reusable game systems on top of Arcade Engine.

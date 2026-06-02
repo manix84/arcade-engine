@@ -20,8 +20,12 @@ Storybook is documentation and demo output only; it builds to
   simulation timing.
 - HTML audio playback with music/effects channels, global pause/resume/stop,
   fades, blocked-playback reporting, and optional spatial panning.
+- Input action mapping helpers for keyboard, mouse, touch, pointer, and gamepad
+  controls.
+- Sprite animation helpers for frame timing and sprite-sheet frame selection.
 - Math, heading, spawn, collision, area-exit, cloning, random-color, and
   browser-event helpers.
+- 2D follow-camera helpers with smoothing, dead zones, and world bounds.
 - Viewport scaling helpers for responsive arena bounds and debug vector drawing
   for heading and steering overlays.
 - Grid helpers for board, tile, puzzle, and cell-based games.
@@ -33,6 +37,7 @@ Storybook is documentation and demo output only; it builds to
   and pseudo-3D arcade camera effects.
 - Arcade motion helpers for first-person camera framing, side-scroller loops,
   jump arcs, and spatial audio pan/depth calculations.
+- Spatial audio math helpers for distance gain, pan, and listener/source mixes.
 - 3D cube-cluster helpers for voxel-style pickups, modular level pieces,
   plasma links, deterministic explosions, and fading debris.
 
@@ -322,6 +327,9 @@ Active package modules:
 - `src/arena.ts`
 - `src/Ticker.ts`
 - `src/Sound.ts`
+- `src/input.ts`
+- `src/animation.ts`
+- `src/camera.ts`
 - `src/helpers.ts`
 - `src/viewport.ts`
 - `src/debug-vectors.ts`
@@ -330,6 +338,7 @@ Active package modules:
 - `src/canvas-rendering.ts`
 - `src/arcade-3d.ts`
 - `src/arcade-motion.ts`
+- `src/spatial-audio.ts`
 - `src/cube-cluster.ts`
 - `src/types.ts`
 
