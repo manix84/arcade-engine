@@ -31,12 +31,20 @@
 - Added a richer `Sound` wrapper with music/effects channels, global
   pause/resume/stop helpers, fade helpers, playback-blocked callbacks, and
   optional browser spatial panning.
+- Added input action helpers for mapping keyboard, mouse, touch, pointer, and
+  gamepad inputs to game actions.
+- Added multiplayer helpers for local player-scoped input, assigned gamepads,
+  co-op/PvP session metadata, and serializable remote player input intents.
+- Added sprite animation helpers for frame timing and sprite-sheet frame data.
+- Added follow-camera helpers for 2D worlds.
 - Added grid helpers for board and tile games.
 - Added axis-aligned box helpers for paddle, brick, shot, enemy, and platform
   patterns.
 - Added canvas rendering helpers for trails, lines, polygons, and color work.
 - Added 2.5D projection helpers for perspective, isometric, and looped-depth
   arcade scenes.
+- Added arcade-motion and spatial-audio math helpers for first-person framing,
+  side scrollers, jump arcs, pan, gain, and listener/source mixes.
 - Added 3D cube-cluster helpers for voxel-style models, plasma links, bounds,
   centers, and deterministic block explosions.
 - Added shared `types.ts` contracts for public engine options and data shapes.
@@ -51,6 +59,8 @@
   hyperspace gate, first-person player, 2D side scroller, and 2.5D side
   scroller styles.
 - Added cube-cluster demos for destructible pickups and modular level pieces.
+- Added systems demos for input actions, local multiplayer, sprite animation,
+  follow cameras, and spatial-audio math.
 - Added a GitHub Pages workflow that deploys Storybook from `storybook-static`
   without adding Storybook output to the npm package build.
 
@@ -67,13 +77,13 @@
 
 - Removed conflicting legacy AMD `src/Sound.js` and `src/Ticker.js` files so
   extensionless imports resolve to the new TypeScript modules.
-- Left the remaining legacy JavaScript modules in place for follow-up review
-  rather than removing them as part of the first modernization slices.
+- Audited and removed the remaining legacy AMD JavaScript modules that were not
+  exported, tested, used by Storybook, or included in the npm package build:
+  `MainMenu.js`, `src/Fullscreen.js`, `src/Graphic.js`, sprite wrappers,
+  `src/Ticker/worker.js`, `src/debugging.js`, and `src/keyboard.js`.
 
 ## 🔜 Next Milestones
 
-- Decide whether the remaining legacy `Graphic`, `Fullscreen`, `keyboard`, and
-  `debugging` modules should be ported, replaced by `GameArena`, or archived.
 - Continue moving demo-only behavior into public helpers when it proves useful
   to real games.
 - Keep Storybook examples aligned with capabilities exported from the engine.

@@ -1,39 +1,31 @@
-# ⚖️ Arcade Engine Licence
+# ⚖️ MIT License
 
-Copyright (c) Rob / manix84.
+Copyright (c) Rob Taylor / manix84.
 
-This project is shared so people can read it, learn from it, and tinker with it.
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to use,
+copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
 
-## ✅ You Can
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-- Read the source code.
-- Fork or clone the project for personal use.
-- Modify it privately.
-- Use small snippets for learning, experiments, or your own non-published
-  projects.
-- Run the tests locally.
+The Software is provided "as is", without warranty of any kind, express or
+implied, including but not limited to the warranties of merchantability, fitness
+for a particular purpose and noninfringement. In no event shall the authors or
+copyright holders be liable for any claim, damages or other liability, whether
+in an action of contract, tort or otherwise, arising from, out of or in
+connection with the Software or the use or other dealings in the Software.
 
-## 🚫 You Cannot
+## 📦 Package Use
 
-- Publish, host, distribute, sell, package, or re-release this engine or a
-  modified version of it without written permission.
-- Upload a public clone, mirror, port, package-registry build, or hosted copy
-  without written permission.
-- Use the Arcade Engine name, repository identity, examples, images, or other
-  project assets in another public project without written permission.
-- Claim this project, its source, or its assets as your own work.
+Arcade Engine is intended to be installed as an npm package and used by games,
+tools, prototypes, and published projects. You may include it as a dependency in
+your own npm package or game repository, including commercial projects, as long
+as the MIT license notice above is preserved where required.
 
-## 🤝 Contributions
-
-If you submit a contribution to this repository, you agree that it may be used
-in this project under this licence.
-
-## 🧯 No Warranty
-
-This project is provided as-is, without warranty of any kind. Use it at your own
-risk.
-
-## 📬 Permission
-
-For permission to publish, redistribute, adapt, or use project assets, contact
-the project author first.
+Project names, logos, examples, screenshots, documentation text, and demo assets
+may still have separate branding or asset considerations. The engine software
+itself is licensed under MIT.

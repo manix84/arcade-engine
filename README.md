@@ -20,8 +20,15 @@ Storybook is documentation and demo output only; it builds to
   simulation timing.
 - HTML audio playback with music/effects channels, global pause/resume/stop,
   fades, blocked-playback reporting, and optional spatial panning.
+- Input action mapping helpers for keyboard, mouse, touch, pointer, and gamepad
+  controls.
+- Local multiplayer input helpers for player one/player two keyboard,
+  mouse/touch, and assigned gamepad controls, plus backend-agnostic remote
+  player intent contracts.
+- Sprite animation helpers for frame timing and sprite-sheet frame selection.
 - Math, heading, spawn, collision, area-exit, cloning, random-color, and
   browser-event helpers.
+- 2D follow-camera helpers with smoothing, dead zones, and world bounds.
 - Viewport scaling helpers for responsive arena bounds and debug vector drawing
   for heading and steering overlays.
 - Grid helpers for board, tile, puzzle, and cell-based games.
@@ -31,6 +38,9 @@ Storybook is documentation and demo output only; it builds to
   shading.
 - 2.5D projection helpers for perspective lanes, isometric tiles, depth loops,
   and pseudo-3D arcade camera effects.
+- Arcade motion helpers for first-person camera framing, side-scroller loops,
+  jump arcs, and spatial audio pan/depth calculations.
+- Spatial audio math helpers for distance gain, pan, and listener/source mixes.
 - 3D cube-cluster helpers for voxel-style pickups, modular level pieces,
   plasma links, deterministic explosions, and fading debris.
 
@@ -51,7 +61,9 @@ import {
   detectBoxCollision,
   drawDebugVectors,
   fillCanvasWithTrail,
+  getFirstPersonCamera,
   getGridCell,
+  getLoopedScrollerPosition,
   getPerspectiveScale,
   getScaledViewportLimit,
   helpers,
@@ -194,6 +206,19 @@ These helpers do not require WebGL. They are useful for pseudo-3D racing,
 starfields, first-person lanes, isometric rooms, 2.5D side scrollers, and
 layered arcade scenes drawn to a normal canvas.
 
+### 🏃 Arcade Motion
+
+Arcade motion helpers move common demo math into the engine package:
+
+- `getFirstPersonCamera(viewport, options?)` calculates center and horizon
+  framing from viewport size, look input, and optional bobbing.
+- `getLoopedScrollerPosition(options)` wraps side-scroller scenery and platform
+  positions across a repeat range.
+- `getSideScrollerJumpY(options)` calculates a simple jump/bob arc.
+- `getSpatialAudioPan(options)` clamps source position into browser pan range.
+- `getSpatialAudioDepth(options)` turns source distance into a visual depth
+  value for 2.5D audio scenes.
+
 ### 🧊 3D Cube Clusters
 
 Cube clusters describe block models as data rather than binding the engine to a
@@ -233,6 +258,8 @@ Storybook contains live demos for the engine surface:
 - **Core**: `GameArena`, ticker behavior, viewport scaling, and debug vectors.
 - **Helpers**: math, geometry, object cloning, event binding, collisions,
   rotation, spawning, and 2.5D variants.
+- **Systems**: input actions, local multiplayer, sprite animation, follow
+  cameras, and spatial-audio math.
 - **Audio**: master controls, effects, music, spatial panning, and global
   playback behavior.
 - **3D**: cube-cluster pickups and modular level pieces.
@@ -256,6 +283,7 @@ More local documentation is available in:
 - [src/README.md](src/README.md)
 - [src/stories/README.md](src/stories/README.md)
 - [src/stories/helpers/README.md](src/stories/helpers/README.md)
+- [src/stories/systems/README.md](src/stories/systems/README.md)
 - [src/stories/sound/README.md](src/stories/sound/README.md)
 - [src/stories/ticker/README.md](src/stories/ticker/README.md)
 
@@ -294,17 +322,22 @@ The test suite uses Vitest with jsdom and lightweight browser API shims for
 canvas, media elements, animation frames, and storage.
 
 Coverage includes package imports, arena behavior, viewport calculations, grid
-and box helpers, 2.5D projection math, cube clusters, debug vectors, ticker
-scheduling, sound lifecycle, and helper math/events.
+and box helpers, input and multiplayer helpers, 2.5D projection math, cube
+clusters, debug vectors, ticker scheduling, sound lifecycle, and helper
+math/events.
 
 ## 🗺️ Migration Status
 
-Active TypeScript package modules:
+Active package modules:
 
 - `src/index.ts`
 - `src/arena.ts`
 - `src/Ticker.ts`
 - `src/Sound.ts`
+- `src/input.ts`
+- `src/multiplayer.ts`
+- `src/animation.ts`
+- `src/camera.ts`
 - `src/helpers.ts`
 - `src/viewport.ts`
 - `src/debug-vectors.ts`
@@ -312,23 +345,16 @@ Active TypeScript package modules:
 - `src/box-collision.ts`
 - `src/canvas-rendering.ts`
 - `src/arcade-3d.ts`
+- `src/arcade-motion.ts`
+- `src/spatial-audio.ts`
 - `src/cube-cluster.ts`
 - `src/types.ts`
 
-Legacy JavaScript modules still present for review:
-
-- `src/Fullscreen.js`
-- `src/Graphic.js`
-- `src/Graphic/Sprite.js`
-- `src/Graphic/Sprite/Static.js`
-- `src/Graphic/Sprite/Animated.js`
-- `src/Ticker/worker.js`
-- `src/debugging.js`
-- `src/keyboard.js`
-
 ## 🤝 Project Docs
 
+- [📘 API Reference](API.md)
 - [🗒️ What's New](WHATSNEW.md)
+- [🗺️ Finish Roadmap](ROADMAP.md)
 - [🔐 Privacy](PRIVACY.md)
 - [⚖️ Licence](LICENSE.md)
 - [🤝 Contributing](CONTRIBUTING.md)

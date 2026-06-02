@@ -9,6 +9,19 @@ export {
   wrapDepth,
 } from "./arcade-3d.js";
 export {
+  getAnimatedSpriteFrame,
+  getSpriteFrameIndex,
+  getSpriteSheetFrame,
+} from "./animation.js";
+export {
+  getFirstPersonCamera,
+  getLoopedScrollerPosition,
+  getSideScrollerJumpY,
+  getSpatialAudioDepth,
+  getSpatialAudioPan,
+} from "./arcade-motion.js";
+export { getFollowCamera } from "./camera.js";
+export {
   clamp,
   containsBox,
   detectBoxCollision,
@@ -50,7 +63,23 @@ export {
 } from "./grid.js";
 export { default as helpers } from "./helpers.js";
 export { default as Sound } from "./Sound.js";
+export { getDistanceGain, getSpatialAudioMix } from "./spatial-audio.js";
 export { default as Ticker } from "./Ticker.js";
+export {
+  createInputController,
+  createKeyboardInputController,
+  getGamepadInputCodes,
+  getInputCode,
+  getInputActions,
+  getInputActionState,
+} from "./input.js";
+export {
+  createLocalMultiplayerController,
+  createMultiplayerSession,
+  createPlayerInputIntent,
+  getPlayerActionState,
+  mergePlayerInputIntent,
+} from "./multiplayer.js";
 export {
   getScaledViewportLimit,
   getViewportAreaScale,
@@ -99,4 +128,48 @@ export type {
   LoopedDepthOptions,
   PerspectiveProjectionOptions,
 } from "./arcade-3d.js";
+export type {
+  ArcadeLookInput,
+  FirstPersonCamera,
+  FirstPersonCameraOptions,
+  LoopedScrollerPositionOptions,
+  SideScrollerJumpOptions,
+  SpatialAudioDepthOptions,
+  SpatialAudioPanOptions,
+} from "./arcade-motion.js";
+export type {
+  AnimatedSpriteFrameOptions,
+  SpriteFrameIndexOptions,
+  SpriteSheetFrameOptions,
+} from "./animation.js";
+export type { CameraBounds, FollowCameraOptions } from "./camera.js";
+export type {
+  InputActionBindings,
+  InputActionState,
+  InputController,
+  InputControllerOptions,
+  InputDeviceEvent,
+  GamepadInputOptions,
+  KeyboardInputController,
+  KeyboardInputControllerOptions,
+} from "./input.js";
+export type {
+  LocalMultiplayerController,
+  LocalMultiplayerControllerOptions,
+  MultiplayerAuthority,
+  MultiplayerConnection,
+  MultiplayerMode,
+  MultiplayerPeer,
+  MultiplayerPlayer,
+  MultiplayerSession,
+  MultiplayerSessionOptions,
+  MultiplayerTeam,
+  PlayerInputIntent,
+  PlayerInputIntentOptions,
+} from "./multiplayer.js";
+export type {
+  DistanceGainOptions,
+  SpatialAudioMix,
+  SpatialAudioMixOptions,
+} from "./spatial-audio.js";
 export type { RgbColor } from "./canvas-rendering.js";

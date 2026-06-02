@@ -5,11 +5,14 @@ import {
   drawCanvasPolygon,
   fillCanvasWithTrail,
   getDepthProgress,
+  getFirstPersonCamera,
   getIsometricTileCorners,
   getIsometricWallSide,
+  getLoopedScrollerPosition,
   getLoopedDepth,
   projectIsometricPoint,
   projectPerspectivePoint,
+  getSideScrollerJumpY,
   Ticker,
 } from "../index.js";
 import {
@@ -55,13 +58,13 @@ type SceneContext = {
 };
 
 const argTypes: Story["argTypes"] = {
-  accentColor: { control: "color" },
-  backgroundColor: { control: "color" },
-  depth: { control: { type: "range", min: 8, max: 44, step: 1 } },
-  objectCount: { control: { type: "range", min: 6, max: 90, step: 1 } },
-  secondaryColor: { control: "color" },
-  speed: { control: { type: "range", min: 0.2, max: 4, step: 0.1 } },
-  trailOpacity: { control: { type: "range", min: 0, max: 0.45, step: 0.01 } },
+  accentColor: { name: "Accent color", control: "color" },
+  backgroundColor: { name: "Background color", control: "color" },
+  depth: { name: "Depth range", control: { type: "range", min: 8, max: 44, step: 1 } },
+  objectCount: { name: "Object count", control: { type: "range", min: 6, max: 90, step: 1 } },
+  secondaryColor: { name: "Secondary color", control: "color" },
+  speed: { name: "Scene speed", control: { type: "range", min: 0.2, max: 4, step: 0.1 } },
+  trailOpacity: { name: "Trail opacity", control: { type: "range", min: 0, max: 0.45, step: 0.01 } },
 };
 
 const defaultArgs = {
@@ -528,8 +531,19 @@ const drawFirstPersonPlayer = (
   { canvas, context, elapsed, pointer }: SceneContext,
   args: Arcade3DStoryArgs
 ): void => {
-  const centerX = canvas.width / 2 + pointer.x * 78;
-  const horizon = canvas.height * 0.47 + Math.sin(elapsed * args.speed * 1.5) * 6 + pointer.y * 34;
+  const { centerX, horizon } = getFirstPersonCamera(
+    { height: canvas.height, width: canvas.width },
+    {
+      bobAmount: 6,
+      bobSpeed: 1.5,
+      centerDrift: 78,
+      elapsedSeconds: elapsed,
+      horizonDrift: 34,
+      horizonRatio: 0.47,
+      look: pointer,
+      speed: args.speed,
+    }
+  );
   const viewport = { height: canvas.height, width: canvas.width };
 
   fillCanvasWithTrail(context, canvas, args.backgroundColor, args.trailOpacity);
@@ -617,7 +631,15 @@ const drawSideScroller2D = (
     const alpha = 0.12 + layer * 0.1;
 
     for (let index = -1; index < 7; index++) {
-      const x = ((index * tileWidth - elapsed * speed) % (tileWidth * 6) + tileWidth * 6) % (tileWidth * 6) - tileWidth;
+      const x =
+        getLoopedScrollerPosition({
+          elapsedSeconds: elapsed,
+          index,
+          offset: -tileWidth,
+          range: tileWidth * 6,
+          spacing: tileWidth,
+          speed,
+        });
       const height = 34 + Math.sin(index * 1.7 + layer) * 14 + layer * 18;
 
       drawCanvasPolygon(
@@ -637,7 +659,15 @@ const drawSideScroller2D = (
   drawCanvasLine(context, { x: 0, y: groundY }, { x: canvas.width, y: groundY }, colorWithAlpha(args.secondaryColor, 0.7), 3);
 
   for (let index = 0; index < Math.max(8, args.objectCount); index++) {
-    const x = ((index * 116 - elapsed * args.speed * 150) % (canvas.width + 140) + canvas.width + 140) % (canvas.width + 140) - 70;
+    const x =
+      getLoopedScrollerPosition({
+        elapsedSeconds: elapsed,
+        index,
+        offset: -70,
+        range: canvas.width + 140,
+        spacing: 116,
+        speed: args.speed * 150,
+      });
     const platformY = groundY - 44 - (index % 4) * 34;
     const width = 78 + (index % 3) * 28;
 
@@ -655,7 +685,12 @@ const drawSideScroller2D = (
   }
 
   const playerX = canvas.width * 0.34;
-  const playerY = groundY - 36 - Math.max(0, Math.sin(elapsed * args.speed * 5)) * 54;
+  const playerY = getSideScrollerJumpY({
+    elapsedSeconds: elapsed,
+    groundY: groundY - 36,
+    height: 54,
+    speed: args.speed * 5,
+  });
 
   context.fillStyle = colorWithAlpha(args.secondaryColor, 0.9);
   context.fillRect(playerX - 16, playerY - 28, 32, 42);
@@ -693,7 +728,15 @@ const drawSideScroller2_5D = (
   for (let index = 0; index < Math.max(12, args.objectCount); index++) {
     const depth = 3 + (index % 4) * 3.2;
     const laneProgress = getDepthProgress(depth, args.depth);
-    const x = ((index * 92 - elapsed * args.speed * (90 + laneProgress * 90)) % (canvas.width + 160) + canvas.width + 160) % (canvas.width + 160) - 80;
+    const x =
+      getLoopedScrollerPosition({
+        elapsedSeconds: elapsed,
+        index,
+        offset: -80,
+        range: canvas.width + 160,
+        spacing: 92,
+        speed: args.speed * (90 + laneProgress * 90),
+      });
     const base = projectPerspectivePoint(
       { x: x - canvas.width / 2, y: 210, z: depth },
       viewport,

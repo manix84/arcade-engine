@@ -4,6 +4,8 @@ import {
   Sound,
   colorWithAlpha,
   drawCanvasLine,
+  getSpatialAudioDepth,
+  getSpatialAudioPan,
   projectPerspectivePoint,
 } from "../../index.js";
 import {
@@ -175,10 +177,10 @@ export const MasterSound: MasterSoundStory = {
     onStopAll: fn(),
   },
   argTypes: {
-    effectsMuted: { control: "boolean" },
-    effectsVolume: { control: { type: "range", min: 0, max: 1, step: 0.1 } },
-    masterVolume: { control: { type: "range", min: 0, max: 1, step: 0.1 } },
-    musicVolume: { control: { type: "range", min: 0, max: 1, step: 0.1 } },
+    effectsMuted: { name: "Effects muted", control: "boolean" },
+    effectsVolume: { name: "Effects volume", control: { type: "range", min: 0, max: 1, step: 0.1 } },
+    masterVolume: { name: "Master volume", control: { type: "range", min: 0, max: 1, step: 0.1 } },
+    musicVolume: { name: "Music volume", control: { type: "range", min: 0, max: 1, step: 0.1 } },
   },
   render: (args: MasterSoundArgs) => {
     const { canvas, controls, log, shell, values } = createSoundScene(
@@ -611,8 +613,8 @@ export const SpatialAndGlobalAudio: SpatialAudioStory = {
     onStopAll: fn(),
   },
   argTypes: {
-    autoMove: { control: "boolean" },
-    listenerRange: { control: { type: "range", min: 120, max: 320, step: 10 } },
+    autoMove: { name: "Auto move source", control: "boolean" },
+    listenerRange: { name: "Listener range", control: { type: "range", min: 120, max: 320, step: 10 } },
   },
   render: (args: SpatialAudioArgs) => {
     const { canvas, controls, log, shell, values } = createSoundScene(
@@ -652,9 +654,14 @@ export const SpatialAndGlobalAudio: SpatialAudioStory = {
     const spatialSound = new Sound(spatialUrl, { channel: "effects", loop: true });
 
     const refreshSpatial = (): void => {
-      spatialSound.setPan(sourceX / args.listenerRange);
+      const pan = getSpatialAudioPan({
+        listenerRange: args.listenerRange,
+        sourceX,
+      });
+
+      spatialSound.setPan(pan);
       spatialSound.setSpatialPosition(sourceX, sourceY, args.listenerRange, 170);
-      setValue(panValue, (sourceX / args.listenerRange).toFixed(2));
+      setValue(panValue, pan.toFixed(2));
       setValue(positionValue, `${Math.round(sourceX)}, ${Math.round(sourceY)}`);
     };
 
@@ -841,9 +848,13 @@ export const SpatialAndGlobalAudioDepth: SpatialAudioStory = {
           { x, y, z },
           { height: canvas.height, width: canvas.width },
           { centerX, horizon }
-        );
+      );
       const listener2_5D = project(0, 170, 7);
-      const sourceDepth = 7 + Math.abs(sourceY) / 12;
+      const sourceDepth = getSpatialAudioDepth({
+        baseDepth: 7,
+        distanceScale: 12,
+        sourceY,
+      });
       const source2_5D = project(sourceX, 170, sourceDepth);
       const listener3D = project(0, 0, 7, canvas.width * 0.72);
       const source3D = project(sourceX, sourceY, sourceDepth, canvas.width * 0.72);

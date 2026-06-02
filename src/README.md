@@ -48,9 +48,6 @@ Use it for:
 - Fixed-step simulation timing.
 - Catch-up limits for stable simulation loops.
 
-The legacy [Ticker/worker.js](Ticker/worker.js) remains for review and is
-documented separately in [Ticker/README.md](Ticker/README.md).
-
 ## 🔊 Sound
 
 [Sound.ts](Sound.ts) wraps HTML audio playback.
@@ -80,6 +77,42 @@ Audio must still be started by user gestures when browsers require it.
 
 These helpers work with simple `posX`, `posY`, `radius`, and `heading` style
 objects used by many arcade games.
+
+## 🎮 Input Actions
+
+[input.ts](input.ts) maps raw keyboard, mouse, touch, pointer, and gamepad input
+to semantic actions and provides a small controller with explicit start/stop
+cleanup.
+
+Use it when a game wants to reason about `jump`, `fire`, or `moveLeft` instead
+of browser key names, mouse buttons, touch events, or gamepad button/axis
+numbers.
+
+## 👥 Multiplayer
+
+[multiplayer.ts](multiplayer.ts) composes input action controllers into
+player-scoped local multiplayer state and provides small data contracts for
+remote co-op or PvP input sync.
+
+Use it when a game needs player one/player two controls, assigned gamepad
+indexes, or serializable `PlayerInputIntent` objects that can be sent through a
+game-owned backend, relay, WebSocket, or WebRTC connection.
+
+## 🎞️ Sprite Animation
+
+[animation.ts](animation.ts) calculates animation frame indices and sprite-sheet
+frame data for `GameArena.renderSprite`.
+
+Use it when a sprite sheet needs stable timing without embedding animation
+state inside rendering code.
+
+## 📷 Camera
+
+[camera.ts](camera.ts) calculates 2D follow-camera positions with optional
+dead-zone, smoothing, and world-bound clamping.
+
+Use it for side scrollers, top-down arenas, and larger worlds where the canvas
+viewport follows a player or focus object.
 
 ## 🧭 Viewport And Debug Vectors
 
@@ -132,6 +165,28 @@ canvas scenes:
 These helpers are not tied to WebGL. They support canvas-rendered arcade camera
 styles such as racers, starfields, first-person corridors, isometric rooms, and
 2.5D side scrollers.
+
+## 🏃 Arcade Motion
+
+[arcade-motion.ts](arcade-motion.ts) contains reusable movement and camera math
+that used to live only in Storybook demos:
+
+- First-person camera center/horizon framing.
+- Looped side-scroller positions.
+- Simple side-scroller jump arcs.
+- Spatial audio pan clamping.
+- Spatial audio visual depth calculation.
+
+Use these helpers when a game needs the same arcade camera, side-scroller, or
+spatial-audio behavior without copying story-specific formulas.
+
+## 🔊 Spatial Audio Math
+
+[spatial-audio.ts](spatial-audio.ts) calculates distance gain and combined
+listener/source pan/gain data.
+
+Use it with `Sound.setPan`, channel volume decisions, or custom positional
+audio UI.
 
 ## 🧊 Cube Clusters
 
