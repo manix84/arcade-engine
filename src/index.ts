@@ -1,4 +1,10 @@
 export {
+  getLoopedDepth,
+  getPerspectiveScale,
+  projectPerspectivePoint,
+  wrapDepth,
+} from "./arcade-3d.js";
+export {
   clamp,
   containsBox,
   detectBoxCollision,
@@ -73,3 +79,9 @@ export type {
   ViewportDimensions,
   ViewportRadiusOptions,
 } from "./viewport.js";
+export type {
+  ArcadePoint3D,
+  ArcadeProjectedPoint,
+  LoopedDepthOptions,
+  PerspectiveProjectionOptions,
+} from "./arcade-3d.js";
