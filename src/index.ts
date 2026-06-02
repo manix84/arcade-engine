@@ -1,6 +1,10 @@
 export {
   getLoopedDepth,
+  getDepthProgress,
+  getIsometricTileCorners,
+  getIsometricWallSide,
   getPerspectiveScale,
+  projectIsometricPoint,
   projectPerspectivePoint,
   wrapDepth,
 } from "./arcade-3d.js";
@@ -25,6 +29,14 @@ export {
   normalizeVector,
   stepExplosionBlocks,
 } from "./cube-cluster.js";
+export {
+  colorWithAlpha,
+  drawCanvasLine,
+  drawCanvasPolygon,
+  fillCanvasWithTrail,
+  parseHexColor,
+  shadeHexColor,
+} from "./canvas-rendering.js";
 export { drawDebugVectors } from "./debug-vectors.js";
 export { default as GameArena } from "./arena.js";
 export {
@@ -80,8 +92,11 @@ export type {
   ViewportRadiusOptions,
 } from "./viewport.js";
 export type {
+  ArcadePoint2D,
   ArcadePoint3D,
   ArcadeProjectedPoint,
+  IsometricProjectionOptions,
   LoopedDepthOptions,
   PerspectiveProjectionOptions,
 } from "./arcade-3d.js";
+export type { RgbColor } from "./canvas-rendering.js";

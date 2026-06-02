@@ -1,5 +1,17 @@
 import type { Meta, StoryObj } from "@storybook/html-vite";
-import { getLoopedDepth, projectPerspectivePoint, Ticker } from "../index.js";
+import {
+  colorWithAlpha,
+  drawCanvasLine,
+  drawCanvasPolygon,
+  fillCanvasWithTrail,
+  getDepthProgress,
+  getIsometricTileCorners,
+  getIsometricWallSide,
+  getLoopedDepth,
+  projectIsometricPoint,
+  projectPerspectivePoint,
+  Ticker,
+} from "../index.js";
 import {
   appendStyles,
   createDemoShell,
@@ -26,11 +38,6 @@ type Arcade3DStoryArgs = {
 };
 
 type Story = StoryObj<Arcade3DStoryArgs>;
-
-type Vec2 = {
-  x: number;
-  y: number;
-};
 
 type SceneContext = {
   canvas: HTMLCanvasElement;
@@ -59,85 +66,6 @@ const defaultArgs = {
   speed: 1,
   trailOpacity: 0.16,
 } satisfies Arcade3DStoryArgs;
-
-const parseHexColor = (hex: string): [number, number, number] => {
-  const normalized = hex.replace("#", "");
-  const value = Number.parseInt(
-    normalized.length === 3
-      ? normalized
-          .split("")
-          .map((part) => part + part)
-          .join("")
-      : normalized,
-    16
-  );
-
-  return [(value >> 16) & 255, (value >> 8) & 255, value & 255];
-};
-
-const colorWithAlpha = (hex: string, alpha: number): string => {
-  const [red, green, blue] = parseHexColor(hex);
-
-  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
-};
-
-const shadeColor = (hex: string, amount: number, alpha = 1): string => {
-  const [red, green, blue] = parseHexColor(hex);
-  const shade = (value: number): number => Math.max(0, Math.min(255, Math.round(value * amount)));
-
-  return `rgba(${shade(red)}, ${shade(green)}, ${shade(blue)}, ${alpha})`;
-};
-
-const fillBackground = (
-  context: CanvasRenderingContext2D,
-  canvas: HTMLCanvasElement,
-  color: string,
-  trailOpacity: number
-): void => {
-  context.fillStyle = trailOpacity > 0 ? colorWithAlpha(color, 1 - trailOpacity) : color;
-  context.fillRect(0, 0, canvas.width, canvas.height);
-};
-
-const drawLine = (
-  context: CanvasRenderingContext2D,
-  from: Vec2,
-  to: Vec2,
-  color: string,
-  width = 1
-): void => {
-  context.beginPath();
-  context.moveTo(from.x, from.y);
-  context.lineTo(to.x, to.y);
-  context.strokeStyle = color;
-  context.lineWidth = width;
-  context.stroke();
-};
-
-const drawPolygon = (
-  context: CanvasRenderingContext2D,
-  points: Vec2[],
-  color: string,
-  stroke?: string
-): void => {
-  context.beginPath();
-  points.forEach((point, index) => {
-    if (index === 0) {
-      context.moveTo(point.x, point.y);
-      return;
-    }
-
-    context.lineTo(point.x, point.y);
-  });
-  context.closePath();
-  context.fillStyle = color;
-  context.fill();
-
-  if (stroke) {
-    context.strokeStyle = stroke;
-    context.lineWidth = 1;
-    context.stroke();
-  }
-};
 
 const createStoryShell = (
   title: string,
@@ -227,7 +155,7 @@ const drawNeonRacer = (
     { x: canvas.width / 2 - roadBottom, y: canvas.height },
   ];
 
-  fillBackground(context, canvas, args.backgroundColor, args.trailOpacity);
+  fillCanvasWithTrail(context, canvas, args.backgroundColor, args.trailOpacity);
   const sky = context.createLinearGradient(0, 0, 0, canvas.height);
 
   sky.addColorStop(0, colorWithAlpha(args.accentColor, 0.12));
@@ -235,7 +163,7 @@ const drawNeonRacer = (
   sky.addColorStop(1, colorWithAlpha(args.secondaryColor, 0.08));
   context.fillStyle = sky;
   context.fillRect(0, 0, canvas.width, canvas.height);
-  drawPolygon(context, road, "rgba(8, 12, 18, 0.92)", colorWithAlpha(args.accentColor, 0.42));
+  drawCanvasPolygon(context, road, "rgba(8, 12, 18, 0.92)", colorWithAlpha(args.accentColor, 0.42));
 
   for (let index = 0; index < Math.max(8, args.objectCount); index++) {
     const z = getLoopedDepth({
@@ -249,7 +177,7 @@ const drawNeonRacer = (
     const y = horizon + (canvas.height - horizon) * (1 - z / args.depth) ** 2;
     const center = canvas.width / 2 + Math.sin(z * 0.9 + elapsed) * 18 * (1 - z / args.depth);
 
-    drawLine(
+    drawCanvasLine(
       context,
       { x: center - width, y },
       { x: center + width, y },
@@ -270,7 +198,7 @@ const drawNeonRacer = (
       { horizon }
     );
 
-    drawLine(context, from, to, colorWithAlpha(args.accentColor, lane === 0 ? 0.55 : 0.22), lane === 0 ? 2 : 1);
+    drawCanvasLine(context, from, to, colorWithAlpha(args.accentColor, lane === 0 ? 0.55 : 0.22), lane === 0 ? 2 : 1);
   }
 
   for (let index = 0; index < Math.min(8, args.objectCount); index++) {
@@ -295,7 +223,7 @@ const drawNeonRacer = (
     const width = 38 * p.scale;
     const height = 24 * p.scale;
 
-    drawPolygon(
+    drawCanvasPolygon(
       context,
       [
         { x: p.x - width, y: p.y + height },
@@ -308,7 +236,7 @@ const drawNeonRacer = (
     );
   }
 
-  drawPolygon(
+  drawCanvasPolygon(
     context,
     [
       { x: canvas.width / 2 - 56, y: canvas.height - 34 },
@@ -325,7 +253,7 @@ const drawStarfighterRun = (
   { canvas, context, elapsed }: SceneContext,
   args: Arcade3DStoryArgs
 ): void => {
-  fillBackground(context, canvas, args.backgroundColor, args.trailOpacity);
+  fillCanvasWithTrail(context, canvas, args.backgroundColor, args.trailOpacity);
 
   for (let index = 0; index < args.objectCount; index++) {
     const seed = index * 47.7;
@@ -356,7 +284,7 @@ const drawStarfighterRun = (
       { focalLength: 440 }
     );
 
-    drawLine(
+    drawCanvasLine(
       context,
       tail,
       point,
@@ -415,39 +343,30 @@ const drawIsometricDungeon = (
 ): void => {
   const tile = 34;
   const origin = { x: canvas.width / 2, y: 112 };
+  const isoOptions = { origin, tileHeight: tile, tileWidth: tile * 2 };
   const bob = Math.sin(elapsed * args.speed * 1.8) * 4;
 
-  fillBackground(context, canvas, args.backgroundColor, args.trailOpacity * 0.4);
+  fillCanvasWithTrail(context, canvas, args.backgroundColor, args.trailOpacity * 0.4);
 
   for (let z = 7; z >= -7; z--) {
     for (let x = -7; x <= 7; x++) {
       const distance = Math.abs(x) + Math.abs(z);
-      const isoX = origin.x + (x - z) * tile;
-      const isoY = origin.y + (x + z) * tile * 0.5;
+      const center = projectIsometricPoint({ x, y: 0, z }, isoOptions);
+      const tileCorners = getIsometricTileCorners(center, isoOptions);
       const isWall = distance > 8 || (x === -2 && z > -5 && z < 4) || (z === 3 && x > -1 && x < 6);
       const pulse = 0.55 + Math.sin(elapsed * args.speed + distance) * 0.08;
 
-      drawPolygon(
+      drawCanvasPolygon(
         context,
-        [
-          { x: isoX, y: isoY },
-          { x: isoX + tile, y: isoY + tile * 0.5 },
-          { x: isoX, y: isoY + tile },
-          { x: isoX - tile, y: isoY + tile * 0.5 },
-        ],
+        tileCorners,
         colorWithAlpha(isWall ? args.secondaryColor : args.accentColor, isWall ? 0.16 : 0.08 + pulse * 0.08),
         colorWithAlpha(isWall ? args.secondaryColor : args.accentColor, isWall ? 0.48 : 0.22)
       );
 
       if (isWall) {
-        drawPolygon(
+        drawCanvasPolygon(
           context,
-          [
-            { x: isoX - tile, y: isoY + tile * 0.5 },
-            { x: isoX, y: isoY + tile },
-            { x: isoX, y: isoY + tile + 34 },
-            { x: isoX - tile, y: isoY + tile * 0.5 + 34 },
-          ],
+          getIsometricWallSide(tileCorners, tile),
           colorWithAlpha(args.secondaryColor, 0.15)
         );
       }
@@ -458,8 +377,9 @@ const drawIsometricDungeon = (
     const angle = elapsed * args.speed * 0.8 + index * 2.1;
     const gridX = Math.round(Math.cos(angle) * 4);
     const gridZ = Math.round(Math.sin(angle * 0.7) * 3);
-    const x = origin.x + (gridX - gridZ) * tile;
-    const y = origin.y + (gridX + gridZ) * tile * 0.5 - 18 - bob;
+    const loot = projectIsometricPoint({ x: gridX, y: 0, z: gridZ }, isoOptions);
+    const x = loot.x;
+    const y = loot.y - 18 - bob;
 
     context.fillStyle = colorWithAlpha(index % 2 === 0 ? args.accentColor : args.secondaryColor, 0.82);
     context.beginPath();
@@ -478,7 +398,7 @@ const drawHyperspaceGate = (
   { canvas, context, elapsed }: SceneContext,
   args: Arcade3DStoryArgs
 ): void => {
-  fillBackground(context, canvas, args.backgroundColor, args.trailOpacity);
+  fillCanvasWithTrail(context, canvas, args.backgroundColor, args.trailOpacity);
 
   for (let index = 0; index < args.objectCount; index++) {
     const z = getLoopedDepth({
@@ -488,7 +408,7 @@ const drawHyperspaceGate = (
       spacing: 1.5,
       speed: args.speed * 5,
     });
-    const progress = 1 - z / args.depth;
+    const progress = getDepthProgress(z, args.depth);
     const radius = 32 + progress * 360;
     const sides = 18;
     const spin = elapsed * args.speed * 0.8 + index * 0.2;
@@ -517,7 +437,7 @@ const drawHyperspaceGate = (
     const inner = 34;
     const outer = 380;
 
-    drawLine(
+    drawCanvasLine(
       context,
       {
         x: canvas.width / 2 + Math.cos(angle) * inner,
