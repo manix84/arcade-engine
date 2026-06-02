@@ -1,12 +1,12 @@
 # 🛡️ Security
 
 Arcade Engine is a browser-side TypeScript library. It does not run a backend,
-store accounts, process payments, or manage secrets.
+store accounts, process payments, manage secrets, or intentionally transmit
+runtime data.
 
 ## ✅ Supported Versions
 
-The project is currently pre-release and private while modernization work is in
-progress.
+The project is currently pre-release while modernization work is in progress.
 
 Security fixes apply to the current `master` branch unless a published release
 line is created later.
@@ -22,6 +22,7 @@ Include:
 - Steps to reproduce it.
 - A minimal example if possible.
 - The affected browser or runtime.
+- The affected engine module or Storybook story, if known.
 - Any known impact.
 
 ## 🧯 What Counts
@@ -29,7 +30,7 @@ Include:
 Useful reports may include:
 
 - Cross-site scripting risks introduced by engine APIs.
-- Unsafe handling of caller-provided asset paths or text.
+- Unsafe handling of caller-provided asset paths, text, colors, or sound URLs.
 - Browser API misuse that could expose user data.
 - Dependency vulnerabilities with a realistic impact on this package.
 - Build or package configuration issues that could publish unintended files.
@@ -40,10 +41,11 @@ The following are usually out of scope for Arcade Engine itself:
 
 - Vulnerabilities in games that consume the engine.
 - Hosting, CDN, or server issues outside this repository.
-- Browser autoplay, fullscreen, and media permission behavior that works as
-  designed.
+- Browser autoplay, fullscreen, pointer, and media permission behavior that
+  works as designed.
 - Denial-of-service cases that only affect the local test suite or developer
   machine.
+- Storybook-only visual glitches with no security impact.
 
 ## 🔐 Secrets
 

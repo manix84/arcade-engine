@@ -2,28 +2,37 @@
 
 A small browser arcade-game engine for canvas games.
 
-This repository is currently being modernized from the older AMD/JavaScript
-engine to a standalone TypeScript package. The active package entry point is
-`src/index.ts`, and published builds are emitted to `dist`.
+Arcade Engine is a standalone TypeScript package for arcade-style browser
+games. It provides a canvas arena, timing, audio, geometry, collision,
+viewport, 2.5D projection, 3D cube-cluster, and rendering helpers that are
+small enough to compose in your own game loop.
+
+The public package entry point is `src/index.ts`. Published package builds emit
+ESM JavaScript, source maps, declaration files, and declaration maps to `dist`.
+Storybook is documentation and demo output only; it builds to
+`storybook-static` and is not included in the npm package output.
 
 ## ✨ What It Provides
 
-- Canvas arena creation and resizing.
-- Fullscreen helpers with browser fallback handling.
-- Sprite frame rendering with crisp pixel-art defaults.
-- Canvas text rendering with expanded arcade-style spacing.
-- Asset preloading with progress callbacks.
-- Circle drawing and debug grid helpers.
-- RequestAnimationFrame-backed ticking.
-- Fixed-step simulation timing support.
-- HTML audio wrapper with global pause/resume/stop, music/effects channels,
-  fades, playback-blocked reporting, and optional browser spatial panning.
-- Geometry, heading, collision, viewport, and debug-vector helpers.
-- Grid helpers for cell-based games like Tetris and board-based puzzle games.
-- Box movement and collision helpers for Space Invaders, Breakout, platform,
-  paddle, brick, shot, and enemy patterns.
-- 3D cube-cluster helpers for voxel-style characters, plasma links, and
-  deterministic block explosions.
+- Canvas arena creation, resizing, fullscreen handling, text, sprites, circles,
+  debug grids, and asset preloading.
+- RequestAnimationFrame-backed ticking with render FPS caps and fixed-step
+  simulation timing.
+- HTML audio playback with music/effects channels, global pause/resume/stop,
+  fades, blocked-playback reporting, and optional spatial panning.
+- Math, heading, spawn, collision, area-exit, cloning, random-color, and
+  browser-event helpers.
+- Viewport scaling helpers for responsive arena bounds and debug vector drawing
+  for heading and steering overlays.
+- Grid helpers for board, tile, puzzle, and cell-based games.
+- Axis-aligned box helpers for paddle, brick, shot, enemy, and platform-style
+  movement.
+- Canvas rendering helpers for trails, lines, polygons, hex color parsing, and
+  shading.
+- 2.5D projection helpers for perspective lanes, isometric tiles, depth loops,
+  and pseudo-3D arcade camera effects.
+- 3D cube-cluster helpers for voxel-style pickups, modular level pieces,
+  plasma links, deterministic explosions, and fading debris.
 
 ## 📦 Installation
 
@@ -41,21 +50,25 @@ import {
   createCubeClusterFromPattern,
   detectBoxCollision,
   drawDebugVectors,
+  fillCanvasWithTrail,
   getGridCell,
+  getPerspectiveScale,
   getScaledViewportLimit,
-  getViewportPaddedRadius,
   helpers,
+  projectIsometricPoint,
+  projectPerspectivePoint,
 } from "arcade-engine";
 ```
 
-The npm package is ESM and publishes generated JavaScript, source maps,
-declaration files, and declaration maps from `dist`.
+The package is ESM-only. Import from `arcade-engine`; do not import from
+individual source files in consuming projects.
 
 ## 🧱 Core Modules
 
 ### 🎬 `GameArena`
 
-`GameArena` owns a canvas inside a host element.
+`GameArena` owns a canvas inside a host element. It handles the common setup
+work that most canvas games need before a loop can draw anything.
 
 ```ts
 import { GameArena } from "arcade-engine";
@@ -74,25 +87,15 @@ arena.renderText("READY", 0, -40, {
 });
 ```
 
-Useful methods include:
-
-- `resize(width?, height?)`
-- `getContext(dimensions?)`
-- `enterFullScreen()`
-- `exitFullScreen()`
-- `toggleFullScreen()`
-- `registerAssets(assets)`
-- `preloadAssets(callback)`
-- `renderText(message, x, y, options)`
-- `renderSprite(image, spriteFrame)`
-- `drawCircle(x, y, radius, options)`
-- `drawDebugGrid(widthSpace?, heightSpace?)`
-- `destroy()`
+Use it for canvas sizing, `CanvasRenderingContext2D` access, fullscreen
+requests, asset preloading, sprite-frame drawing, crisp pixel-art rendering,
+text drawing, circles, and debug grids.
 
 ### ⏱️ `Ticker`
 
-`Ticker` schedules frame callbacks with optional render throttling or fixed-step
-simulation timing.
+`Ticker` schedules callbacks on `requestAnimationFrame`. Use an FPS cap when
+you want to draw less often, or fixed-step timing when simulation should advance
+at a stable rate regardless of render cadence.
 
 ```ts
 import { Ticker } from "arcade-engine";
@@ -106,12 +109,13 @@ ticker.addSchedule((frame) => {
 ticker.start();
 ```
 
-Use `new Ticker({ fps: 30 })` for capped render-style scheduling, or
-`new Ticker({ fixedStepFps: 50 })` for stable simulation catch-up.
+`new Ticker({ fps: 30 })` caps render callbacks. Fixed-step ticker options run
+catch-up steps for deterministic movement and collision.
 
 ### 🔊 `Sound`
 
-`Sound` wraps HTML audio and centralizes music/effects volume behavior.
+`Sound` wraps browser `Audio` elements and keeps channel volume, global mute,
+pause/resume, fades, and cleanup in one place.
 
 ```ts
 import { Sound } from "arcade-engine";
@@ -127,91 +131,73 @@ const music = new Sound("/music/menu.ogg", { channel: "music" });
 music.fadeInLoop(700);
 ```
 
-Global helpers include `Sound.pauseAll()`, `Sound.resumePaused()`,
-`Sound.stopAll()`, `Sound.destroyAll()`, `Sound.setMuted()`, and
-`Sound.refreshAllVolumes()`.
+Audio playback still follows browser rules, so games should start playback from
+user gestures.
 
-### 🧮 Helpers
+## 🧮 Helper Families
 
-The default `helpers` export includes geometry and event helpers:
+### Geometry And Events
 
-- `float(number)`
-- `rotateTo(destinationAngle, currentAngle, stepSize)`
-- `getSpawnCoords(target, options?)`
-- `findHeading(target, origin?)`
-- `detectCollision(target, origin?)`
-- `detectAreaExit(radialCenter, target, radius)`
-- `bind(eventNames, callback, element?)`
-- `unbind(...eventNames)`
-- `getRandomColor()`
-- `cloneObject(oldObject)`
+The default `helpers` export includes:
 
-Viewport helpers include `getViewportRadius`, `getViewportPaddedRadius`,
-`getViewportAreaScale`, and `getScaledViewportLimit`.
+- `float(number)` for rounding noisy decimal results.
+- `rotateTo(destinationAngle, currentAngle, stepSize)` for incremental turning.
+- `getSpawnCoords(target, options?)` for arc/radius spawning.
+- `findHeading(target, origin?)` for angle and distance between objects.
+- `detectCollision(target, origin?)` for radial collision.
+- `detectAreaExit(radialCenter, target, radius)` for arena boundary checks.
+- `bind(eventNames, callback, element?)` and `unbind(...eventNames)` for simple
+  DOM event registration.
+- `getRandomColor()` and `cloneObject(oldObject)`.
 
-### 🧩 Grid Helpers
+### Viewport And Debug Vectors
 
-Grid helpers support fixed-cell games without changing the existing
-heading-based helpers.
+Viewport helpers calculate radius and scale limits from the current arena size.
+Debug vectors draw velocity, heading, and target overlays so movement logic is
+visible while developing.
 
-```ts
-import { getGridCell, getGridPosition, snapToGrid } from "arcade-engine";
+### Grid And Box Collision
 
-const board = {
-  columns: 10,
-  rows: 20,
-  cellWidth: 24,
-  cellHeight: 24,
-  originX: 8,
-  originY: 16,
-};
+Grid helpers convert between pixel coordinates and cells, clamp cells to a
+board, and snap entities to a grid. Box helpers move and collide top-left
+`posX`/`posY` rectangles for games like Breakout, Space Invaders, and simple
+platformers.
 
-const activeCell = getGridPosition(board, { posX: 82, posY: 118 });
-const renderCell = getGridCell(board, activeCell);
-const snapped = snapToGrid(board, { posX: 999, posY: -20 });
-```
+### Canvas Rendering
 
-Useful helpers include:
+Canvas rendering helpers are small drawing utilities used by the demos and
+available to games:
 
-- `getGridSize(grid)`
-- `getGridCell(grid, position)`
-- `getGridCellCenter(grid, position)`
-- `getGridPosition(grid, coordinates)`
-- `isInsideGrid(grid, position)`
-- `clampGridPosition(grid, position)`
-- `snapToGrid(grid, coordinates)`
+- `fillCanvasWithTrail(context, canvas, color, trailOpacity)` clears or fades a
+  frame while leaving after-images.
+- `drawCanvasLine(context, from, to, color, width?)`.
+- `drawCanvasPolygon(context, points, color, stroke?)`.
+- `parseHexColor`, `colorWithAlpha`, and `shadeHexColor` for hex color work.
 
-### 🧱 Box Helpers
+`fillCanvasWithTrail` accepts any valid CSS color string. Hex-specific helpers
+require 3 or 6 digit hex colors.
 
-Box helpers use top-left `posX`/`posY` coordinates and are designed for
-axis-aligned games such as Space Invaders, Breakout, and paddle games.
+### 2.5D Projection
 
-```ts
-import { detectBoxCollision, keepBoxInside, moveBy } from "arcade-engine";
+The `arcade-3d` helpers are renderer-agnostic math functions for arcade-style
+depth effects:
 
-const arena = { posX: 0, posY: 0, width: 320, height: 240 };
-const paddle = { posX: 280, posY: 220, width: 56, height: 12, velocityX: 80 };
-const ball = { posX: 42, posY: 96, width: 8, height: 8 };
-const brick = { posX: 40, posY: 88, width: 48, height: 16 };
+- `projectPerspectivePoint(point, viewport, options?)`.
+- `projectIsometricPoint(point, options?)`.
+- `getPerspectiveScale(depth, options?)`.
+- `getLoopedDepth(options)` and `wrapDepth(depth, range)`.
+- `getDepthProgress(depth, range)`.
+- `getIsometricTileCorners(center, options?)`.
+- `getIsometricWallSide(tileCorners, height, side?)`.
 
-const movedPaddle = keepBoxInside(moveBy(paddle, 0.5), arena);
-const didHitBrick = detectBoxCollision(ball, brick);
-```
-
-Useful helpers include:
-
-- `clamp(value, min, max)`
-- `moveBy(entity, delta?)`
-- `detectBoxCollision(target, origin)`
-- `containsBox(bounds, target)`
-- `keepBoxInside(target, bounds)`
-- `getBoxCenter(box)`
+These helpers do not require WebGL. They are useful for pseudo-3D racing,
+starfields, first-person lanes, isometric rooms, 2.5D side scrollers, and
+layered arcade scenes drawn to a normal canvas.
 
 ### 🧊 3D Cube Clusters
 
-Cube-cluster helpers describe loosely connected 3D blocks without tying the
-engine package to a renderer. Use them with Three.js, Babylon, raw WebGL, or a
-custom renderer.
+Cube clusters describe block models as data rather than binding the engine to a
+specific renderer.
 
 ```ts
 import {
@@ -221,35 +207,57 @@ import {
   stepExplosionBlocks,
 } from "arcade-engine";
 
-const invader = createCubeClusterFromPattern(
+const pickup = createCubeClusterFromPattern(
   [
-    [" # # ", "#####", "# # #"],
+    [" ### ", "#####", " ### "],
     ["  #  ", " ### ", "  #  "],
   ],
-  { size: 1, gap: 0.2, layerGap: 0.2, color: "#4fd1c5" }
+  { color: "#4fd1c5", gap: 0.2, size: 1 }
 );
 
-const blocks = centerCubeCluster(invader.blocks);
+const blocks = centerCubeCluster(pickup.blocks);
 let explosion = createExplosionBlocks(blocks, { force: 7 });
-
-explosion = stepExplosionBlocks(explosion, 1 / 60, {
-  drag: 0.985,
-  fadeSpeed: 0.42,
-});
+explosion = stepExplosionBlocks(explosion, 1 / 60);
 ```
 
-Useful helpers include:
+Use these helpers with Three.js, Babylon, raw WebGL, or a custom canvas
+projection. The engine supplies block positions, links, bounds, centers,
+normalized vectors, and explosion state; the renderer decides how to display
+them.
 
-- `createCubeClusterFromPattern(layers, options?)`
-- `createPlasmaLinks(blocks, maxDistance?)`
-- `centerCubeCluster(blocks)`
-- `getCubeClusterBounds(blocks)`
-- `getCubeClusterCenter(blocks)`
-- `createExplosionBlocks(blocks, options?)`
-- `stepExplosionBlocks(blocks, delta, options?)`
-- `getVisibleExplosionBlocks(blocks)`
-- `normalizeVector(vector)`
-- `getVectorDistance(a, b)`
+## 📚 Storybook
+
+Storybook contains live demos for the engine surface:
+
+- **Overview**: animated arcade loop showcases.
+- **Core**: `GameArena`, ticker behavior, viewport scaling, and debug vectors.
+- **Helpers**: math, geometry, object cloning, event binding, collisions,
+  rotation, spawning, and 2.5D variants.
+- **Audio**: master controls, effects, music, spatial panning, and global
+  playback behavior.
+- **3D**: cube-cluster pickups and modular level pieces.
+- **Demos**: arcade camera styles, including racer, starfighter, isometric,
+  hyperspace, first-person, 2D side scroller, and 2.5D side scroller examples.
+
+Run it locally:
+
+```sh
+npm run storybook
+```
+
+Build the static docs:
+
+```sh
+npm run build:storybook
+```
+
+More local documentation is available in:
+
+- [src/README.md](src/README.md)
+- [src/stories/README.md](src/stories/README.md)
+- [src/stories/helpers/README.md](src/stories/helpers/README.md)
+- [src/stories/sound/README.md](src/stories/sound/README.md)
+- [src/stories/ticker/README.md](src/stories/ticker/README.md)
 
 ## 🛠️ Local Development
 
@@ -259,21 +267,12 @@ Install dependencies:
 npm install
 ```
 
-Run type checks:
+Run the main checks:
 
 ```sh
+npm run lint
 npm run typecheck
-```
-
-Run tests:
-
-```sh
 npm test
-```
-
-Build the npm package output:
-
-```sh
 npm run build
 ```
 
@@ -283,55 +282,24 @@ Preview the npm tarball contents:
 npm run pack:dry-run
 ```
 
-Run Storybook locally:
-
-```sh
-npm run storybook
-```
-
-Build the GitHub Pages Storybook output:
+Story changes should also run:
 
 ```sh
 npm run build:storybook
 ```
-
-Storybook builds to `storybook-static` and is not included in the npm package
-or the `dist` package build.
 
 ## 🧪 Tests
 
 The test suite uses Vitest with jsdom and lightweight browser API shims for
 canvas, media elements, animation frames, and storage.
 
-Current coverage includes:
-
-- Engine module imports.
-- Arena canvas creation, text, sprite, circle, fullscreen, and asset behavior.
-- Viewport calculations.
-- Grid and box helpers for cell-based and axis-aligned games.
-- 3D cube-cluster helpers for voxel character assembly and explosions.
-- Debug vector drawing.
-- Ticker scheduling and fixed-step behavior.
-- Sound lifecycle, volume channels, global pause/resume/stop, playback-blocked
-  callbacks, and spatial-audio cleanup.
-- Core helper math and event binding.
-
-## 📚 Storybook
-
-Storybook contains live demos for the engine surface:
-
-- `GameArena`
-- helper math, geometry, object, and event utilities
-- viewport scaling and debug vectors
-- requestAnimationFrame, FPS-capped, and fixed-step tickers
-- sound playback, global controls, channels, fades, and spatial panning
-
-The Storybook UI uses local Arcade Engine branding and is deployed to GitHub
-Pages from the `storybook-static` output.
+Coverage includes package imports, arena behavior, viewport calculations, grid
+and box helpers, 2.5D projection math, cube clusters, debug vectors, ticker
+scheduling, sound lifecycle, and helper math/events.
 
 ## 🗺️ Migration Status
 
-Migrated TypeScript modules:
+Active TypeScript package modules:
 
 - `src/index.ts`
 - `src/arena.ts`
@@ -340,11 +308,15 @@ Migrated TypeScript modules:
 - `src/helpers.ts`
 - `src/viewport.ts`
 - `src/debug-vectors.ts`
+- `src/grid.ts`
+- `src/box-collision.ts`
+- `src/canvas-rendering.ts`
+- `src/arcade-3d.ts`
+- `src/cube-cluster.ts`
 - `src/types.ts`
 
 Legacy JavaScript modules still present for review:
 
-- `MainMenu.js`
 - `src/Fullscreen.js`
 - `src/Graphic.js`
 - `src/Graphic/Sprite.js`
@@ -356,7 +328,7 @@ Legacy JavaScript modules still present for review:
 
 ## 🤝 Project Docs
 
-- [📝 What's New](WHATSNEW.md)
+- [🗒️ What's New](WHATSNEW.md)
 - [🔐 Privacy](PRIVACY.md)
 - [⚖️ Licence](LICENSE.md)
 - [🤝 Contributing](CONTRIBUTING.md)

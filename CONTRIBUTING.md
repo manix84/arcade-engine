@@ -2,16 +2,20 @@
 
 Thanks for taking the time to improve Arcade Engine.
 
-This repository is being modernized from the older JavaScript engine into a
-standalone TypeScript package, so small, focused changes are preferred.
+Arcade Engine is a standalone browser arcade-game engine package. The package is
+being modernized from older JavaScript modules into a typed ESM package, so
+small, focused changes are easier to review and safer to ship.
 
 ## 🧭 Before You Start
 
 - Check the current package status in [README.md](README.md).
+- Read the local folder README when working inside a documented subsection.
 - Keep changes scoped to one concern.
+- Prefer existing helpers and story utilities before adding a new abstraction.
 - Avoid broad formatting-only rewrites while legacy modules are still being
   reviewed.
-- Do not remove legacy files unless the replacement path is clear and tested.
+- Do not remove legacy files unless the replacement path is clear, documented,
+  and tested.
 
 ## 🛠️ Local Setup
 
@@ -21,21 +25,12 @@ Install dependencies:
 npm install
 ```
 
-Run type checks:
+Run the main checks:
 
 ```sh
+npm run lint
 npm run typecheck
-```
-
-Run tests:
-
-```sh
 npm test
-```
-
-Build the publishable package output:
-
-```sh
 npm run build
 ```
 
@@ -72,19 +67,35 @@ not affect the commit.
 
 Add or update tests when a change affects:
 
-- Public exports.
+- Public exports from `src/index.ts`.
 - Canvas rendering behavior.
-- Ticker timing.
-- Sound lifecycle behavior.
-- Geometry, collision, heading, or viewport helper behavior.
+- Ticker timing or fixed-step behavior.
+- Sound lifecycle, channel volume, fades, or spatial audio.
+- Geometry, collision, heading, viewport, grid, or box helper behavior.
+- 2.5D projection or 3D cube-cluster helper behavior.
 - Migration decisions that remove or replace legacy modules.
 
-For very small documentation-only changes, tests are not required.
+For documentation-only changes, tests are not usually required. Inspect links,
+headings, examples, and formatting; run `git diff --check` before finishing.
+
+## 📚 Documentation Expectations
+
+Documentation should make the package easier to use, not just list symbols.
+When adding or changing docs:
+
+- Explain what the user is looking at.
+- Mention the engine APIs involved.
+- Include a small usage example when it helps.
+- Keep Storybook docs tied to visible behavior in the demo.
+- Keep root README content package-level; put detailed subsection guidance in
+  the nearest folder README.
+- Keep asset paths relative so Storybook still works on GitHub Pages.
 
 ## ✍️ Code Style
 
-- Prefer TypeScript for new engine code.
+- Prefer TypeScript for new engine code, tests, configs, and stories.
 - Keep public APIs explicit and typed.
+- Avoid `any`; prefer `unknown`, narrow interfaces, or generic constraints.
 - Keep browser-specific behavior behind small, testable wrappers.
 - Prefer existing module patterns over new abstractions.
 - Keep comments short and useful.
@@ -100,6 +111,17 @@ When porting legacy modules:
 - Keep compatibility notes in `WHATSNEW.md`.
 - Prefer consolidating behavior into the new TypeScript package surface instead
   of recreating every old AMD module one-for-one.
+- Update local folder documentation when package responsibilities move.
+
+## 📖 Storybook Guidance
+
+Stories should demo engine behavior visually. A user should be able to open a
+story and understand the API through movement, sound, controls, telemetry, or
+interaction.
+
+Use shared Storybook helpers from `src/stories/story-utils.ts` where possible.
+Add controls, actions, and interactions when they make behavior easier to
+explore or verify.
 
 ## 🔀 Pull Requests
 

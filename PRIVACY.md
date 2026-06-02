@@ -26,6 +26,10 @@ Games built with the engine may load assets such as images, fonts, music, sound
 effects, or API data from paths supplied by the game. Those requests are
 controlled by the consuming game and its hosting environment.
 
+Storybook demos use local demo code and generated tones. Static Storybook builds
+may still be served by a hosting provider, and that provider can have normal
+request logs.
+
 ## 🔊 Audio
 
 The `Sound` module creates browser `Audio` elements for caller-provided source
@@ -35,10 +39,16 @@ Browser autoplay restrictions may block playback. If configured, the engine can
 call an application-provided `onPlaybackBlocked` callback with the affected
 sound channel and source paths so the game can show its own UI.
 
-## 🖼️ Canvas
+Optional spatial audio uses browser audio APIs for listener/source panning. It
+does not collect location data; positions are game-provided coordinates.
+
+## 🖼️ Canvas And Input
 
 The `GameArena` module creates and draws to a browser canvas. It does not read
 screen contents outside its own canvas and does not transmit rendered pixels.
+
+Some demos listen for pointer or keyboard input so users can interact with the
+scene. Those events are handled locally by the demo or consuming game.
 
 ## 🧪 Tests
 

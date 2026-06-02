@@ -17,9 +17,13 @@ do not generate a PR description until the template is available.
 - Keep the `## 🧾 Summary` section as short bullets describing what changed.
 - Use `## 🧱 Package Impact` for package, API, build, documentation,
   Storybook, workflow, or compatibility impact.
+- Use `## 📚 Documentation` for new, removed, or updated docs and for any docs
+  that should have changed but did not.
 - In `## 🧪 Verification`, mark only commands that are explicitly mentioned as
   having been run in the PR description, commit messages, or comments. Leave
   all others unchecked.
+- Mark `Documentation links/examples inspected` only when documentation links,
+  examples, and formatting were actually checked.
 - Use `## 📸 Screenshots` only for visual UI, Storybook, or canvas changes. If
   screenshots are not relevant, say `Not applicable.` under that heading.
 - Do not replace the template with a generic Copilot summary.

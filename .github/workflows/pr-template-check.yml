@@ -32,6 +32,7 @@ jobs:
             "# 🔀 Pull Request",
             "## 🧾 Summary",
             "## 🧱 Package Impact",
+            "## 📚 Documentation",
             "## 🧪 Verification",
             "## 📸 Screenshots",
           ];
@@ -41,6 +42,7 @@ jobs:
             { label: "`npm test`", pattern: /^- \[[ xX]\] `npm test`$/m },
             { label: "`npm run build`", pattern: /^- \[[ xX]\] `npm run build`$/m },
             { label: "`npm run build:storybook`", pattern: /^- \[[ xX]\] `npm run build:storybook`$/m },
+            { label: "Documentation links/examples inspected", pattern: /^- \[[ xX]\] Documentation links\/examples inspected$/m },
           ];
 
           const missing = [
@@ -52,6 +54,7 @@ jobs:
             "# 🔀 Pull Request",
             "## 🧾 Summary",
             "## 🧱 Package Impact",
+            "## 📚 Documentation",
             "## 🧪 Verification",
             "## 📸 Screenshots",
           ];

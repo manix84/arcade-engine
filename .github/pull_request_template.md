@@ -12,11 +12,15 @@ Copilot PR summary generation instructions:
 
 ## 🧾 Summary
 
-- 
+-
 
 ## 🧱 Package Impact
 
-- 
+-
+
+## 📚 Documentation
+
+-
 
 ## 🧪 Verification
 
@@ -24,6 +28,7 @@ Copilot PR summary generation instructions:
 - [ ] `npm test`
 - [ ] `npm run build`
 - [ ] `npm run build:storybook`
+- [ ] Documentation links/examples inspected
 
 ## 📸 Screenshots
 
