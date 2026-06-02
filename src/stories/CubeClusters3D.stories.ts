@@ -116,22 +116,22 @@ const platformPattern = [
 ];
 
 const argTypes: Story["argTypes"] = {
-  accentColor: { control: "color" },
-  backgroundColor: { control: "color" },
-  blockColor: { control: "color" },
+  accentColor: { name: "Accent color", control: "color" },
+  backgroundColor: { name: "Background color", control: "color" },
+  blockColor: { name: "Block color", control: "color" },
   cutawayView: { name: "Cutaway view", control: "boolean" },
   explosionLoop: { name: "Explosion loop", control: "boolean" },
-  explosionFadeMax: { control: { type: "range", min: 0.2, max: 2.2, step: 0.05 } },
-  explosionFadeMin: { control: { type: "range", min: 0.1, max: 1.6, step: 0.05 } },
-  explosionForce: { control: { type: "range", min: 1, max: 12, step: 0.5 } },
-  gap: { control: { type: "range", min: 0, max: 0.7, step: 0.02 } },
-  gravity: { control: { type: "range", min: -6, max: 2, step: 0.25 } },
-  linkDistance: { control: { type: "range", min: 1, max: 2.6, step: 0.05 } },
-  rotationSpeed: { control: { type: "range", min: -1.5, max: 1.5, step: 0.05 } },
-  showLinks: { control: "boolean" },
-  spinX: { control: { type: "range", min: -0.8, max: 0.8, step: 0.05 } },
-  spinY: { control: { type: "range", min: -0.8, max: 0.8, step: 0.05 } },
-  tumbleSpeed: { control: { type: "range", min: 0, max: 12, step: 0.25 } },
+  explosionFadeMax: { name: "Max fade speed", control: { type: "range", min: 0.2, max: 2.2, step: 0.05 } },
+  explosionFadeMin: { name: "Min fade speed", control: { type: "range", min: 0.1, max: 1.6, step: 0.05 } },
+  explosionForce: { name: "Explosion force", control: { type: "range", min: 1, max: 12, step: 0.5 } },
+  gap: { name: "Block gap", control: { type: "range", min: 0, max: 0.7, step: 0.02 } },
+  gravity: { name: "Gravity", control: { type: "range", min: -6, max: 2, step: 0.25 } },
+  linkDistance: { name: "Link distance", control: { type: "range", min: 1, max: 2.6, step: 0.05 } },
+  rotationSpeed: { name: "Rotation speed", control: { type: "range", min: -1.5, max: 1.5, step: 0.05 } },
+  showLinks: { name: "Show links", control: "boolean" },
+  spinX: { name: "Spin X", control: { type: "range", min: -0.8, max: 0.8, step: 0.05 } },
+  spinY: { name: "Spin Y", control: { type: "range", min: -0.8, max: 0.8, step: 0.05 } },
+  tumbleSpeed: { name: "Tumble speed", control: { type: "range", min: 0, max: 12, step: 0.25 } },
 };
 
 const defaultArgs = {

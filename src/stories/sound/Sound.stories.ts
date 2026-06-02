@@ -177,10 +177,10 @@ export const MasterSound: MasterSoundStory = {
     onStopAll: fn(),
   },
   argTypes: {
-    effectsMuted: { control: "boolean" },
-    effectsVolume: { control: { type: "range", min: 0, max: 1, step: 0.1 } },
-    masterVolume: { control: { type: "range", min: 0, max: 1, step: 0.1 } },
-    musicVolume: { control: { type: "range", min: 0, max: 1, step: 0.1 } },
+    effectsMuted: { name: "Effects muted", control: "boolean" },
+    effectsVolume: { name: "Effects volume", control: { type: "range", min: 0, max: 1, step: 0.1 } },
+    masterVolume: { name: "Master volume", control: { type: "range", min: 0, max: 1, step: 0.1 } },
+    musicVolume: { name: "Music volume", control: { type: "range", min: 0, max: 1, step: 0.1 } },
   },
   render: (args: MasterSoundArgs) => {
     const { canvas, controls, log, shell, values } = createSoundScene(
@@ -613,8 +613,8 @@ export const SpatialAndGlobalAudio: SpatialAudioStory = {
     onStopAll: fn(),
   },
   argTypes: {
-    autoMove: { control: "boolean" },
-    listenerRange: { control: { type: "range", min: 120, max: 320, step: 10 } },
+    autoMove: { name: "Auto move source", control: "boolean" },
+    listenerRange: { name: "Listener range", control: { type: "range", min: 120, max: 320, step: 10 } },
   },
   render: (args: SpatialAudioArgs) => {
     const { canvas, controls, log, shell, values } = createSoundScene(

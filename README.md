@@ -335,6 +335,7 @@ Active package modules:
 
 ## 🤝 Project Docs
 
+- [📘 API Reference](API.md)
 - [🗒️ What's New](WHATSNEW.md)
 - [🗺️ Finish Roadmap](ROADMAP.md)
 - [🔐 Privacy](PRIVACY.md)

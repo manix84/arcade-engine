@@ -1,7 +1,7 @@
 {
   "name": "arcade-engine",
   "description": "A small browser arcade-game engine for canvas games.",
-  "version": "2.19.0",
+  "version": "2.20.0",
   "license": "MIT",
   "type": "module",
   "author": "Rob Taylor",
@@ -49,6 +49,7 @@
   "types": "./dist/index.d.ts",
   "files": [
     "dist",
+    "API.md",
     "LICENSE.md",
     "PRIVACY.md",
     "README.md",

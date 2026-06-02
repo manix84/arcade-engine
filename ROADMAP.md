@@ -143,6 +143,26 @@ Goal: make the engine easy to learn from npm, GitHub, and Storybook.
 - Confirm controls are named clearly and reset where expected.
 - Capture any important screenshots or visual notes for release materials.
 
+### Current Status
+
+- Added `API.md` as a package-level reference for every public export from
+  `src/index.ts`.
+- Linked the API reference from the root README and included it in npm package
+  files.
+- Added concise examples for core classes, helpers, grid/box collision, canvas
+  rendering, 2.5D projection, arcade motion, and cube clusters.
+- Polished prominent Storybook control labels for arcade camera, cube-cluster,
+  and audio stories so controls read as user-facing options.
+
+Verification notes:
+
+- Verified with `npm run lint`, `npm run typecheck`, `npm test`,
+  `npm run build`, `npm run build:storybook`, and `npm run pack:dry-run`.
+- Unit tests passed with 103 assertions.
+- The package dry run confirmed `API.md` is included in the published tarball.
+- The local tool shell needs `PATH=/usr/local/bin:$PATH`; the dry run used
+  `npm_config_cache=/private/tmp/arcade-engine-npm-cache`.
+
 ## 📦 Stage 5: Release Candidate
 
 Goal: prepare the package for publishing.

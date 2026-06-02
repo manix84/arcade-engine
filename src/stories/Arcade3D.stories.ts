@@ -58,13 +58,13 @@ type SceneContext = {
 };
 
 const argTypes: Story["argTypes"] = {
-  accentColor: { control: "color" },
-  backgroundColor: { control: "color" },
-  depth: { control: { type: "range", min: 8, max: 44, step: 1 } },
-  objectCount: { control: { type: "range", min: 6, max: 90, step: 1 } },
-  secondaryColor: { control: "color" },
-  speed: { control: { type: "range", min: 0.2, max: 4, step: 0.1 } },
-  trailOpacity: { control: { type: "range", min: 0, max: 0.45, step: 0.01 } },
+  accentColor: { name: "Accent color", control: "color" },
+  backgroundColor: { name: "Background color", control: "color" },
+  depth: { name: "Depth range", control: { type: "range", min: 8, max: 44, step: 1 } },
+  objectCount: { name: "Object count", control: { type: "range", min: 6, max: 90, step: 1 } },
+  secondaryColor: { name: "Secondary color", control: "color" },
+  speed: { name: "Scene speed", control: { type: "range", min: 0.2, max: 4, step: 0.1 } },
+  trailOpacity: { name: "Trail opacity", control: { type: "range", min: 0, max: 0.45, step: 0.01 } },
 };
 
 const defaultArgs = {
