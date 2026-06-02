@@ -13,7 +13,7 @@ import {
 } from "../story-utils.js";
 
 const meta = {
-  title: "Engine/Ticker",
+  title: "Engine/Core/Ticker",
 } satisfies Meta;
 
 export default meta;

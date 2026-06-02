@@ -22,7 +22,7 @@ import {
 } from "./story-utils.js";
 
 const meta = {
-  title: "Engine/3D/Arcade Scenes",
+  title: "Engine/Demos/Arcade Camera Styles",
 } satisfies Meta;
 
 export default meta;

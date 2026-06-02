@@ -20,7 +20,7 @@ import {
 } from "./story-utils.js";
 
 const meta = {
-  title: "Engine/Viewport And Debug Vectors",
+  title: "Engine/Core/Viewport And Debug Vectors",
 } satisfies Meta;
 
 export default meta;
