@@ -16,9 +16,9 @@ const config: StorybookConfig = {
   viteFinal: (config) => ({
     ...config,
     server: {
-      ...config.server,
+      ...(config.server ?? {}),
       headers: {
-        ...config.server?.headers,
+        ...(config.server?.headers ?? {}),
         "X-Clacks-Overhead": "GNU Terry Pratchett",
       },
     },
