@@ -15,7 +15,7 @@ import {
 } from "../story-utils.js";
 
 const meta = {
-  title: "Engine/Sound",
+  title: "Engine/Audio/Sound",
 } satisfies Meta;
 
 export default meta;

@@ -21,7 +21,7 @@ import {
 } from "./story-utils.js";
 
 const meta = {
-  title: "Engine/Showcase",
+  title: "Engine/Overview/Showcase",
 } satisfies Meta;
 
 export default meta;

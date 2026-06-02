@@ -27,6 +27,7 @@ const requestAnimationFrame =
   animationWindow.mozRequestAnimationFrame ||
   animationWindow.webkitRequestAnimationFrame ||
   animationWindow.msRequestAnimationFrame;
+const frameTimingToleranceMs = 0.0001;
 
 /**
  * requestAnimationFrame-backed scheduler used by simulation and rendering loops.
@@ -179,11 +180,29 @@ class Ticker implements TickerInstance {
       return false;
     }
 
-    if (timestamp - this._lastStepTime < this._frameInterval) {
+    const elapsedMs = timestamp - this._lastStepTime;
+    this._lastStepTime = timestamp;
+
+    if (elapsedMs <= 0) {
       return false;
     }
 
-    this._lastStepTime = timestamp;
+    this._accumulatedStepTime += elapsedMs;
+
+    if (this._accumulatedStepTime + frameTimingToleranceMs < this._frameInterval) {
+      return false;
+    }
+
+    this._accumulatedStepTime -= this._frameInterval;
+
+    if (this._accumulatedStepTime < 0) {
+      this._accumulatedStepTime = 0;
+    }
+
+    if (this._accumulatedStepTime >= this._frameInterval) {
+      this._accumulatedStepTime %= this._frameInterval;
+    }
+
     return true;
   };
 

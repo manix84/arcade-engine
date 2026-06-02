@@ -1,0 +1,46 @@
+<style>
+  main[role="main"] {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+  }
+
+  main[role="main"] > h2,
+  main[role="main"] > section {
+    flex: 0 0 auto !important;
+  }
+
+  main[role="main"] > div:has(#storybook-preview-wrapper),
+  main[role="main"] > div:has(#storybook-preview-wrapper) > div,
+  main[role="main"] > div:has(#storybook-preview-wrapper) > div > div {
+    align-content: stretch !important;
+    align-items: stretch !important;
+    flex: 1 1 auto !important;
+    height: auto !important;
+    justify-content: stretch !important;
+    justify-items: stretch !important;
+    min-height: 0 !important;
+    place-content: stretch !important;
+    place-items: stretch !important;
+  }
+
+  #storybook-preview-wrapper {
+    align-content: stretch !important;
+    align-items: stretch !important;
+    height: 100% !important;
+    justify-content: stretch !important;
+    justify-items: stretch !important;
+    min-height: 0 !important;
+    place-content: stretch !important;
+    place-items: stretch !important;
+  }
+
+  #storybook-preview-wrapper > div:has(#storybook-preview-iframe),
+  #storybook-preview-iframe {
+    align-self: stretch !important;
+    height: 100% !important;
+    justify-self: stretch !important;
+    min-height: 0 !important;
+    width: 100% !important;
+  }
+</style>

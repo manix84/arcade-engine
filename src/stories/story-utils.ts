@@ -307,7 +307,7 @@ export const appendStyles = (root: HTMLElement): void => {
 
   styles.textContent = `
     .ae-shell {
-      min-height: 100vh;
+      min-height: 100%;
       padding: 24px;
       background:
         linear-gradient(135deg, rgba(79, 209, 197, 0.13), transparent 28%),
