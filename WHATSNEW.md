@@ -19,6 +19,8 @@
   declaration files, and declaration maps into `dist`.
 - Added package exports, `types`, `files`, repository metadata, keywords,
   public publish config, and a dry-run pack script for npm publishing.
+- Added an automatic GitHub Actions npm release workflow for matching `v*`
+  release tags.
 - Added local package metadata, TypeScript config, Vitest config, and a lockfile
   so the engine can be developed and tested independently.
 
