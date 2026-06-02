@@ -310,6 +310,10 @@ Preview the npm tarball contents:
 npm run pack:dry-run
 ```
 
+Release publishing is handled by GitHub Actions when a matching release tag is
+pushed. See [RELEASE.md](RELEASE.md) for the npm release process and required
+`NPM_TOKEN` secret.
+
 Story changes should also run:
 
 ```sh
@@ -353,6 +357,7 @@ Active package modules:
 ## 🤝 Project Docs
 
 - [📘 API Reference](API.md)
+- [📦 Release Process](RELEASE.md)
 - [🗒️ What's New](WHATSNEW.md)
 - [🗺️ Finish Roadmap](ROADMAP.md)
 - [🔐 Privacy](PRIVACY.md)

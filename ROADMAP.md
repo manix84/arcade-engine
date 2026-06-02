@@ -217,8 +217,10 @@ Latest verification: June 2, 2026.
 - `dist/multiplayer.*`, `dist/input.*`, `dist/animation.*`,
   `dist/camera.*`, and `dist/spatial-audio.*` are included.
 - `storybook-static` is excluded from the npm package.
-- `README.md`, `API.md`, `LICENSE.md`, `PRIVACY.md`, and `WHATSNEW.md` are
-  included in the npm package.
+- `README.md`, `API.md`, `LICENSE.md`, `PRIVACY.md`, `RELEASE.md`, and
+  `WHATSNEW.md` are included in the npm package.
+- Automatic npm publishing is configured through the `NPM Release` GitHub
+  Actions workflow for matching `v*` release tags.
 
 Verification notes:
 
