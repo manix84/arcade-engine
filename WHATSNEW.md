@@ -33,6 +33,8 @@
   optional browser spatial panning.
 - Added input action helpers for mapping keyboard, mouse, touch, pointer, and
   gamepad inputs to game actions.
+- Added multiplayer helpers for local player-scoped input, assigned gamepads,
+  co-op/PvP session metadata, and serializable remote player input intents.
 - Added sprite animation helpers for frame timing and sprite-sheet frame data.
 - Added follow-camera helpers for 2D worlds.
 - Added grid helpers for board and tile games.

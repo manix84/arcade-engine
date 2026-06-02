@@ -22,6 +22,9 @@ Storybook is documentation and demo output only; it builds to
   fades, blocked-playback reporting, and optional spatial panning.
 - Input action mapping helpers for keyboard, mouse, touch, pointer, and gamepad
   controls.
+- Local multiplayer input helpers for player one/player two keyboard,
+  mouse/touch, and assigned gamepad controls, plus backend-agnostic remote
+  player intent contracts.
 - Sprite animation helpers for frame timing and sprite-sheet frame selection.
 - Math, heading, spawn, collision, area-exit, cloning, random-color, and
   browser-event helpers.

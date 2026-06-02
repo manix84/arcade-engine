@@ -74,6 +74,13 @@ export {
   getInputActionState,
 } from "./input.js";
 export {
+  createLocalMultiplayerController,
+  createMultiplayerSession,
+  createPlayerInputIntent,
+  getPlayerActionState,
+  mergePlayerInputIntent,
+} from "./multiplayer.js";
+export {
   getScaledViewportLimit,
   getViewportAreaScale,
   getViewportPaddedRadius,
@@ -146,6 +153,20 @@ export type {
   KeyboardInputController,
   KeyboardInputControllerOptions,
 } from "./input.js";
+export type {
+  LocalMultiplayerController,
+  LocalMultiplayerControllerOptions,
+  MultiplayerAuthority,
+  MultiplayerConnection,
+  MultiplayerMode,
+  MultiplayerPeer,
+  MultiplayerPlayer,
+  MultiplayerSession,
+  MultiplayerSessionOptions,
+  MultiplayerTeam,
+  PlayerInputIntent,
+  PlayerInputIntentOptions,
+} from "./multiplayer.js";
 export type {
   DistanceGainOptions,
   SpatialAudioMix,

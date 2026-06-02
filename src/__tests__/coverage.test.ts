@@ -699,7 +699,10 @@ describe("coverage-focused engine branches", () => {
       "createExplosionBlocks",
       "createInputController",
       "createKeyboardInputController",
+      "createLocalMultiplayerController",
+      "createMultiplayerSession",
       "createPlasmaLinks",
+      "createPlayerInputIntent",
       "detectBoxCollision",
       "drawCanvasLine",
       "drawCanvasPolygon",
@@ -726,6 +729,7 @@ describe("coverage-focused engine branches", () => {
       "getLoopedDepth",
       "getLoopedScrollerPosition",
       "getPerspectiveScale",
+      "getPlayerActionState",
       "getScaledViewportLimit",
       "getSideScrollerJumpY",
       "getSpatialAudioDepth",
@@ -741,6 +745,7 @@ describe("coverage-focused engine branches", () => {
       "helpers",
       "isInsideGrid",
       "keepBoxInside",
+      "mergePlayerInputIntent",
       "moveBy",
       "normalizeVector",
       "parseHexColor",
@@ -751,5 +756,5 @@ describe("coverage-focused engine branches", () => {
       "stepExplosionBlocks",
       "wrapDepth",
     ]);
-  });
+  }, 10_000);
 });

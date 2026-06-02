@@ -2,6 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createInputController,
   createKeyboardInputController,
+  createLocalMultiplayerController,
+  createMultiplayerSession,
+  createPlayerInputIntent,
   getAnimatedSpriteFrame,
   getDistanceGain,
   getFollowCamera,
@@ -9,9 +12,11 @@ import {
   getInputCode,
   getInputActionState,
   getInputActions,
+  getPlayerActionState,
   getSpatialAudioMix,
   getSpriteFrameIndex,
   getSpriteSheetFrame,
+  mergePlayerInputIntent,
 } from "../index.js";
 
 describe("game system helpers", () => {
@@ -131,6 +136,115 @@ describe("game system helpers", () => {
 
     controller.stop();
     expect(controller.getPressedInputs()).toEqual([]);
+  });
+
+  it("tracks local multiplayer action state per player", () => {
+    const target = document.createElement("button");
+    const multiplayer = createLocalMultiplayerController(
+      [
+        {
+          bindings: {
+            fire: ["Space", "Gamepad0"],
+            moveLeft: ["KeyA"],
+          },
+          gamepadIndex: 0,
+          id: "p1",
+          name: "Player 1",
+          team: "shared",
+        },
+        {
+          bindings: {
+            fire: ["Enter", "Gamepad0"],
+            moveLeft: ["KeyJ"],
+          },
+          gamepadIndex: 1,
+          id: "p2",
+          name: "Player 2",
+          team: "shared",
+        },
+      ],
+      { target }
+    );
+    const inactiveGamepad = {
+      axes: [],
+      buttons: [{ pressed: false }],
+    } as unknown as Gamepad;
+    const activeGamepad = {
+      axes: [],
+      buttons: [{ pressed: true }],
+    } as unknown as Gamepad;
+
+    multiplayer.start();
+    target.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyA" }));
+    target.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyJ" }));
+
+    expect(multiplayer.getPlayerState("p1")).toEqual({
+      fire: false,
+      moveLeft: true,
+    });
+    expect(multiplayer.getPlayerState("p2")).toEqual({
+      fire: false,
+      moveLeft: true,
+    });
+
+    multiplayer.updateGamepads([inactiveGamepad, activeGamepad]);
+
+    expect(multiplayer.isPressed("p1", "fire")).toBe(false);
+    expect(multiplayer.isPressed("p2", "fire")).toBe(true);
+
+    multiplayer.stop();
+  });
+
+  it("creates serializable multiplayer session and remote input intents", () => {
+    const session = createMultiplayerSession({
+      id: "match-1",
+      localPeerId: "peer-a",
+      mode: "versus",
+      peers: [
+        { connection: "local", id: "peer-a", isLocal: true, playerId: "p1", team: "p1" },
+        { connection: "remote", id: "peer-b", playerId: "p2", team: "p2" },
+      ],
+    });
+    const player = {
+      bindings: {
+        fire: ["Space"],
+        moveRight: ["ArrowRight"],
+      },
+      id: "p1",
+    };
+    const intent = createPlayerInputIntent({
+      actions: getPlayerActionState(player, ["Space"]),
+      playerId: "p1",
+      sequence: 7,
+      tick: 120,
+    });
+
+    expect(session).toEqual({
+      authority: "host",
+      id: "match-1",
+      localPeerId: "peer-a",
+      maxPlayers: 2,
+      mode: "versus",
+      peers: [
+        { connection: "local", id: "peer-a", isLocal: true, playerId: "p1", team: "p1" },
+        { connection: "remote", id: "peer-b", playerId: "p2", team: "p2" },
+      ],
+    });
+    expect(intent).toEqual({
+      actions: {
+        fire: true,
+        moveRight: false,
+      },
+      playerId: "p1",
+      sequence: 7,
+      tick: 120,
+    });
+    expect(mergePlayerInputIntent({}, intent)).toEqual({
+      p1: {
+        fire: true,
+        moveRight: false,
+      },
+    });
   });
 
   it("calculates sprite animation frame indices", () => {

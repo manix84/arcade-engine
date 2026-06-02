@@ -167,6 +167,9 @@ Verification notes:
 
 - Added input action mapping and an input controller so games can map raw
   keyboard, mouse, touch, pointer, and gamepad input to semantic actions.
+- Added local multiplayer input helpers for player-scoped controls, assigned
+  gamepads, and serializable input intents for game-owned remote co-op/PvP
+  transports.
 - Added sprite animation helpers for frame timing and sprite-sheet frame data.
 - Added 2D follow-camera helpers with smoothing, dead zones, and world bounds.
 - Added spatial audio gain/mix helpers for listener/source calculations.
@@ -244,6 +247,9 @@ Stage 5 release candidate unless a real game depends on them immediately.
 - Gamepad connection/disconnection event helpers.
 - Pointer gesture helpers for drag, swipe, tap, and virtual sticks.
 - Touch-safe UI helpers for mobile/tablet arcade controls.
+- Storybook demos for local co-op, local PvP, and remote-intent simulation.
+- Optional rollback/prediction helpers if a real game needs tighter remote PvP
+  behavior.
 
 ### Audio Follow-Ups
 

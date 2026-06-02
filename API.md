@@ -77,6 +77,40 @@ if (input.isPressed("fire")) {
 }
 ```
 
+## 👥 Multiplayer Input
+
+| Export | Use It For |
+| --- | --- |
+| `createLocalMultiplayerController` | Track separate action state for multiple local players. |
+| `createMultiplayerSession` | Describe a local or remote co-op/PvP session without choosing a backend. |
+| `createPlayerInputIntent` | Create serializable player input messages for remote sync. |
+| `getPlayerActionState` | Resolve one player's bindings against pressed inputs. |
+| `mergePlayerInputIntent` | Merge a local or remote player intent into a player-state map. |
+
+```ts
+const multiplayer = createLocalMultiplayerController([
+  {
+    bindings: { fire: ["Space", "Gamepad0"], moveLeft: ["KeyA"] },
+    gamepadIndex: 0,
+    id: "p1",
+  },
+  {
+    bindings: { fire: ["Enter", "Gamepad0"], moveLeft: ["KeyJ"] },
+    gamepadIndex: 1,
+    id: "p2",
+  },
+]);
+
+multiplayer.start();
+multiplayer.updateGamepads();
+
+const state = multiplayer.getState();
+```
+
+Remote multiplayer is supported as data contracts rather than a bundled
+network stack. Games can send `PlayerInputIntent` objects through WebSocket,
+WebRTC, a hosted relay, or their own backend.
+
 ## 🎞️ Sprite Animation
 
 | Export | Use It For |

@@ -88,6 +88,16 @@ Use it when a game wants to reason about `jump`, `fire`, or `moveLeft` instead
 of browser key names, mouse buttons, touch events, or gamepad button/axis
 numbers.
 
+## 👥 Multiplayer
+
+[multiplayer.ts](multiplayer.ts) composes input action controllers into
+player-scoped local multiplayer state and provides small data contracts for
+remote co-op or PvP input sync.
+
+Use it when a game needs player one/player two controls, assigned gamepad
+indexes, or serializable `PlayerInputIntent` objects that can be sent through a
+game-owned backend, relay, WebSocket, or WebRTC connection.
+
 ## 🎞️ Sprite Animation
 
 [animation.ts](animation.ts) calculates animation frame indices and sprite-sheet
