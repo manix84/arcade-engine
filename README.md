@@ -299,7 +299,7 @@ scheduling, sound lifecycle, and helper math/events.
 
 ## 🗺️ Migration Status
 
-Active TypeScript package modules:
+Active package modules:
 
 - `src/index.ts`
 - `src/arena.ts`
@@ -314,17 +314,6 @@ Active TypeScript package modules:
 - `src/arcade-3d.ts`
 - `src/cube-cluster.ts`
 - `src/types.ts`
-
-Legacy JavaScript modules still present for review:
-
-- `src/Fullscreen.js`
-- `src/Graphic.js`
-- `src/Graphic/Sprite.js`
-- `src/Graphic/Sprite/Static.js`
-- `src/Graphic/Sprite/Animated.js`
-- `src/Ticker/worker.js`
-- `src/debugging.js`
-- `src/keyboard.js`
 
 ## 🤝 Project Docs
 

@@ -681,4 +681,58 @@ describe("coverage-focused engine branches", () => {
       vi.restoreAllMocks();
     }
   });
+
+  it("keeps the public package export surface deliberate", async () => {
+    const engine = await import("../index.js");
+
+    expect(Object.keys(engine).sort()).toEqual([
+      "GameArena",
+      "Sound",
+      "Ticker",
+      "centerCubeCluster",
+      "clamp",
+      "clampGridPosition",
+      "cloneCubeBlock",
+      "colorWithAlpha",
+      "containsBox",
+      "createCubeClusterFromPattern",
+      "createExplosionBlocks",
+      "createPlasmaLinks",
+      "detectBoxCollision",
+      "drawCanvasLine",
+      "drawCanvasPolygon",
+      "drawDebugVectors",
+      "fillCanvasWithTrail",
+      "getBoxCenter",
+      "getCubeClusterBounds",
+      "getCubeClusterCenter",
+      "getDepthProgress",
+      "getGridCell",
+      "getGridCellCenter",
+      "getGridPosition",
+      "getGridSize",
+      "getIsometricTileCorners",
+      "getIsometricWallSide",
+      "getLoopedDepth",
+      "getPerspectiveScale",
+      "getScaledViewportLimit",
+      "getVectorDistance",
+      "getViewportAreaScale",
+      "getViewportPaddedRadius",
+      "getViewportRadius",
+      "getVisibleExplosionBlocks",
+      "helpers",
+      "isInsideGrid",
+      "keepBoxInside",
+      "moveBy",
+      "normalizeVector",
+      "parseHexColor",
+      "projectIsometricPoint",
+      "projectPerspectivePoint",
+      "shadeHexColor",
+      "snapToGrid",
+      "stepExplosionBlocks",
+      "wrapDepth",
+    ]);
+  });
 });

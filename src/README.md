@@ -48,9 +48,6 @@ Use it for:
 - Fixed-step simulation timing.
 - Catch-up limits for stable simulation loops.
 
-The legacy [Ticker/worker.js](Ticker/worker.js) remains for review and is
-documented separately in [Ticker/README.md](Ticker/README.md).
-
 ## 🔊 Sound
 
 [Sound.ts](Sound.ts) wraps HTML audio playback.

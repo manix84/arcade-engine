@@ -67,13 +67,13 @@
 
 - Removed conflicting legacy AMD `src/Sound.js` and `src/Ticker.js` files so
   extensionless imports resolve to the new TypeScript modules.
-- Left the remaining legacy JavaScript modules in place for follow-up review
-  rather than removing them as part of the first modernization slices.
+- Audited and removed the remaining legacy AMD JavaScript modules that were not
+  exported, tested, used by Storybook, or included in the npm package build:
+  `MainMenu.js`, `src/Fullscreen.js`, `src/Graphic.js`, sprite wrappers,
+  `src/Ticker/worker.js`, `src/debugging.js`, and `src/keyboard.js`.
 
 ## 🔜 Next Milestones
 
-- Decide whether the remaining legacy `Graphic`, `Fullscreen`, `keyboard`, and
-  `debugging` modules should be ported, replaced by `GameArena`, or archived.
 - Continue moving demo-only behavior into public helpers when it proves useful
   to real games.
 - Keep Storybook examples aligned with capabilities exported from the engine.

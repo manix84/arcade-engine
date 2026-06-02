@@ -57,7 +57,7 @@ legacy JavaScript files.
 ### Work
 
 - Audit every export from `src/index.ts`.
-- Decide which legacy files are kept, ported, or removed:
+- Decide which legacy files are kept, ported, or removed. Stage 2 removed:
   - `MainMenu.js`
   - `src/Fullscreen.js`
   - `src/Graphic.js`
@@ -71,6 +71,15 @@ legacy JavaScript files.
   engine.
 - Add tests before removing or replacing legacy behavior.
 - Keep public types explicit and documented.
+
+### Current Status
+
+- Public exports from `src/index.ts` have a regression test.
+- Legacy AMD-era JavaScript modules were audited and removed because they were
+  not exported, not used by source or Storybook, excluded from lint, and not
+  included in the package build.
+- Modern replacements are documented through `GameArena`, `Ticker`, canvas
+  rendering helpers, debug vectors, and helper/event APIs.
 
 ## 🎮 Stage 3: Engine Capability Coverage
 
