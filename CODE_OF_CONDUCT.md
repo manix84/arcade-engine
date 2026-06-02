@@ -8,6 +8,9 @@ be clear, respectful, and practical.
 - Be respectful of different experience levels and backgrounds.
 - Keep technical disagreement focused on the code and the outcome.
 - Give useful context when reporting bugs or proposing changes.
+- Read the relevant documentation before opening duplicate issues.
+- Be specific about the Storybook story, module, browser, or package version
+  involved when asking for help.
 - Accept maintainers' decisions about scope, timing, and project direction.
 - Avoid wasting other contributors' time with low-effort or bad-faith
   interactions.

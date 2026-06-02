@@ -16,9 +16,15 @@ assignees: []
 
 ## 🔁 Steps To Reproduce
 
-1. 
-2. 
-3. 
+1.
+2.
+3.
+
+## 📚 Where You Saw It
+
+- Package API/module:
+- Storybook section/story:
+- Documentation page:
 
 ## 🧪 Environment
 
@@ -29,4 +35,5 @@ assignees: []
 
 ## 📎 Extra Context
 
-Add console errors, test output, screenshots, or a minimal reproduction.
+Add console errors, test output, screenshots, links to affected docs, or a
+minimal reproduction.

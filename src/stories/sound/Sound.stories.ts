@@ -1,6 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/html-vite";
 import { fn } from "storybook/test";
-import { Sound } from "../../index.js";
+import {
+  Sound,
+  colorWithAlpha,
+  drawCanvasLine,
+  projectPerspectivePoint,
+} from "../../index.js";
 import {
   appendStyles,
   createButton,
@@ -740,6 +745,169 @@ export const SpatialAndGlobalAudio: SpatialAudioStory = {
         sourceX = Math.min(args.listenerRange, sourceX + 40);
         sourceHeading = 90;
         refreshSpatial();
+      })
+    );
+    values.append(modeValue, panValue, positionValue);
+    refreshSpatial();
+    draw();
+    onRemove(shell, () => {
+      window.cancelAnimationFrame(animationFrame);
+      Sound.destroyAll();
+      Sound.configure();
+      destroyUrls([globalUrl, spatialUrl]);
+    });
+
+    return shell;
+  },
+};
+
+export const SpatialAndGlobalAudioDepth: SpatialAudioStory = {
+  args: SpatialAndGlobalAudio.args,
+  argTypes: SpatialAndGlobalAudio.argTypes,
+  render: (args: SpatialAudioArgs) => {
+    const { canvas, controls, log, shell, values } = createSoundScene(
+      "Sound: 2.5D / 3D Spatial And Global Audio",
+      "Depth Audio Field"
+    );
+    const globalUrl = createToneUrl({
+      durationSeconds: 0.5,
+      frequency: 329.63,
+      gain: 0.22,
+      modulationFrequency: 1.5,
+      waveform: "sine",
+    });
+    const spatialUrl = createToneUrl({
+      durationSeconds: 1.6,
+      frequency: 220,
+      gain: 0.2,
+      modulationFrequency: 0.9,
+      release: 0.28,
+      waveform: "triangle",
+    });
+    const modeValue = createValue("mode", "spatial");
+    const panValue = createValue("pan", "0.00");
+    const positionValue = createValue("position", "0, 0");
+    let animationFrame = 0;
+    let isMoving = args.autoMove;
+    let sourceX = 230;
+    let sourceY = 0;
+    let sourceHeading = 270;
+    let frame = 0;
+
+    Sound.configure({
+      getVolume: () => 0.65,
+      onPlaybackBlocked: ({ channel }) => appendLog(log, `${channel} blocked`),
+    });
+    const globalSound = new Sound(globalUrl, { channel: "effects" });
+    const spatialSound = new Sound(spatialUrl, { channel: "effects", loop: true });
+
+    const refreshSpatial = (): void => {
+      spatialSound.setPan(sourceX / args.listenerRange);
+      spatialSound.setSpatialPosition(sourceX, sourceY, args.listenerRange, 170);
+      setValue(panValue, (sourceX / args.listenerRange).toFixed(2));
+      setValue(positionValue, `${Math.round(sourceX)}, ${Math.round(sourceY)}`);
+    };
+
+    const draw = (): void => {
+      const context = canvas.getContext("2d");
+      const horizon = canvas.height * 0.5;
+
+      if (!context) {
+        return;
+      }
+
+      frame++;
+      if (isMoving) {
+        const previousSourceX = sourceX;
+        const previousSourceY = sourceY;
+
+        sourceX = Math.sin(frame / 70) * 240;
+        sourceY = Math.cos(frame / 95) * 140;
+        sourceHeading =
+          ((Math.atan2(sourceX - previousSourceX, -(sourceY - previousSourceY)) * 180) /
+            Math.PI +
+            360) %
+          360;
+        refreshSpatial();
+      }
+
+      context.fillStyle = "#05070a";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.fillStyle = colorWithAlpha("#90cdf4", 0.07);
+      context.fillRect(0, 0, canvas.width, horizon);
+
+      const project = (x: number, y: number, z: number, centerX = canvas.width / 2) =>
+        projectPerspectivePoint(
+          { x, y, z },
+          { height: canvas.height, width: canvas.width },
+          { centerX, horizon }
+        );
+      const listener2_5D = project(0, 170, 7);
+      const sourceDepth = 7 + Math.abs(sourceY) / 12;
+      const source2_5D = project(sourceX, 170, sourceDepth);
+      const listener3D = project(0, 0, 7, canvas.width * 0.72);
+      const source3D = project(sourceX, sourceY, sourceDepth, canvas.width * 0.72);
+
+      for (let z = 2; z < 26; z += 2) {
+        drawCanvasLine(
+          context,
+          project(-args.listenerRange, 180, z),
+          project(args.listenerRange, 180, z),
+          colorWithAlpha("#90cdf4", 0.08)
+        );
+      }
+
+      drawCanvasLine(context, listener2_5D, source2_5D, "#f6e05e", 3);
+      drawCanvasLine(context, listener3D, source3D, "#4fd1c5", 3);
+      drawTargetMarker(context, listener2_5D.x, listener2_5D.y, {
+        color: "#90cdf4",
+        label: "2.5D listener",
+        radius: 18,
+      });
+      drawTopDownShip(context, source2_5D.x, source2_5D.y, {
+        accent: "#f6e05e",
+        heading: sourceHeading,
+        label: "2.5D source",
+        scale: 0.45 + source2_5D.scale,
+        thrust: 0.45,
+      });
+      drawTargetMarker(context, listener3D.x, listener3D.y, {
+        color: "#90cdf4",
+        label: "3D listener",
+        radius: 18,
+      });
+      drawTopDownShip(context, source3D.x, source3D.y, {
+        accent: "#4fd1c5",
+        heading: sourceHeading,
+        label: "3D source",
+        scale: 0.45 + source3D.scale,
+        thrust: 0.45,
+      });
+      animationFrame = window.requestAnimationFrame(draw);
+    };
+
+    controls.append(
+      createButton("Play Global", () => {
+        args.onPlayGlobal();
+        globalSound.play();
+        setValue(modeValue, "global");
+        appendLog(log, "global sound");
+      }),
+      createButton("Start Spatial Loop", () => {
+        args.onStartSpatialLoop();
+        spatialSound.loop();
+        setValue(modeValue, "spatial loop");
+        appendLog(log, "spatial loop");
+      }),
+      createButton("Stop All", () => {
+        args.onStopAll();
+        Sound.stopAll();
+        setValue(modeValue, "stopped");
+        appendLog(log, "stop all");
+      }),
+      createButton("Move Source", () => {
+        args.onMoveSource();
+        isMoving = !isMoving;
       })
     );
     values.append(modeValue, panValue, positionValue);

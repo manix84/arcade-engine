@@ -1,5 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/html-vite";
-import { helpers } from "../index.js";
+import {
+  colorWithAlpha,
+  drawCanvasLine,
+  helpers,
+  projectPerspectivePoint,
+} from "../index.js";
 import {
   appendStyles,
   createButton,
@@ -227,6 +232,125 @@ export const MathCollisionAndEvents: Story = {
     });
     updateMath();
     updateCollision();
+
+    return shell;
+  },
+};
+
+export const MathCollisionAndEventsDepth: Story = {
+  render: () => {
+    const shell = createDemoShell("Helpers: 2.5D / 3D");
+    const grid = document.createElement("div");
+    const visualPanel = createPanel("Depth Visualizer");
+    const mathPanel = createPanel("Math");
+    const collisionPanel = createPanel("Collision");
+    const eventPanel = createPanel("Events");
+    const stage = document.createElement("div");
+    const canvas = document.createElement("canvas");
+    const mathValues = document.createElement("div");
+    const collisionValues = document.createElement("div");
+    const controls = document.createElement("div");
+    const eventLog = document.createElement("pre");
+
+    appendStyles(shell);
+    grid.className = "ae-grid";
+    stage.className = "ae-stage";
+    mathValues.className = "ae-values";
+    collisionValues.className = "ae-values";
+    controls.className = "ae-controls";
+    eventLog.className = "ae-log";
+    canvas.width = 640;
+    canvas.height = 360;
+
+    const targetX = createNumberInput("target x", 32, -200, 200);
+    const targetY = createNumberInput("target y", 18, -200, 200);
+    const targetRadius = createNumberInput("target radius", 24, 1, 120);
+    const originRadius = createNumberInput("origin radius", 32, 1, 120);
+    const rotateValue = createValue("rotateTo");
+    const headingValue = createValue("findHeading");
+    const spawnValue = createValue("getSpawnCoords");
+    const collisionValue = createValue("detectCollision");
+    const exitValue = createValue("detectAreaExit");
+
+    const project = (x: number, y: number, z: number, centerX = canvas.width / 2) =>
+      projectPerspectivePoint(
+        { x, y, z },
+        { height: canvas.height, width: canvas.width },
+        { centerX, horizon: canvas.height * 0.52 }
+      );
+
+    const update = (): void => {
+      const context = canvas.getContext("2d");
+      const target = {
+        posX: getNumberInputValue(targetX),
+        posY: getNumberInputValue(targetY),
+        radius: getNumberInputValue(targetRadius),
+      };
+      const origin = {
+        posX: 0,
+        posY: 0,
+        radius: getNumberInputValue(originRadius),
+      };
+      const heading = helpers.findHeading(target, origin);
+      const rotated = helpers.rotateTo(heading, heading + 120, 18);
+      const spawn = helpers.getSpawnCoords(
+        { heading, posX: origin.posX, posY: origin.posY },
+        { spawnArc: 80, spawnRadius: 130 }
+      );
+      const isColliding = helpers.detectCollision(target, origin);
+      const hasExited = helpers.detectAreaExit(origin, target, 90);
+
+      setValue(rotateValue, helpers.float(rotated));
+      setValue(headingValue, helpers.float(heading));
+      setValue(spawnValue, `${spawn.posX}, ${spawn.posY}`);
+      setValue(collisionValue, String(isColliding));
+      setValue(exitValue, String(hasExited));
+
+      if (!context) {
+        return;
+      }
+
+      context.fillStyle = "#05070a";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.fillStyle = colorWithAlpha("#4fd1c5", 0.06);
+      context.fillRect(0, 0, canvas.width, canvas.height * 0.52);
+
+      const origin2_5D = project(origin.posX, 160, 7);
+      const target2_5D = project(target.posX, 160, 9 + Math.abs(target.posY) / 10);
+      const origin3D = project(origin.posX, origin.posY, 7, canvas.width * 0.72);
+      const target3D = project(target.posX, target.posY, 9 + Math.abs(target.posY) / 10, canvas.width * 0.72);
+
+      drawCanvasLine(context, origin2_5D, target2_5D, isColliding ? "#fc8181" : "#f6e05e", 3);
+      drawCanvasLine(context, origin3D, target3D, hasExited ? "#fc8181" : "#4fd1c5", 3);
+      drawTargetMarker(context, origin2_5D.x, origin2_5D.y, { color: "#4fd1c5", label: "2.5D", radius: origin.radius * origin2_5D.scale });
+      drawTargetMarker(context, target2_5D.x, target2_5D.y, { color: isColliding ? "#fc8181" : "#f6e05e", label: "target", radius: target.radius * target2_5D.scale });
+      drawTargetMarker(context, origin3D.x, origin3D.y, { color: "#90cdf4", label: "3D", radius: origin.radius * origin3D.scale });
+      drawTargetMarker(context, target3D.x, target3D.y, { color: hasExited ? "#fc8181" : "#f6e05e", label: "target", radius: target.radius * target3D.scale });
+    };
+
+    const eventTarget = new EventTarget();
+    const listener = (event: Event): void => {
+      eventLog.textContent = `${event.type}\n${eventLog.textContent}`.slice(0, 400);
+    };
+
+    helpers.bind(["alpha-depth", "beta-depth"], listener, eventTarget);
+    mathValues.append(rotateValue, headingValue, spawnValue);
+    collisionValues.append(targetX, targetY, targetRadius, originRadius, collisionValue, exitValue);
+    controls.append(
+      createButton("Alpha", () => eventTarget.dispatchEvent(new Event("alpha-depth"))),
+      createButton("Beta", () => eventTarget.dispatchEvent(new Event("beta-depth"))),
+      createButton("Unbind", () => helpers.unbind("alpha-depth", "beta-depth"))
+    );
+
+    stage.appendChild(canvas);
+    visualPanel.appendChild(stage);
+    mathPanel.appendChild(mathValues);
+    collisionPanel.appendChild(collisionValues);
+    eventPanel.append(controls, eventLog);
+    grid.append(visualPanel, mathPanel, collisionPanel, eventPanel);
+    shell.appendChild(grid);
+    shell.addEventListener("input", update);
+    update();
 
     return shell;
   },
