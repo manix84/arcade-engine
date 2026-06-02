@@ -26,6 +26,8 @@ baseline.
 
 ### Current Status
 
+Latest verification: June 2, 2026.
+
 - License: MIT.
 - Package metadata: public package metadata is present.
 - Root documentation: present.
@@ -37,6 +39,13 @@ baseline.
 - Package build: passed.
 - Storybook build: passed.
 - Package dry-run: passed.
+
+Verification notes:
+
+- The local tool shell needs `PATH=/usr/local/bin:$PATH` so npm can find Node.
+- Vitest needs local socket access in this environment.
+- The package dry run used `npm_config_cache=/private/tmp/arcade-engine-npm-cache`
+  to avoid unrelated permissions in the user npm cache.
 
 Stage 1 is complete when these results are committed with the roadmap.
 
