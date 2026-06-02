@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   colorWithAlpha,
+  fillCanvasWithTrail,
   getDepthProgress,
   getIsometricTileCorners,
   getIsometricWallSide,
@@ -129,5 +130,29 @@ describe("arcade 3D helpers", () => {
     expect(() => parseHexColor("nope")).toThrow(
       "Expected a 3 or 6 digit hex color."
     );
+  });
+
+  it("fills canvas trails with any valid canvas color string", () => {
+    let alphaDuringFill = 0;
+    const context = {
+      fillRect: vi.fn(),
+      fillStyle: "",
+      globalAlpha: 0.8,
+    } as unknown as CanvasRenderingContext2D;
+    const canvas = {
+      height: 60,
+      width: 80,
+    } as HTMLCanvasElement;
+
+    vi.mocked(context.fillRect).mockImplementation(() => {
+      alphaDuringFill = context.globalAlpha;
+    });
+
+    fillCanvasWithTrail(context, canvas, "hsl(180 70% 50%)", 0.25);
+
+    expect(context.fillStyle).toBe("hsl(180 70% 50%)");
+    expect(context.fillRect).toHaveBeenCalledWith(0, 0, 80, 60);
+    expect(alphaDuringFill).toBe(0.75);
+    expect(context.globalAlpha).toBe(0.8);
   });
 });

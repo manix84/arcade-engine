@@ -42,9 +42,13 @@ export const fillCanvasWithTrail = (
   color: string,
   trailOpacity: number
 ): void => {
-  context.fillStyle =
-    trailOpacity > 0 ? colorWithAlpha(color, 1 - trailOpacity) : color;
+  const previousAlpha = context.globalAlpha;
+  const fillAlpha = Math.max(0, Math.min(1, 1 - trailOpacity));
+
+  context.globalAlpha = trailOpacity > 0 ? fillAlpha : previousAlpha;
+  context.fillStyle = color;
   context.fillRect(0, 0, canvas.width, canvas.height);
+  context.globalAlpha = previousAlpha;
 };
 
 export const drawCanvasLine = (
