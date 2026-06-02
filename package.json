@@ -1,8 +1,8 @@
 {
   "name": "arcade-engine",
   "description": "A small browser arcade-game engine for canvas games.",
-  "version": "2.17.0",
-  "license": "SEE LICENSE IN LICENSE.md",
+  "version": "2.18.0",
+  "license": "MIT",
   "type": "module",
   "author": "Rob Taylor",
   "homepage": "https://github.com/manix84/arcade-engine#readme",
