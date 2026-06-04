@@ -42,6 +42,8 @@
 - Added grid helpers for board and tile games.
 - Added axis-aligned box helpers for paddle, brick, shot, enemy, and platform
   patterns.
+- Added gravity and lightweight 2D/3D ragdoll helpers for arcade physics
+  effects.
 - Added canvas rendering helpers for trails, lines, polygons, and color work.
 - Added 2.5D projection helpers for perspective, isometric, and looped-depth
   arcade scenes.
@@ -66,6 +68,7 @@
 - Added cube-cluster demos for destructible pickups and modular level pieces.
 - Added systems demos for input actions, local multiplayer, sprite animation,
   follow cameras, and spatial-audio math.
+- Added systems demos for gravity and 2D/3D ragdoll helpers.
 - Added a GitHub Pages workflow that deploys Storybook from `storybook-static`
   without adding Storybook output to the npm package build.
 

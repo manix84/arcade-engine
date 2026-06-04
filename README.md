@@ -34,6 +34,7 @@ Storybook is documentation and demo output only; it builds to
 - Grid helpers for board, tile, puzzle, and cell-based games.
 - Axis-aligned box helpers for paddle, brick, shot, enemy, and platform-style
   movement.
+- Gravity and lightweight 2D/3D ragdoll helpers for arcade physics effects.
 - Canvas rendering helpers for trails, lines, polygons, hex color parsing, and
   shading.
 - 2.5D projection helpers for perspective lanes, isometric tiles, depth loops,
@@ -349,6 +350,7 @@ Active package modules:
 - `src/debug-vectors.ts`
 - `src/grid.ts`
 - `src/box-collision.ts`
+- `src/physics.ts`
 - `src/canvas-rendering.ts`
 - `src/arcade-3d.ts`
 - `src/arcade-motion.ts`

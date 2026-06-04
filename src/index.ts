@@ -67,6 +67,14 @@ export { default as Sound } from "./Sound.js";
 export { getDistanceGain, getSpatialAudioMix } from "./spatial-audio.js";
 export { default as Ticker } from "./Ticker.js";
 export {
+  applyGravity2D,
+  applyGravity3D,
+  createRagdoll2D,
+  createRagdoll3D,
+  stepRagdoll2D,
+  stepRagdoll3D,
+} from "./physics.js";
+export {
   createInputController,
   createKeyboardInputController,
   getGamepadInputCodes,
@@ -176,3 +184,15 @@ export type {
   SpatialAudioMixOptions,
 } from "./spatial-audio.js";
 export type { RgbColor } from "./canvas-rendering.js";
+export type {
+  GravityOptions,
+  PhysicsBody2D,
+  PhysicsBody3D,
+  Ragdoll2D,
+  Ragdoll3D,
+  RagdollConstraint,
+  RagdollFactoryOptions,
+  RagdollPoint2D,
+  RagdollPoint3D,
+  RagdollStepOptions,
+} from "./physics.js";

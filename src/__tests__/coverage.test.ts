@@ -689,6 +689,8 @@ describe("coverage-focused engine branches", () => {
       "GameArena",
       "Sound",
       "Ticker",
+      "applyGravity2D",
+      "applyGravity3D",
       "centerCubeCluster",
       "clamp",
       "clampGridPosition",
@@ -703,6 +705,8 @@ describe("coverage-focused engine branches", () => {
       "createMultiplayerSession",
       "createPlasmaLinks",
       "createPlayerInputIntent",
+      "createRagdoll2D",
+      "createRagdoll3D",
       "detectBoxCollision",
       "drawCanvasLine",
       "drawCanvasPolygon",
@@ -755,6 +759,8 @@ describe("coverage-focused engine branches", () => {
       "shadeHexColor",
       "snapToGrid",
       "stepExplosionBlocks",
+      "stepRagdoll2D",
+      "stepRagdoll3D",
       "wrapDepth",
     ]);
   }, 30_000);
