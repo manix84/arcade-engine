@@ -34,6 +34,7 @@ Storybook is documentation and demo output only; it builds to
 - Grid helpers for board, tile, puzzle, and cell-based games.
 - Axis-aligned box helpers for paddle, brick, shot, enemy, and platform-style
   movement.
+- Gravity and lightweight 2D/3D ragdoll helpers for arcade physics effects.
 - Canvas rendering helpers for trails, lines, polygons, hex color parsing, and
   shading.
 - 2.5D projection helpers for perspective lanes, isometric tiles, depth loops,
@@ -214,6 +215,8 @@ Arcade motion helpers move common demo math into the engine package:
   framing from viewport size, look input, and optional bobbing.
 - `getLoopedScrollerPosition(options)` wraps side-scroller scenery and platform
   positions across a repeat range.
+- `getSideScrollerActorPosition(options)` wraps obstacles, enemies, pickups, or
+  platforms and reports visibility/progress for rendering and collision checks.
 - `getSideScrollerJumpY(options)` calculates a simple jump/bob arc.
 - `getSpatialAudioPan(options)` clamps source position into browser pan range.
 - `getSpatialAudioDepth(options)` turns source distance into a visual depth
@@ -310,9 +313,17 @@ Preview the npm tarball contents:
 npm run pack:dry-run
 ```
 
-Release publishing is handled by GitHub Actions when a matching release tag is
-pushed. See [RELEASE.md](RELEASE.md) for the npm release process and required
-`NPM_TOKEN` secret.
+Build the release tarball locally:
+
+```sh
+npm run pack:release
+```
+
+Release publishing is handled by GitHub Actions when a release commit is pushed
+to `main`. The workflow publishes `arcade-engine` to npmjs, publishes
+`@manix84/arcade-engine` to GitHub Packages, and uploads the release tarball to
+the GitHub Release for the package version. See [RELEASE.md](RELEASE.md) for
+the release process and required `NPM_TOKEN` secret.
 
 Story changes should also run:
 
@@ -347,6 +358,7 @@ Active package modules:
 - `src/debug-vectors.ts`
 - `src/grid.ts`
 - `src/box-collision.ts`
+- `src/physics.ts`
 - `src/canvas-rendering.ts`
 - `src/arcade-3d.ts`
 - `src/arcade-motion.ts`

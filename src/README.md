@@ -135,6 +135,19 @@ centers.
 Use grid helpers for board/tile logic. Use box helpers for top-left rectangle
 movement and collision.
 
+## 🧲 Physics
+
+[physics.ts](physics.ts) contains lightweight arcade physics helpers:
+
+- 2D gravity integration with velocity, floor clamping, and optional bounce.
+- 3D gravity integration that preserves depth movement.
+- 2D ragdoll point/constraint creation.
+- 3D ragdoll point/constraint creation.
+- Verlet-style ragdoll stepping with constraint solving.
+
+Use these helpers for falling objects, impacts, knockbacks, simple dummy
+enemies, and visual ragdoll effects without adding a full physics engine.
+
 ## 🎨 Canvas Rendering
 
 [canvas-rendering.ts](canvas-rendering.ts) contains renderer-agnostic canvas
@@ -173,6 +186,7 @@ that used to live only in Storybook demos:
 
 - First-person camera center/horizon framing.
 - Looped side-scroller positions.
+- Side-scroller actor positions for obstacles, enemies, pickups, and platforms.
 - Simple side-scroller jump arcs.
 - Spatial audio pan clamping.
 - Spatial audio visual depth calculation.

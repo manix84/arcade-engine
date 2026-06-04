@@ -63,7 +63,7 @@ focused helper stories live in [helpers/README.md](helpers/README.md).
 
 [systems/Systems.stories.ts](systems/Systems.stories.ts) documents newer
 system-level helpers for input actions, local multiplayer, sprite animation,
-follow cameras, and spatial-audio math. See
+follow cameras, gravity, 2D/3D ragdolls, and spatial-audio math. See
 [systems/README.md](systems/README.md).
 
 ### Audio
@@ -89,8 +89,8 @@ styles that can be built from the engine's 2.5D and canvas helpers:
 - Isometric dungeon room.
 - Hyperspace gate.
 - First-person player.
-- 2D side scroller.
-- 2.5D side scroller.
+- 2D side scroller with obstacles, ladders, platforms, and dummy enemies.
+- 2.5D belt side scroller with depth-scaled obstacles and dummy enemies.
 
 The first-person and side-scroller stories use exported arcade-motion helpers
 for camera framing, looped scenery, and jump arcs. Story code owns the drawing;

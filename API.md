@@ -155,6 +155,27 @@ const nextPaddle = keepBoxInside(moveBy(paddle, delta), arenaBounds);
 const hit = detectBoxCollision(ball, brick);
 ```
 
+## 🧲 Physics
+
+| Export | Use It For |
+| --- | --- |
+| `applyGravity2D` | Apply gravity, velocity, floor clamping, and optional bounce to a 2D body. |
+| `applyGravity3D` | Apply vertical gravity while preserving depth movement for a 3D body. |
+| `createRagdoll2D` | Create a small linked 2D ragdoll point/constraint skeleton. |
+| `createRagdoll3D` | Create a linked 3D ragdoll point/constraint skeleton. |
+| `stepRagdoll2D` | Step a 2D ragdoll with Verlet-style gravity and constraint solving. |
+| `stepRagdoll3D` | Step a 3D ragdoll with gravity, depth, and constraint solving. |
+
+```ts
+let body = { posX: 20, posY: 0, velocityY: 0 };
+
+body = applyGravity2D(body, {
+  delta,
+  floorY: 240,
+  gravity: 980,
+});
+```
+
 ## 🧭 Viewport And Debug Vectors
 
 | Export | Use It For |
@@ -224,6 +245,7 @@ const projected = projectPerspectivePoint(
 | --- | --- |
 | `getFirstPersonCamera` | First-person center/horizon framing from viewport and look input. |
 | `getLoopedScrollerPosition` | Wrapped side-scroller scenery and platform positions. |
+| `getSideScrollerActorPosition` | Wrapped actor positions with visibility and progress for obstacles, enemies, pickups, or platforms. |
 | `getSideScrollerJumpY` | Simple jump and bob arcs. |
 | `getSpatialAudioPan` | Clamp game-space source position into browser pan range. |
 | `getSpatialAudioDepth` | Convert source distance into visual depth for 2.5D audio scenes. |
@@ -282,7 +304,7 @@ The package exports TypeScript types for public data shapes, including:
 
 - Arena, sound, ticker, input, multiplayer, animation, camera, coordinate,
   heading, sprite, and render options.
-- Grid, box, viewport, debug-vector, canvas color, projection, arcade-motion,
-  spatial-audio, cube-cluster, and explosion types.
+- Grid, box, physics, viewport, debug-vector, canvas color, projection,
+  arcade-motion, spatial-audio, cube-cluster, and explosion types.
 
 Use these types when building reusable game systems on top of Arcade Engine.

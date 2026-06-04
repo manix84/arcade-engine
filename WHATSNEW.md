@@ -19,8 +19,12 @@
   declaration files, and declaration maps into `dist`.
 - Added package exports, `types`, `files`, repository metadata, keywords,
   public publish config, and a dry-run pack script for npm publishing.
-- Added an automatic GitHub Actions npm release workflow for matching `v*`
-  release tags.
+- Added an automatic GitHub Actions release workflow for pushes to `main`, with
+  manual release dispatches for selected tags.
+- Added release tarball packaging and GitHub Release asset upload for release
+  tags.
+- Added GitHub Packages publishing as `@manix84/arcade-engine` alongside the
+  npmjs `arcade-engine` package.
 - Added local package metadata, TypeScript config, Vitest config, and a lockfile
   so the engine can be developed and tested independently.
 
@@ -42,11 +46,14 @@
 - Added grid helpers for board and tile games.
 - Added axis-aligned box helpers for paddle, brick, shot, enemy, and platform
   patterns.
+- Added gravity and lightweight 2D/3D ragdoll helpers for arcade physics
+  effects.
 - Added canvas rendering helpers for trails, lines, polygons, and color work.
 - Added 2.5D projection helpers for perspective, isometric, and looped-depth
   arcade scenes.
 - Added arcade-motion and spatial-audio math helpers for first-person framing,
-  side scrollers, jump arcs, pan, gain, and listener/source mixes.
+  side scrollers, actor placement, jump arcs, pan, gain, and listener/source
+  mixes.
 - Added 3D cube-cluster helpers for voxel-style models, plasma links, bounds,
   centers, and deterministic block explosions.
 - Added shared `types.ts` contracts for public engine options and data shapes.
@@ -60,9 +67,12 @@
 - Added arcade camera demos covering racer, starfighter, isometric room,
   hyperspace gate, first-person player, 2D side scroller, and 2.5D side
   scroller styles.
+- Expanded the 2D and 2.5D side-scroller demos with obstacles, ladders,
+  platforms, depth-scaled belt actors, and stompable dummy enemies.
 - Added cube-cluster demos for destructible pickups and modular level pieces.
 - Added systems demos for input actions, local multiplayer, sprite animation,
   follow cameras, and spatial-audio math.
+- Added systems demos for gravity and 2D/3D ragdoll helpers.
 - Added a GitHub Pages workflow that deploys Storybook from `storybook-static`
   without adding Storybook output to the npm package build.
 

@@ -1,15 +1,27 @@
 import type { Meta, StoryObj } from "@storybook/html-vite";
 import {
+  applyGravity2D,
+  applyGravity3D,
+  createRagdoll2D,
+  createRagdoll3D,
   createLocalMultiplayerController,
   createMultiplayerSession,
   createPlayerInputIntent,
   drawCanvasLine,
+  drawCanvasPolygon,
   fillCanvasWithTrail,
   getAnimatedSpriteFrame,
   getFollowCamera,
   getInputActionState,
   getSpatialAudioMix,
   mergePlayerInputIntent,
+  stepRagdoll2D,
+  stepRagdoll3D,
+  type Ragdoll2D as PhysicsRagdoll2D,
+  type Ragdoll3D as PhysicsRagdoll3D,
+  type RagdollConstraint,
+  type RagdollPoint2D,
+  type RagdollPoint3D,
 } from "../../index.js";
 import {
   appendStyles,
@@ -505,6 +517,277 @@ export const SpatialAudioMath: Story = {
       setValue(distanceValue, Math.round(mix.distance));
       setValue(panValue, mix.pan.toFixed(2));
       setValue(gainValue, mix.gain.toFixed(2));
+      animationFrame = window.requestAnimationFrame(render);
+    };
+
+    animationFrame = window.requestAnimationFrame(render);
+    onRemove(shell, () => window.cancelAnimationFrame(animationFrame));
+
+    return shell;
+  },
+};
+
+const getPoint2D = (
+  points: readonly RagdollPoint2D[],
+  id: string
+): RagdollPoint2D | undefined => points.find((point) => point.id === id);
+
+const drawRagdoll2D = (
+  context: CanvasRenderingContext2D,
+  ragdoll: PhysicsRagdoll2D,
+  color: string
+): void => {
+  context.strokeStyle = color;
+  context.lineWidth = 4;
+  ragdoll.constraints.forEach((constraint) => {
+    const a = getPoint2D(ragdoll.points, constraint.a);
+    const b = getPoint2D(ragdoll.points, constraint.b);
+
+    if (a && b) {
+      drawCanvasLine(context, { x: a.posX, y: a.posY }, { x: b.posX, y: b.posY }, color, 4);
+    }
+  });
+  ragdoll.points.forEach((point) => {
+    context.fillStyle = point.pinned ? "#f6e05e" : color;
+    context.beginPath();
+    context.arc(point.posX, point.posY, point.id === "head" ? 10 : 6, 0, Math.PI * 2);
+    context.fill();
+  });
+};
+
+const projectRagdollPoint = (
+  point: RagdollPoint3D,
+  canvas: HTMLCanvasElement
+): { scale: number; x: number; y: number } => {
+  const depth = 260 + point.posZ;
+  const scale = 260 / Math.max(80, depth);
+
+  return {
+    scale,
+    x: canvas.width / 2 + point.posX * scale,
+    y: canvas.height / 2 + point.posY * scale,
+  };
+};
+
+const drawRagdoll3D = (
+  context: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
+  ragdoll: PhysicsRagdoll3D,
+  color: string
+): void => {
+  const projected = new Map(
+    ragdoll.points.map((point) => [point.id, projectRagdollPoint(point, canvas)])
+  );
+
+  ragdoll.constraints.forEach((constraint: RagdollConstraint) => {
+    const a = projected.get(constraint.a);
+    const b = projected.get(constraint.b);
+
+    if (a && b) {
+      drawCanvasLine(context, a, b, color, Math.max(2, 4 * Math.min(a.scale, b.scale)));
+    }
+  });
+  ragdoll.points.forEach((point) => {
+    const projectedPoint = projected.get(point.id);
+
+    if (!projectedPoint) {
+      return;
+    }
+
+    context.fillStyle = point.pinned ? "#f6e05e" : color;
+    context.beginPath();
+    context.arc(
+      projectedPoint.x,
+      projectedPoint.y,
+      (point.id === "head" ? 10 : 6) * projectedPoint.scale,
+      0,
+      Math.PI * 2
+    );
+    context.fill();
+  });
+};
+
+export const Gravity: Story = {
+  render: () => {
+    const { canvas, metrics, shell } = createSystemsLayout("Gravity helper");
+    const context = canvas.getContext("2d");
+    const bodyValue = createValue("body");
+    const gravityValue = createValue("gravity", "980 px/s/s");
+    let animationFrame = 0;
+    let body2D = { posX: 110, posY: 40, velocityX: 80, velocityY: -260 };
+    let body3D = { posX: -170, posY: -80, posZ: 120, velocityX: 42, velocityY: -180, velocityZ: -34 };
+    let last = performance.now();
+
+    metrics.append(bodyValue, gravityValue, createValue("uses", "applyGravity2D + applyGravity3D"));
+    const controls = document.createElement("div");
+    controls.className = "ae-controls";
+    controls.append(
+      createButton("Reset", () => {
+        body2D = { posX: 110, posY: 40, velocityX: 80, velocityY: -260 };
+        body3D = { posX: -170, posY: -80, posZ: 120, velocityX: 42, velocityY: -180, velocityZ: -34 };
+      })
+    );
+    metrics.append(controls);
+
+    const render = (now: number): void => {
+      if (!context) {
+        return;
+      }
+
+      const delta = Math.min(0.033, (now - last) / 1000);
+      last = now;
+      body2D = applyGravity2D(body2D, {
+        bounce: 0.62,
+        delta,
+        floorY: canvas.height - 54,
+        gravity: 980,
+        maxFallSpeed: 760,
+      });
+      body3D = applyGravity3D(body3D, {
+        bounce: 0.5,
+        delta,
+        floorY: 95,
+        gravity: 680,
+        maxFallSpeed: 560,
+      });
+
+      if (body2D.posX > canvas.width + 30) {
+        body2D = { ...body2D, posX: -30 };
+      }
+
+      if (body3D.posX > 260) {
+        body3D = { ...body3D, posX: -260 };
+      }
+
+      context.fillStyle = "#05070a";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      drawCanvasLine(context, { x: 0, y: canvas.height - 54 }, { x: canvas.width, y: canvas.height - 54 }, "#243241", 3);
+      context.fillStyle = "#4fd1c5";
+      context.beginPath();
+      context.arc(body2D.posX, body2D.posY, 18, 0, Math.PI * 2);
+      context.fill();
+
+      const point3D = projectRagdollPoint({ id: "body", posX: body3D.posX, posY: body3D.posY, posZ: body3D.posZ }, canvas);
+      drawCanvasPolygon(
+        context,
+        [
+          { x: point3D.x, y: point3D.y - 22 * point3D.scale },
+          { x: point3D.x + 22 * point3D.scale, y: point3D.y },
+          { x: point3D.x, y: point3D.y + 22 * point3D.scale },
+          { x: point3D.x - 22 * point3D.scale, y: point3D.y },
+        ],
+        "rgba(246, 224, 94, 0.78)"
+      );
+      setValue(bodyValue, `2D y ${Math.round(body2D.posY)}, 3D y ${Math.round(body3D.posY)}`);
+      animationFrame = window.requestAnimationFrame(render);
+    };
+
+    animationFrame = window.requestAnimationFrame(render);
+    onRemove(shell, () => window.cancelAnimationFrame(animationFrame));
+
+    return shell;
+  },
+};
+
+export const Ragdoll2D: Story = {
+  render: () => {
+    const { canvas, metrics, shell } = createSystemsLayout("2D ragdoll helper");
+    const context = canvas.getContext("2d");
+    const pointsValue = createValue("points");
+    const constraintsValue = createValue("constraints");
+    let ragdoll = createRagdoll2D({ posX: canvas.width / 2, posY: 120 });
+    let animationFrame = 0;
+
+    metrics.append(pointsValue, constraintsValue, createValue("uses", "createRagdoll2D + stepRagdoll2D"));
+    const controls = document.createElement("div");
+    controls.className = "ae-controls";
+    controls.append(
+      createButton("Drop", () => {
+        ragdoll = createRagdoll2D({ posX: canvas.width / 2, posY: 90 });
+      }),
+      createButton("Pinned Head", () => {
+        ragdoll = createRagdoll2D({ posX: canvas.width / 2, posY: 110 }, { pinnedHead: true });
+      })
+    );
+    metrics.append(controls);
+
+    const render = (): void => {
+      if (!context) {
+        return;
+      }
+
+      ragdoll = stepRagdoll2D(ragdoll, {
+        delta: 1 / 60,
+        floorY: canvas.height - 44,
+        gravity: 1150,
+        iterations: 6,
+      });
+      context.fillStyle = "#05070a";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      drawCanvasLine(context, { x: 0, y: canvas.height - 44 }, { x: canvas.width, y: canvas.height - 44 }, "#243241", 3);
+      drawRagdoll2D(context, ragdoll, "#4fd1c5");
+      setValue(pointsValue, ragdoll.points.length);
+      setValue(constraintsValue, ragdoll.constraints.length);
+      animationFrame = window.requestAnimationFrame(render);
+    };
+
+    animationFrame = window.requestAnimationFrame(render);
+    onRemove(shell, () => window.cancelAnimationFrame(animationFrame));
+
+    return shell;
+  },
+};
+
+export const Ragdoll3D: Story = {
+  render: () => {
+    const { canvas, metrics, shell } = createSystemsLayout("3D ragdoll helper");
+    const context = canvas.getContext("2d");
+    const depthValue = createValue("depth spread");
+    let ragdoll = createRagdoll3D({ posX: 0, posY: -100, posZ: 0 }, { scale: 1.35 });
+    let animationFrame = 0;
+    let spin = 0;
+
+    metrics.append(depthValue, createValue("uses", "createRagdoll3D + stepRagdoll3D"));
+    const controls = document.createElement("div");
+    controls.className = "ae-controls";
+    controls.append(
+      createButton("Reset", () => {
+        ragdoll = createRagdoll3D({ posX: 0, posY: -100, posZ: 0 }, { scale: 1.35 });
+      })
+    );
+    metrics.append(controls);
+
+    const render = (): void => {
+      if (!context) {
+        return;
+      }
+
+      spin += 0.02;
+      ragdoll = stepRagdoll3D(
+        {
+          constraints: ragdoll.constraints,
+          points: ragdoll.points.map((point) => ({
+            ...point,
+            previousZ: point.previousZ ?? point.posZ,
+            posZ: point.posZ + Math.sin(spin + point.posX * 0.02) * 0.4,
+          })),
+        },
+        {
+          delta: 1 / 60,
+          floorY: 120,
+          gravity: 900,
+          iterations: 6,
+        }
+      );
+
+      context.fillStyle = "#05070a";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.strokeStyle = "rgba(245, 247, 251, 0.12)";
+      context.strokeRect(canvas.width / 2 - 210, canvas.height / 2 - 120, 420, 220);
+      drawRagdoll3D(context, canvas, ragdoll, "#f6e05e");
+
+      const zValues = ragdoll.points.map((point) => point.posZ);
+      setValue(depthValue, `${Math.round(Math.min(...zValues))}..${Math.round(Math.max(...zValues))}`);
       animationFrame = window.requestAnimationFrame(render);
     };
 

@@ -66,3 +66,47 @@ The story demonstrates:
 
 Use this helper alongside `Sound.setPan`, custom mixers, or UI telemetry for
 positional sound.
+
+## 🧲 Gravity
+
+`Gravity` shows 2D and 3D bodies using exported gravity helpers.
+
+The story demonstrates:
+
+- `applyGravity2D`.
+- `applyGravity3D`.
+- Floor clamping.
+- Bounce and falling-speed limits.
+
+Use this pattern for falling pickups, debris, knockback, thrown objects, or
+simple arcade platformer bodies.
+
+## 🧍 2D Ragdoll
+
+`Ragdoll2D` shows a small linked point/constraint skeleton falling under
+gravity.
+
+The story demonstrates:
+
+- `createRagdoll2D`.
+- `stepRagdoll2D`.
+- Pinned and unpinned points.
+- Floor collision and repeated constraint solving.
+
+Use this pattern for dummy enemies, impact effects, or simple character
+collapse animations.
+
+## 🧍 3D Ragdoll
+
+`Ragdoll3D` shows the same linked skeleton with depth and a simple 3D
+projection.
+
+The story demonstrates:
+
+- `createRagdoll3D`.
+- `stepRagdoll3D`.
+- Depth-aware point projection.
+- Constraint solving across X, Y, and Z.
+
+Use this pattern for pseudo-3D or WebGL-style ragdoll effects where the engine
+owns the point/constraint data and the renderer decides how to draw it.

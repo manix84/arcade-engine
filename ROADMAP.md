@@ -219,8 +219,13 @@ Latest verification: June 2, 2026.
 - `storybook-static` is excluded from the npm package.
 - `README.md`, `API.md`, `LICENSE.md`, `PRIVACY.md`, `RELEASE.md`, and
   `WHATSNEW.md` are included in the npm package.
-- Automatic npm publishing is configured through the `NPM Release` GitHub
-  Actions workflow for matching `v*` release tags.
+- Automatic release publishing is configured through the `NPM Release` GitHub
+  Actions workflow for pushes to `main`, with manual dispatches for selected
+  tags.
+- The same workflow builds `release-artifacts/arcade-engine-X.Y.Z.tgz` and
+  uploads it to the GitHub Release for the tag.
+- The workflow publishes `arcade-engine` to npmjs and publishes
+  `@manix84/arcade-engine` to GitHub Packages.
 
 Verification notes:
 
