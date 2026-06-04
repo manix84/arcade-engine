@@ -138,5 +138,11 @@ everything passes.
 If the workflow fails before publishing, fix the issue, create a new commit if
 needed, and tag the corrected version.
 
+If the workflow fails while uploading the tarball to a GitHub Release, check
+whether the npmjs or GitHub Packages publish steps ran. If neither package
+registry published the version, delete the incomplete GitHub Release and rerun
+the workflow for the same version. If either registry published the version,
+bump the package version and publish a new release.
+
 If either registry publish succeeds but a later step fails, do not reuse the
 same version. Bump the package version and publish a new release.
