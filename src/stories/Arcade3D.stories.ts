@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/html-vite";
 import {
   colorWithAlpha,
+  detectBoxCollision,
   drawCanvasLine,
   drawCanvasPolygon,
   fillCanvasWithTrail,
@@ -12,6 +13,7 @@ import {
   getLoopedDepth,
   projectIsometricPoint,
   projectPerspectivePoint,
+  getSideScrollerActorPosition,
   getSideScrollerJumpY,
   Ticker,
 } from "../index.js";
@@ -619,6 +621,9 @@ const drawSideScroller2D = (
   args: Arcade3DStoryArgs
 ): void => {
   const groundY = canvas.height - 78;
+  const runnerSpeed = args.speed * 156;
+  const encounterCount = Math.max(10, Math.min(args.objectCount, 24));
+  const encounterRange = encounterCount * 138;
 
   fillCanvasWithTrail(context, canvas, args.backgroundColor, args.trailOpacity * 0.35);
   context.fillStyle = colorWithAlpha(args.accentColor, 0.08);
@@ -658,45 +663,171 @@ const drawSideScroller2D = (
   context.fillRect(0, groundY, canvas.width, canvas.height - groundY);
   drawCanvasLine(context, { x: 0, y: groundY }, { x: canvas.width, y: groundY }, colorWithAlpha(args.secondaryColor, 0.7), 3);
 
-  for (let index = 0; index < Math.max(8, args.objectCount); index++) {
-    const x =
-      getLoopedScrollerPosition({
-        elapsedSeconds: elapsed,
-        index,
-        offset: -70,
-        range: canvas.width + 140,
-        spacing: 116,
-        speed: args.speed * 150,
-      });
-    const platformY = groundY - 44 - (index % 4) * 34;
-    const width = 78 + (index % 3) * 28;
+  const actors = Array.from({ length: encounterCount }, (_, index) => {
+    const pattern = index % 6;
+    const kind =
+      pattern === 0 || pattern === 4
+        ? "enemy"
+        : pattern === 1
+          ? "crate"
+          : pattern === 2
+            ? "ladder"
+            : "platform";
+    const width = kind === "platform" ? 116 : kind === "ladder" ? 42 : 54;
+    const height = kind === "platform" ? 18 : kind === "ladder" ? 120 : kind === "enemy" ? 38 : 46;
+    const y =
+      kind === "platform"
+        ? groundY - 122 - (index % 2) * 42
+        : kind === "ladder"
+          ? groundY - height
+          : groundY - height;
+    const position = getSideScrollerActorPosition({
+      elapsedSeconds: elapsed,
+      index,
+      offset: -220,
+      range: encounterRange,
+      spacing: 138,
+      speed: runnerSpeed,
+      viewportWidth: canvas.width,
+      width,
+    });
 
-    drawCanvasPolygon(
-      context,
-      [
-        { x, y: platformY },
-        { x: x + width, y: platformY },
-        { x: x + width - 12, y: platformY + 18 },
-        { x: x + 12, y: platformY + 18 },
-      ],
-      colorWithAlpha(args.accentColor, 0.35),
-      colorWithAlpha("#ffffff", 0.18)
-    );
-  }
-
-  const playerX = canvas.width * 0.34;
-  const playerY = getSideScrollerJumpY({
-    elapsedSeconds: elapsed,
-    groundY: groundY - 36,
-    height: 54,
-    speed: args.speed * 5,
+    return { height, index, kind, width, x: position.x, y };
   });
 
+  const playerX = canvas.width * 0.34;
+  const jumpY = getSideScrollerJumpY({
+    elapsedSeconds: elapsed,
+    groundY: groundY - 36,
+    height: 66,
+    speed: args.speed * 5,
+  });
+  const nearbyLadder = actors.find(
+    (actor) =>
+      actor.kind === "ladder" &&
+      playerX + 18 > actor.x &&
+      playerX - 18 < actor.x + actor.width
+  );
+  const nearbyPlatform = actors.find(
+    (actor) =>
+      actor.kind === "platform" &&
+      playerX + 22 > actor.x &&
+      playerX - 22 < actor.x + actor.width &&
+      jumpY > actor.y - 42
+  );
+  const climbProgress = nearbyLadder
+    ? Math.max(0, Math.min(1, (playerX - nearbyLadder.x) / nearbyLadder.width))
+    : 0;
+  const playerY = nearbyLadder
+    ? nearbyLadder.y + nearbyLadder.height - 22 - climbProgress * 92
+    : nearbyPlatform
+      ? nearbyPlatform.y - 34
+      : jumpY;
+  const playerBox = {
+    height: 52,
+    posX: playerX - 18,
+    posY: playerY - 32,
+    width: 36,
+  };
+  const killedEnemies = new Set<number>();
+
+  actors.forEach((actor) => {
+    if (actor.kind !== "enemy") {
+      return;
+    }
+
+    const enemyBox = {
+      height: actor.height,
+      posX: actor.x,
+      posY: actor.y,
+      width: actor.width,
+    };
+
+    if (detectBoxCollision(playerBox, enemyBox) && playerY < groundY - 46) {
+      killedEnemies.add(actor.index);
+    }
+  });
+
+  actors.forEach((actor) => {
+    if (actor.x + actor.width < -20 || actor.x > canvas.width + 20) {
+      return;
+    }
+
+    if (actor.kind === "platform") {
+      drawCanvasPolygon(
+        context,
+        [
+          { x: actor.x, y: actor.y },
+          { x: actor.x + actor.width, y: actor.y },
+          { x: actor.x + actor.width - 12, y: actor.y + actor.height },
+          { x: actor.x + 12, y: actor.y + actor.height },
+        ],
+        colorWithAlpha(args.accentColor, 0.36),
+        colorWithAlpha("#ffffff", 0.18)
+      );
+      return;
+    }
+
+    if (actor.kind === "ladder") {
+      context.strokeStyle = colorWithAlpha("#f5f7fb", 0.32);
+      context.lineWidth = 3;
+      drawCanvasLine(context, { x: actor.x + 6, y: actor.y }, { x: actor.x + 6, y: actor.y + actor.height }, args.secondaryColor, 3);
+      drawCanvasLine(context, { x: actor.x + actor.width - 6, y: actor.y }, { x: actor.x + actor.width - 6, y: actor.y + actor.height }, args.secondaryColor, 3);
+
+      for (let rung = 12; rung < actor.height; rung += 18) {
+        drawCanvasLine(
+          context,
+          { x: actor.x + 5, y: actor.y + rung },
+          { x: actor.x + actor.width - 5, y: actor.y + rung },
+          colorWithAlpha("#f5f7fb", 0.5),
+          2
+        );
+      }
+      return;
+    }
+
+    if (actor.kind === "enemy") {
+      const killed = killedEnemies.has(actor.index);
+
+      context.fillStyle = killed ? colorWithAlpha("#94a3b8", 0.55) : colorWithAlpha("#fc8181", 0.82);
+      context.fillRect(actor.x + 4, killed ? actor.y + 22 : actor.y + 8, actor.width - 8, killed ? 12 : actor.height - 8);
+      context.fillStyle = killed ? colorWithAlpha("#f6e05e", 0.42) : "#05070a";
+      context.fillRect(actor.x + 14, actor.y + 18, 7, 5);
+      context.fillRect(actor.x + actor.width - 21, actor.y + 18, 7, 5);
+      if (!killed) {
+        drawCanvasLine(context, { x: actor.x + 6, y: actor.y + actor.height }, { x: actor.x - 8, y: actor.y + actor.height + 10 }, "#f5f7fb", 2);
+        drawCanvasLine(context, { x: actor.x + actor.width - 6, y: actor.y + actor.height }, { x: actor.x + actor.width + 8, y: actor.y + actor.height + 10 }, "#f5f7fb", 2);
+      }
+      return;
+    }
+
+    context.fillStyle = colorWithAlpha(args.secondaryColor, 0.76);
+    context.fillRect(actor.x, actor.y, actor.width, actor.height);
+    context.fillStyle = colorWithAlpha(args.accentColor, 0.35);
+    context.fillRect(actor.x + 8, actor.y + 8, actor.width - 16, 8);
+  });
+
+  context.fillStyle = colorWithAlpha("#05070a", 0.34);
+  context.fillRect(playerX - 28, groundY + 8, 56, 7);
   context.fillStyle = colorWithAlpha(args.secondaryColor, 0.9);
   context.fillRect(playerX - 16, playerY - 28, 32, 42);
   context.fillStyle = colorWithAlpha(args.accentColor, 0.9);
   context.fillRect(playerX - 20, playerY + 12, 40, 14);
-  drawCanvasLine(context, { x: playerX + 18, y: playerY - 8 }, { x: playerX + 46, y: playerY - 14 }, "#f5f7fb", 3);
+  drawCanvasLine(
+    context,
+    { x: playerX + 18, y: playerY - 8 },
+    { x: playerX + 46, y: nearbyLadder ? playerY - 22 : playerY - 14 },
+    "#f5f7fb",
+    3
+  );
+
+  context.fillStyle = "#cbd5e1";
+  context.font = "12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+  context.fillText(
+    nearbyLadder ? "climb" : nearbyPlatform ? "platform" : killedEnemies.size > 0 ? "stomp" : "jump",
+    playerX - 24,
+    playerY - 44
+  );
 };
 
 const drawSideScroller2_5D = (
@@ -706,61 +837,200 @@ const drawSideScroller2_5D = (
   const centerX = canvas.width / 2 + pointer.x * 64;
   const horizon = canvas.height * 0.36 + pointer.y * 28;
   const viewport = { height: canvas.height, width: canvas.width };
+  const beltDepths = [3.4, 6.4, 9.4, 12.4];
+  const actorCount = Math.max(14, Math.min(args.objectCount, 30));
+  const actorRange = actorCount * 112;
 
   fillCanvasWithTrail(context, canvas, args.backgroundColor, args.trailOpacity * 0.55);
   context.fillStyle = colorWithAlpha(args.accentColor, 0.06);
   context.fillRect(0, 0, canvas.width, canvas.height);
 
-  for (let lane = 0; lane < 4; lane++) {
-    const z = 2 + lane * 3.6;
-    const left = projectPerspectivePoint({ x: -420, y: 260, z }, viewport, { centerX, horizon });
-    const right = projectPerspectivePoint({ x: 420, y: 260, z }, viewport, { centerX, horizon });
-
-    drawCanvasLine(
-      context,
-      left,
-      right,
-      colorWithAlpha(lane % 2 === 0 ? args.secondaryColor : args.accentColor, 0.18 + lane * 0.08),
-      2 + lane
-    );
-  }
-
-  for (let index = 0; index < Math.max(12, args.objectCount); index++) {
-    const depth = 3 + (index % 4) * 3.2;
-    const laneProgress = getDepthProgress(depth, args.depth);
-    const x =
-      getLoopedScrollerPosition({
-        elapsedSeconds: elapsed,
-        index,
-        offset: -80,
-        range: canvas.width + 160,
-        spacing: 92,
-        speed: args.speed * (90 + laneProgress * 90),
-      });
-    const base = projectPerspectivePoint(
-      { x: x - canvas.width / 2, y: 210, z: depth },
-      viewport,
-      { centerX, horizon }
-    );
-    const width = 42 + laneProgress * 56;
-    const height = 28 + laneProgress * 38;
+  beltDepths.forEach((depth, lane) => {
+    const nearLeft = projectPerspectivePoint({ x: -520, y: 260, z: depth }, viewport, { centerX, horizon });
+    const nearRight = projectPerspectivePoint({ x: 520, y: 260, z: depth }, viewport, { centerX, horizon });
+    const farLeft = projectPerspectivePoint({ x: -500, y: 208, z: depth + 1.6 }, viewport, { centerX, horizon });
+    const farRight = projectPerspectivePoint({ x: 500, y: 208, z: depth + 1.6 }, viewport, { centerX, horizon });
+    const laneAlpha = 0.08 + (1 - lane / beltDepths.length) * 0.18;
 
     drawCanvasPolygon(
       context,
-      [
-        { x: base.x - width, y: base.y },
-        { x: base.x + width, y: base.y },
-        { x: base.x + width * 0.68, y: base.y - height },
-        { x: base.x - width * 0.68, y: base.y - height },
-      ],
-      colorWithAlpha(index % 2 === 0 ? args.accentColor : args.secondaryColor, 0.24 + laneProgress * 0.36),
-      colorWithAlpha("#ffffff", 0.18 + laneProgress * 0.16)
+      [nearLeft, nearRight, farRight, farLeft],
+      colorWithAlpha(lane % 2 === 0 ? args.secondaryColor : args.accentColor, laneAlpha),
+      colorWithAlpha("#ffffff", 0.08 + laneAlpha * 0.4)
     );
-  }
 
-  const playerBase = projectPerspectivePoint({ x: -170, y: 215, z: 4 }, viewport, { centerX, horizon });
-  const bob = Math.sin(elapsed * args.speed * 5) * 7;
+    drawCanvasLine(
+      context,
+      nearLeft,
+      farLeft,
+      colorWithAlpha(args.accentColor, 0.14),
+      1 + lane * 0.4
+    );
+    drawCanvasLine(
+      context,
+      nearRight,
+      farRight,
+      colorWithAlpha(args.accentColor, 0.14),
+      1 + lane * 0.4
+    );
+  });
 
+  const actors = Array.from({ length: actorCount }, (_, index) => {
+    const depth = beltDepths[index % beltDepths.length];
+    const pattern = index % 7;
+    const kind =
+      pattern === 0 || pattern === 4
+        ? "enemy"
+        : pattern === 1
+          ? "crate"
+          : pattern === 2
+            ? "ladder"
+            : "platform";
+    const width = kind === "platform" ? 104 : kind === "ladder" ? 44 : 56;
+    const height = kind === "platform" ? 18 : kind === "ladder" ? 114 : kind === "enemy" ? 40 : 48;
+    const position = getSideScrollerActorPosition({
+      elapsedSeconds: elapsed,
+      index,
+      offset: -180,
+      range: actorRange,
+      spacing: 112,
+      speed: args.speed * (96 + getDepthProgress(depth, args.depth) * 80),
+      viewportWidth: canvas.width,
+      width,
+    });
+    const base = projectPerspectivePoint(
+      { x: position.x - canvas.width / 2, y: 226, z: depth },
+      viewport,
+      { centerX, horizon }
+    );
+    const depthProgress = getDepthProgress(depth, args.depth);
+
+    return { base, depth, depthProgress, height, index, kind, width };
+  });
+
+  const playerDepth = 4;
+  const jumpLift = Math.max(0, Math.sin(elapsed * args.speed * 5)) * 64;
+  const playerProbe = projectPerspectivePoint({ x: -170, y: 215, z: playerDepth }, viewport, { centerX, horizon });
+  const nearbyLadder = actors.find(
+    (actor) =>
+      actor.kind === "ladder" &&
+      Math.abs(actor.depth - playerDepth) < 1.1 &&
+      Math.abs(actor.base.x - playerProbe.x) < 44
+  );
+  const climbLift = nearbyLadder ? Math.max(0, Math.min(1, (playerProbe.x - nearbyLadder.base.x + 28) / 56)) * 82 : 0;
+  const playerBase = projectPerspectivePoint(
+    { x: -170, y: 215 - Math.max(jumpLift, climbLift), z: playerDepth },
+    viewport,
+    { centerX, horizon }
+  );
+  const bob = Math.sin(elapsed * args.speed * 5) * 5;
+  const playerBox = {
+    height: 58,
+    posX: playerBase.x - 42,
+    posY: playerBase.y - 62 + bob,
+    width: 84,
+  };
+  const stompedEnemies = new Set<number>();
+
+  actors.forEach((actor) => {
+    if (actor.kind !== "enemy" || Math.abs(actor.depth - playerDepth) > 1.1) {
+      return;
+    }
+
+    const scale = Math.max(0.36, actor.base.scale);
+    const enemyBox = {
+      height: actor.height * scale,
+      posX: actor.base.x - (actor.width * scale) / 2,
+      posY: actor.base.y - actor.height * scale,
+      width: actor.width * scale,
+    };
+
+    if (detectBoxCollision(playerBox, enemyBox) && jumpLift > 28) {
+      stompedEnemies.add(actor.index);
+    }
+  });
+
+  actors
+    .slice()
+    .sort((a, b) => b.depth - a.depth)
+    .forEach((actor) => {
+      if (actor.base.x < -90 || actor.base.x > canvas.width + 90) {
+        return;
+      }
+
+      const scale = Math.max(0.34, actor.base.scale);
+      const width = actor.width * scale;
+      const height = actor.height * scale;
+      const alpha = 0.18 + actor.depthProgress * 0.58;
+      const x = actor.base.x;
+      const y = actor.base.y;
+
+      context.fillStyle = colorWithAlpha("#05070a", 0.25 + actor.depthProgress * 0.16);
+      context.beginPath();
+      context.ellipse(x, y + 6 * scale, width * 0.58, 8 * scale, 0, 0, Math.PI * 2);
+      context.fill();
+
+      if (actor.kind === "platform") {
+        drawCanvasPolygon(
+          context,
+          [
+            { x: x - width * 0.72, y },
+            { x: x + width * 0.72, y },
+            { x: x + width * 0.54, y: y - height },
+            { x: x - width * 0.54, y: y - height },
+          ],
+          colorWithAlpha(args.accentColor, alpha),
+          colorWithAlpha("#ffffff", 0.1 + actor.depthProgress * 0.2)
+        );
+        return;
+      }
+
+      if (actor.kind === "ladder") {
+        drawCanvasLine(context, { x: x - width * 0.34, y }, { x: x - width * 0.22, y: y - height }, args.secondaryColor, Math.max(2, 4 * scale));
+        drawCanvasLine(context, { x: x + width * 0.34, y }, { x: x + width * 0.22, y: y - height }, args.secondaryColor, Math.max(2, 4 * scale));
+
+        for (let rung = 0.18; rung < 0.92; rung += 0.18) {
+          const rungY = y - height * rung;
+
+          drawCanvasLine(
+            context,
+            { x: x - width * 0.28, y: rungY },
+            { x: x + width * 0.28, y: rungY },
+            colorWithAlpha("#f5f7fb", 0.38 + actor.depthProgress * 0.28),
+            Math.max(1, 2 * scale)
+          );
+        }
+        return;
+      }
+
+      if (actor.kind === "enemy") {
+        const stomped = stompedEnemies.has(actor.index);
+
+        context.fillStyle = stomped ? colorWithAlpha("#94a3b8", 0.5) : colorWithAlpha("#fc8181", alpha + 0.08);
+        context.fillRect(x - width * 0.42, stomped ? y - height * 0.32 : y - height, width * 0.84, stomped ? height * 0.22 : height * 0.82);
+        context.fillStyle = stomped ? colorWithAlpha(args.secondaryColor, 0.42) : "#05070a";
+        context.fillRect(x - width * 0.18, y - height * 0.62, Math.max(2, 5 * scale), Math.max(2, 5 * scale));
+        context.fillRect(x + width * 0.1, y - height * 0.62, Math.max(2, 5 * scale), Math.max(2, 5 * scale));
+        return;
+      }
+
+      drawCanvasPolygon(
+        context,
+        [
+          { x: x - width * 0.5, y },
+          { x: x + width * 0.5, y },
+          { x: x + width * 0.42, y: y - height },
+          { x: x - width * 0.42, y: y - height },
+        ],
+        colorWithAlpha(args.secondaryColor, alpha),
+        colorWithAlpha(args.accentColor, 0.12 + actor.depthProgress * 0.2)
+      );
+    });
+
+  context.fillStyle = colorWithAlpha("#05070a", 0.32);
+  context.beginPath();
+  context.ellipse(playerBase.x, playerBase.y + 8, 52 * playerBase.scale, 9 * playerBase.scale, 0, 0, Math.PI * 2);
+  context.fill();
   drawCanvasPolygon(
     context,
     [
@@ -773,6 +1043,13 @@ const drawSideScroller2_5D = (
     "#f5f7fb"
   );
   drawCanvasLine(context, { x: playerBase.x + 34, y: playerBase.y - 36 + bob }, { x: playerBase.x + 86, y: playerBase.y - 48 + bob }, colorWithAlpha(args.accentColor, 0.86), 4);
+  context.fillStyle = "#cbd5e1";
+  context.font = "12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+  context.fillText(
+    nearbyLadder ? "climb" : stompedEnemies.size > 0 ? "stomp" : "belt jump",
+    playerBase.x - 36,
+    playerBase.y - 78 + bob
+  );
 };
 
 export const NeonVectorRacer: Story = {

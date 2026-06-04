@@ -89,8 +89,8 @@ styles that can be built from the engine's 2.5D and canvas helpers:
 - Isometric dungeon room.
 - Hyperspace gate.
 - First-person player.
-- 2D side scroller.
-- 2.5D side scroller.
+- 2D side scroller with obstacles, ladders, platforms, and dummy enemies.
+- 2.5D belt side scroller with depth-scaled obstacles and dummy enemies.
 
 The first-person and side-scroller stories use exported arcade-motion helpers
 for camera framing, looped scenery, and jump arcs. Story code owns the drawing;

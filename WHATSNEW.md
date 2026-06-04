@@ -46,7 +46,8 @@
 - Added 2.5D projection helpers for perspective, isometric, and looped-depth
   arcade scenes.
 - Added arcade-motion and spatial-audio math helpers for first-person framing,
-  side scrollers, jump arcs, pan, gain, and listener/source mixes.
+  side scrollers, actor placement, jump arcs, pan, gain, and listener/source
+  mixes.
 - Added 3D cube-cluster helpers for voxel-style models, plasma links, bounds,
   centers, and deterministic block explosions.
 - Added shared `types.ts` contracts for public engine options and data shapes.
@@ -60,6 +61,8 @@
 - Added arcade camera demos covering racer, starfighter, isometric room,
   hyperspace gate, first-person player, 2D side scroller, and 2.5D side
   scroller styles.
+- Expanded the 2D and 2.5D side-scroller demos with obstacles, ladders,
+  platforms, depth-scaled belt actors, and stompable dummy enemies.
 - Added cube-cluster demos for destructible pickups and modular level pieces.
 - Added systems demos for input actions, local multiplayer, sprite animation,
   follow cameras, and spatial-audio math.

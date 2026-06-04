@@ -15,6 +15,7 @@ export {
 } from "./animation.js";
 export {
   getFirstPersonCamera,
+  getSideScrollerActorPosition,
   getLoopedScrollerPosition,
   getSideScrollerJumpY,
   getSpatialAudioDepth,
@@ -133,6 +134,8 @@ export type {
   FirstPersonCamera,
   FirstPersonCameraOptions,
   LoopedScrollerPositionOptions,
+  SideScrollerActorPosition,
+  SideScrollerActorPositionOptions,
   SideScrollerJumpOptions,
   SpatialAudioDepthOptions,
   SpatialAudioPanOptions,

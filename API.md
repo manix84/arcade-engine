@@ -224,6 +224,7 @@ const projected = projectPerspectivePoint(
 | --- | --- |
 | `getFirstPersonCamera` | First-person center/horizon framing from viewport and look input. |
 | `getLoopedScrollerPosition` | Wrapped side-scroller scenery and platform positions. |
+| `getSideScrollerActorPosition` | Wrapped actor positions with visibility and progress for obstacles, enemies, pickups, or platforms. |
 | `getSideScrollerJumpY` | Simple jump and bob arcs. |
 | `getSpatialAudioPan` | Clamp game-space source position into browser pan range. |
 | `getSpatialAudioDepth` | Convert source distance into visual depth for 2.5D audio scenes. |

@@ -731,6 +731,7 @@ describe("coverage-focused engine branches", () => {
       "getPerspectiveScale",
       "getPlayerActionState",
       "getScaledViewportLimit",
+      "getSideScrollerActorPosition",
       "getSideScrollerJumpY",
       "getSpatialAudioDepth",
       "getSpatialAudioMix",

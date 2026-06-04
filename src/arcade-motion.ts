@@ -38,6 +38,17 @@ export interface SideScrollerJumpOptions {
   speed: number;
 }
 
+export interface SideScrollerActorPositionOptions extends LoopedScrollerPositionOptions {
+  viewportWidth: number;
+  width?: number;
+}
+
+export interface SideScrollerActorPosition {
+  isVisible: boolean;
+  progress: number;
+  x: number;
+}
+
 export interface SpatialAudioPanOptions {
   listenerRange: number;
   sourceX: number;
@@ -100,6 +111,24 @@ export const getSideScrollerJumpY = ({
   speed,
 }: SideScrollerJumpOptions): number =>
   groundY - Math.max(0, Math.sin(elapsedSeconds * speed + phase)) * height;
+
+export const getSideScrollerActorPosition = (
+  options: SideScrollerActorPositionOptions
+): SideScrollerActorPosition => {
+  if (options.viewportWidth <= 0) {
+    throw new Error("Viewport width must be greater than 0.");
+  }
+
+  const x = getLoopedScrollerPosition(options);
+  const width = options.width ?? 0;
+  const progress = clamp((x + width) / (options.viewportWidth + width), 0, 1);
+
+  return {
+    isVisible: x + width >= 0 && x <= options.viewportWidth,
+    progress,
+    x,
+  };
+};
 
 export const getSpatialAudioPan = ({
   listenerRange,

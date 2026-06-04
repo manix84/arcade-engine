@@ -214,6 +214,8 @@ Arcade motion helpers move common demo math into the engine package:
   framing from viewport size, look input, and optional bobbing.
 - `getLoopedScrollerPosition(options)` wraps side-scroller scenery and platform
   positions across a repeat range.
+- `getSideScrollerActorPosition(options)` wraps obstacles, enemies, pickups, or
+  platforms and reports visibility/progress for rendering and collision checks.
 - `getSideScrollerJumpY(options)` calculates a simple jump/bob arc.
 - `getSpatialAudioPan(options)` clamps source position into browser pan range.
 - `getSpatialAudioDepth(options)` turns source distance into a visual depth

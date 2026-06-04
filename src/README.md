@@ -173,6 +173,7 @@ that used to live only in Storybook demos:
 
 - First-person camera center/horizon framing.
 - Looped side-scroller positions.
+- Side-scroller actor positions for obstacles, enemies, pickups, and platforms.
 - Simple side-scroller jump arcs.
 - Spatial audio pan clamping.
 - Spatial audio visual depth calculation.

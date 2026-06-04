@@ -9,6 +9,7 @@ import {
   getLoopedScrollerPosition,
   getLoopedDepth,
   getPerspectiveScale,
+  getSideScrollerActorPosition,
   getSideScrollerJumpY,
   getSpatialAudioDepth,
   getSpatialAudioPan,
@@ -103,6 +104,50 @@ describe("arcade 3D helpers", () => {
         speed: 5,
       })
     ).toBe(220);
+  });
+
+  it("calculates side-scroller actor positions and visibility", () => {
+    expect(
+      getSideScrollerActorPosition({
+        elapsedSeconds: 2,
+        index: 3,
+        offset: -70,
+        range: 900,
+        spacing: 116,
+        speed: 150,
+        viewportWidth: 640,
+        width: 80,
+      })
+    ).toEqual({
+      isVisible: true,
+      progress: 0.08055555555555556,
+      x: -22,
+    });
+    expect(
+      getSideScrollerActorPosition({
+        elapsedSeconds: 0,
+        index: 0,
+        offset: -180,
+        range: 900,
+        spacing: 1,
+        speed: 1,
+        viewportWidth: 640,
+        width: 80,
+      })
+    ).toMatchObject({
+      isVisible: false,
+      x: -180,
+    });
+    expect(() =>
+      getSideScrollerActorPosition({
+        elapsedSeconds: 0,
+        index: 0,
+        range: 900,
+        spacing: 1,
+        speed: 1,
+        viewportWidth: 0,
+      })
+    ).toThrow("Viewport width must be greater than 0.");
   });
 
   it("calculates spatial audio pan and visual depth", () => {
