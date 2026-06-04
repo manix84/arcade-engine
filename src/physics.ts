@@ -215,6 +215,21 @@ const satisfy3D = (
   }
 };
 
+const clampFloor2D = (
+  points: Iterable<RagdollPoint2D>,
+  floorY: number | undefined
+): void => {
+  if (floorY === undefined) {
+    return;
+  }
+
+  for (const point of points) {
+    if (point.posY > floorY) {
+      point.posY = floorY;
+    }
+  }
+};
+
 export const stepRagdoll2D = (
   ragdoll: Ragdoll2D,
   options: RagdollStepOptions
@@ -248,7 +263,10 @@ export const stepRagdoll2D = (
 
   for (let iteration = 0; iteration < (options.iterations ?? 4); iteration++) {
     ragdoll.constraints.forEach((constraint) => satisfy2D(pointMap, constraint));
+    clampFloor2D(pointMap.values(), options.floorY);
   }
+
+  clampFloor2D(pointMap.values(), options.floorY);
 
   return { constraints: ragdoll.constraints, points: [...pointMap.values()] };
 };
@@ -290,7 +308,10 @@ export const stepRagdoll3D = (
 
   for (let iteration = 0; iteration < (options.iterations ?? 4); iteration++) {
     ragdoll.constraints.forEach((constraint) => satisfy3D(pointMap, constraint));
+    clampFloor2D(pointMap.values(), options.floorY);
   }
+
+  clampFloor2D(pointMap.values(), options.floorY);
 
   return { constraints: ragdoll.constraints, points: [...pointMap.values()] };
 };

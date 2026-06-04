@@ -119,8 +119,13 @@ export const getSideScrollerActorPosition = (
     throw new Error("Viewport width must be greater than 0.");
   }
 
-  const x = getLoopedScrollerPosition(options);
   const width = options.width ?? 0;
+
+  if (width < 0) {
+    throw new Error("Actor width must be greater than or equal to 0.");
+  }
+
+  const x = getLoopedScrollerPosition(options);
   const progress = clamp((x + width) / (options.viewportWidth + width), 0, 1);
 
   return {

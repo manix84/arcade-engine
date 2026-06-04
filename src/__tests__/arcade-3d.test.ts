@@ -148,6 +148,17 @@ describe("arcade 3D helpers", () => {
         viewportWidth: 0,
       })
     ).toThrow("Viewport width must be greater than 0.");
+    expect(() =>
+      getSideScrollerActorPosition({
+        elapsedSeconds: 0,
+        index: 0,
+        range: 900,
+        spacing: 1,
+        speed: 1,
+        viewportWidth: 640,
+        width: -640,
+      })
+    ).toThrow("Actor width must be greater than or equal to 0.");
   });
 
   it("calculates spatial audio pan and visual depth", () => {

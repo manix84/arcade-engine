@@ -81,7 +81,7 @@ jobs:
         run: npm run pack:dry-run
 
       - name: Build release tarball
-        run: npm run pack:release
+        run: npm run pack:release -- --ignore-scripts
 
       - name: Upload tarball to GitHub Release
         env:

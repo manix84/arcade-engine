@@ -63,6 +63,26 @@ describe("physics helpers", () => {
     expect(foot?.posY).toBeLessThanOrEqual(180);
   });
 
+  it("keeps solved 2D ragdoll points above the floor", () => {
+    const ragdoll = createRagdoll2D({ posX: 0, posY: 0 });
+    const stepped = stepRagdoll2D(
+      {
+        constraints: ragdoll.constraints,
+        points: ragdoll.points.map((point) =>
+          point.id.endsWith("Foot") ? { ...point, posY: 120, previousY: 90 } : point
+        ),
+      },
+      {
+        delta: 1 / 60,
+        floorY: 100,
+        gravity: 1200,
+        iterations: 8,
+      }
+    );
+
+    expect(stepped.points.every((point) => point.posY <= 100)).toBe(true);
+  });
+
   it("creates and steps 3D ragdolls", () => {
     const ragdoll = createRagdoll3D({ posX: 0, posY: 0, posZ: 20 }, { scale: 1.2 });
     const stepped = stepRagdoll3D(ragdoll, {
@@ -76,5 +96,25 @@ describe("physics helpers", () => {
     expect(ragdoll.points.every((point) => typeof point.posZ === "number")).toBe(true);
     expect(chest?.posY).toBeGreaterThan(-22);
     expect(chest?.posZ).not.toBe(20);
+  });
+
+  it("keeps solved 3D ragdoll points above the floor", () => {
+    const ragdoll = createRagdoll3D({ posX: 0, posY: 0, posZ: 20 });
+    const stepped = stepRagdoll3D(
+      {
+        constraints: ragdoll.constraints,
+        points: ragdoll.points.map((point) =>
+          point.id.endsWith("Foot") ? { ...point, posY: 120, previousY: 90 } : point
+        ),
+      },
+      {
+        delta: 1 / 60,
+        floorY: 100,
+        gravity: 1200,
+        iterations: 8,
+      }
+    );
+
+    expect(stepped.points.every((point) => point.posY <= 100)).toBe(true);
   });
 });

@@ -43,7 +43,7 @@ npm test
 npm run build
 npm run build:storybook
 npm run pack:dry-run
-npm run pack:release
+npm run pack:release -- --ignore-scripts
 ```
 
 The package build validates that `dist` contains the package entry point,
@@ -59,6 +59,9 @@ The release pack creates a tarball in `release-artifacts`, such as:
 ```txt
 release-artifacts/arcade-engine-X.Y.Z.tgz
 ```
+
+The workflow passes `--ignore-scripts` to `pack:release` because the package
+build has already produced and validated `dist` before packing.
 
 The workflow creates the GitHub Release for the tag if it does not already
 exist, then uploads the tarball as a release asset.
