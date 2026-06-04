@@ -1,7 +1,7 @@
 {
   "name": "arcade-engine",
   "description": "A small browser arcade-game engine for canvas games.",
-  "version": "2.26.0",
+  "version": "2.27.0",
   "license": "MIT",
   "type": "module",
   "author": "Rob Taylor",
@@ -27,6 +27,7 @@
     "lint:fix": "eslint . --fix",
     "hooks:install": "node scripts/install-git-hooks.mjs",
     "pack:dry-run": "npm pack --dry-run",
+    "pack:release": "mkdir -p release-artifacts && npm pack --pack-destination release-artifacts",
     "prepack": "npm run build",
     "precommit": "node scripts/pre-commit.mjs",
     "storybook": "storybook dev -p 6006",

@@ -221,6 +221,8 @@ Latest verification: June 2, 2026.
   `WHATSNEW.md` are included in the npm package.
 - Automatic npm publishing is configured through the `NPM Release` GitHub
   Actions workflow for matching `v*` release tags.
+- The same workflow builds `release-artifacts/arcade-engine-X.Y.Z.tgz` and
+  uploads it to the GitHub Release for the tag.
 
 Verification notes:
 

@@ -313,6 +313,12 @@ Preview the npm tarball contents:
 npm run pack:dry-run
 ```
 
+Build the release tarball locally:
+
+```sh
+npm run pack:release
+```
+
 Release publishing is handled by GitHub Actions when a matching release tag is
 pushed. See [RELEASE.md](RELEASE.md) for the npm release process and required
 `NPM_TOKEN` secret.

@@ -21,6 +21,8 @@
   public publish config, and a dry-run pack script for npm publishing.
 - Added an automatic GitHub Actions npm release workflow for matching `v*`
   release tags.
+- Added release tarball packaging and GitHub Release asset upload for release
+  tags.
 - Added local package metadata, TypeScript config, Vitest config, and a lockfile
   so the engine can be developed and tested independently.
 

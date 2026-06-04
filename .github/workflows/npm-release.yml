@@ -12,7 +12,7 @@ on:
         type: string
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
 
 concurrency:
@@ -62,6 +62,31 @@ jobs:
 
       - name: Dry-run npm package
         run: npm run pack:dry-run
+
+      - name: Build release tarball
+        run: npm run pack:release
+
+      - name: Upload tarball to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./package.json').version")"
+          tarball="release-artifacts/arcade-engine-${version}.tgz"
+
+          if [ ! -f "$tarball" ]; then
+            echo "Release tarball not found: $tarball" >&2
+            exit 1
+          fi
+
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" \
+              --title "Release $RELEASE_TAG" \
+              --notes "Release $RELEASE_TAG"
+          fi
+
+          gh release upload "$RELEASE_TAG" "$tarball" --clobber
 
       - name: Publish to npm
         run: npm publish --provenance --access public

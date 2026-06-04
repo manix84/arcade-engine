@@ -36,6 +36,7 @@ npm test
 npm run build
 npm run build:storybook
 npm run pack:dry-run
+npm run pack:release
 ```
 
 The package build validates that `dist` contains the package entry point,
@@ -46,6 +47,15 @@ The dry-run pack confirms that npm receives only the package files listed in
 Storybook output remains documentation/demo output and is not included in the
 npm package.
 
+The release pack creates a tarball in `release-artifacts`, such as:
+
+```txt
+release-artifacts/arcade-engine-X.Y.Z.tgz
+```
+
+The workflow creates the GitHub Release for the tag if it does not already
+exist, then uploads the tarball as a release asset.
+
 ## 🚀 Publishing From A Tag
 
 Create and push a release tag after the release commit is ready:
@@ -55,7 +65,16 @@ git tag -a vX.Y.Z -m "Release vX.Y.Z"
 git push origin vX.Y.Z
 ```
 
-Pushing the tag starts the `NPM Release` workflow. If all checks pass, it runs:
+Pushing the tag starts the `NPM Release` workflow. If all checks pass, it:
+
+1. Builds the package.
+2. Builds Storybook.
+3. Dry-runs the npm package.
+4. Builds the release tarball.
+5. Uploads the tarball to the GitHub Release for the tag.
+6. Publishes to npm.
+
+The npm publish step runs:
 
 ```sh
 npm publish --provenance --access public
