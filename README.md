@@ -319,9 +319,11 @@ Build the release tarball locally:
 npm run pack:release
 ```
 
-Release publishing is handled by GitHub Actions when a matching release tag is
-pushed. See [RELEASE.md](RELEASE.md) for the npm release process and required
-`NPM_TOKEN` secret.
+Release publishing is handled by GitHub Actions when a release commit is pushed
+to `main`. The workflow publishes `arcade-engine` to npmjs, publishes
+`@manix84/arcade-engine` to GitHub Packages, and uploads the release tarball to
+the GitHub Release for the package version. See [RELEASE.md](RELEASE.md) for
+the release process and required `NPM_TOKEN` secret.
 
 Story changes should also run:
 

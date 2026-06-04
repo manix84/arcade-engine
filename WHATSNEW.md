@@ -19,10 +19,12 @@
   declaration files, and declaration maps into `dist`.
 - Added package exports, `types`, `files`, repository metadata, keywords,
   public publish config, and a dry-run pack script for npm publishing.
-- Added an automatic GitHub Actions npm release workflow for matching `v*`
-  release tags.
+- Added an automatic GitHub Actions release workflow for pushes to `main`, with
+  manual release dispatches for selected tags.
 - Added release tarball packaging and GitHub Release asset upload for release
   tags.
+- Added GitHub Packages publishing as `@manix84/arcade-engine` alongside the
+  npmjs `arcade-engine` package.
 - Added local package metadata, TypeScript config, Vitest config, and a lockfile
   so the engine can be developed and tested independently.
 
