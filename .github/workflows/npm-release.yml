@@ -157,7 +157,10 @@ jobs:
           set -euo pipefail
           echo "@manix84:registry=https://npm.pkg.github.com" >> ~/.npmrc
           echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
-          test -f ./github-package/package/package.json
+          if [ ! -f ./github-package/package/package.json ]; then
+            echo "Expected GitHub package manifest at ./github-package/package/package.json, but it was not found."
+            exit 1
+          fi
           npm publish ./github-package/package --registry=https://npm.pkg.github.com --access public
         env:
           NODE_AUTH_TOKEN: ${{ github.token }}
