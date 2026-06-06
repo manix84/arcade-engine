@@ -323,7 +323,7 @@ Release publishing is handled by GitHub Actions when a release commit is pushed
 to `main`. The workflow publishes `arcade-engine` to npmjs, publishes
 `@manix84/arcade-engine` to GitHub Packages, and uploads the release tarball to
 the GitHub Release for the package version. See [RELEASE.md](RELEASE.md) for
-the release process and required `NPM_TOKEN` secret.
+the release process and npm trusted publishing setup.
 
 Story changes should also run:
 

@@ -37,6 +37,11 @@ jobs:
           cache: npm
           registry-url: "https://registry.npmjs.org"
 
+      - name: Use npm with trusted publishing support
+        run: |
+          npm install --global npm@11
+          npm --version
+
       - name: Install dependencies
         run: npm ci
 
@@ -117,9 +122,7 @@ jobs:
           fi
 
       - name: Publish to npm
-        run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
 
       - name: Prepare GitHub Packages package
         run: |

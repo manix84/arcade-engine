@@ -8,13 +8,20 @@ The workflow is intentionally gated. It publishes automatically from pushes to
 `main`, can also publish a selected tag through manual dispatch, and verifies
 the package before running `npm publish`.
 
-## 🔐 Required Secrets And Permissions
+## 🔐 Required Publishing Setup
 
-Add a GitHub Actions repository secret named `NPM_TOKEN`.
+Configure npm trusted publishing for `arcade-engine` on npmjs.com:
 
-Use an npm access token that can publish `arcade-engine` to
-`https://registry.npmjs.org`. The workflow passes this token to npm as
-`NODE_AUTH_TOKEN`.
+- Publisher: GitHub Actions.
+- Organization or user: `manix84`.
+- Repository: `arcade-engine`.
+- Workflow: `npm-release.yml`.
+- Environment: leave blank unless the workflow is later moved into a GitHub
+  environment.
+- Allowed action: `npm publish`.
+
+Trusted publishing uses GitHub OIDC instead of a long-lived npm token, so npmjs
+publishing does not need an `NPM_TOKEN` secret or a one-time password in CI.
 
 GitHub Packages publishing uses the workflow `GITHUB_TOKEN`. The workflow grants
 `packages: write` so it can publish `@manix84/arcade-engine` to
@@ -44,6 +51,7 @@ npm run build
 npm run build:storybook
 npm run pack:dry-run
 npm run pack:release -- --ignore-scripts
+npm publish --access public
 ```
 
 The package build validates that `dist` contains the package entry point,
@@ -103,11 +111,14 @@ input. If all checks pass, it:
 6. Publishes to npmjs.
 7. Publishes to GitHub Packages.
 
-The npmjs publish step runs:
+The npmjs publish step runs with trusted publishing:
 
 ```sh
-npm publish --provenance --access public
+npm publish --access public
 ```
+
+Npm automatically generates provenance when trusted publishing is used from a
+public GitHub Actions workflow.
 
 The GitHub Packages publish step rewrites the built package name to
 `@manix84/arcade-engine` in a temporary unpacked tarball, configures
