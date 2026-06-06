@@ -157,6 +157,7 @@ jobs:
           set -euo pipefail
           echo "@manix84:registry=https://npm.pkg.github.com" >> ~/.npmrc
           echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
-          npm publish github-package/package --registry=https://npm.pkg.github.com --access public
+          test -f ./github-package/package/package.json
+          npm publish ./github-package/package --registry=https://npm.pkg.github.com --access public
         env:
           NODE_AUTH_TOKEN: ${{ github.token }}
