@@ -44,7 +44,7 @@ helper systems could support other arcade-style browser games too.
   lists.
 - Canvas achievement notification helpers for queued unlock popups.
 - High-score helpers for local leaderboards, optional remote sync, receipt
-  integrity payloads, and backend submission validation.
+  integrity payloads, backend receipt issuance, and submission validation.
 - Sprite animation helpers for frame timing and sprite-sheet frame selection.
 - Math, heading, spawn, collision, area-exit, cloning, random-color, and
   browser-event helpers.
@@ -85,6 +85,7 @@ import {
   Ticker,
   createCubeClusterFromPattern,
   createHighScoreManager,
+  createHighScoreServerRunReceipt,
   createUserOptionsStore,
   getDisplayFilterSettingsForMode,
   detectBoxCollision,
@@ -99,6 +100,7 @@ import {
   helpers,
   projectIsometricPoint,
   projectPerspectivePoint,
+  validateHighScoreServerRunReceipt,
   validateHighScoreSubmission,
 } from "arcade-engine";
 ```
@@ -231,10 +233,11 @@ normalizers, and plausibility rules. See the
 `Engine/Systems/New Helpers/High Scores` Storybook story for local leaderboard,
 threshold, integrity, and plausibility examples.
 
-Remote leaderboard submissions can use run receipts and integrity payloads. A
-backend can import `validateHighScoreSubmission` from `arcade-engine/high-scores`
-and pair it with the game's token signing, receipt storage, expiry, and rate
-limits.
+Remote leaderboard submissions can use run receipts and integrity payloads.
+Backends can import `createHighScoreServerRunReceipt`,
+`validateHighScoreServerRunReceipt`, and `validateHighScoreSubmission` from
+`arcade-engine/high-scores`, while keeping route handling, receipt storage, and
+rate limits app-owned.
 
 ### User Options
 

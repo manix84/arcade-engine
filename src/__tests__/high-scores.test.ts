@@ -1,12 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  areHighScoreTokenHashesEqual,
+  createHighScoreRunToken,
   createHighScoreIntegrity,
   createHighScoreManager,
+  createHighScoreServerRunReceipt,
   getHighScorePlausibilityReasons,
   getHighScoreStatValues,
+  hashHighScoreRunToken,
   isHighScoreRunReceipt,
+  isHighScoreServerRunRecord,
+  isHighScoreServerRunRecordUsable,
   normalizeHighScoreName,
   validateHighScoreIntegrity,
+  validateHighScoreServerRunReceipt,
   validateHighScoreSubmission,
 } from "../index.js";
 
@@ -195,6 +202,69 @@ describe("high score helpers", () => {
         formatSettings,
       })
     ).toBe(false);
+  });
+
+  it("creates and validates server run receipts with signed token hashes", async () => {
+    const created = await createHighScoreServerRunReceipt({
+      issuedAt: 1000.9,
+      randomUUID: () => "run-1",
+      secret: "server-secret",
+      ttlMs: 5000,
+    });
+
+    expect(created.receipt).toEqual({
+      issuedAt: 1000,
+      runId: "run-1",
+      token: await createHighScoreRunToken("run-1", 1000, "server-secret"),
+    });
+    expect(created.record).toEqual({
+      expiresAt: 6000,
+      issuedAt: 1000,
+      runId: "run-1",
+      tokenHash: await hashHighScoreRunToken(
+        created.receipt.token,
+        "server-secret"
+      ),
+      used: false,
+    });
+    expect(isHighScoreServerRunRecord(created.record)).toBe(true);
+    expect(isHighScoreServerRunRecordUsable(created.record, 5999)).toBe(true);
+    expect(
+      await validateHighScoreServerRunReceipt(created.receipt, created.record, {
+        now: () => 5999,
+        secret: "server-secret",
+      })
+    ).toBe(true);
+
+    await expect(
+      validateHighScoreServerRunReceipt(
+        { ...created.receipt, runId: "other-run" },
+        created.record,
+        { now: () => 5999, secret: "server-secret" }
+      )
+    ).resolves.toBe(false);
+    await expect(
+      validateHighScoreServerRunReceipt(created.receipt, created.record, {
+        now: () => 6001,
+        secret: "server-secret",
+      })
+    ).resolves.toBe(false);
+    await expect(
+      validateHighScoreServerRunReceipt(
+        created.receipt,
+        { ...created.record, used: true },
+        { now: () => 5999, secret: "server-secret" }
+      )
+    ).resolves.toBe(false);
+    await expect(
+      validateHighScoreServerRunReceipt(created.receipt, created.record, {
+        now: () => 5999,
+        secret: "wrong-secret",
+      })
+    ).resolves.toBe(false);
+    expect(areHighScoreTokenHashesEqual(created.record.tokenHash, "short")).toBe(
+      false
+    );
   });
 
   it("submits pending receipt-backed scores and stores remote results", async () => {

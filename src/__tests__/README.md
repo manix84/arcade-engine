@@ -26,8 +26,8 @@ They verify package behavior without requiring a real browser window.
 - [achievement-notifications.test.ts](achievement-notifications.test.ts) checks
   canvas popup queueing, event enqueueing, icon drawing/fallbacks, and timing.
 - [high-scores.test.ts](high-scores.test.ts) checks local high-score storage,
-  receipt-backed integrity, optional remote sync, and backend submission
-  validation.
+  receipt-backed integrity, server receipt helpers, optional remote sync, and
+  backend submission validation.
 - [systems.test.ts](systems.test.ts) checks input action mapping, multiplayer
   input contracts, sprite animation frame helpers, follow-camera behavior, and
   spatial-audio math.

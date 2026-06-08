@@ -59,7 +59,8 @@
   status lists.
 - Added canvas achievement notification helpers for queued unlock popups.
 - Added high-score helpers for local leaderboards, optional remote sync,
-  receipt-backed integrity, and backend submission validation.
+  receipt-backed integrity, server receipt validation, and backend submission
+  validation.
 - Added sprite animation helpers for frame timing and sprite-sheet frame data.
 - Added follow-camera helpers for 2D worlds.
 - Added grid helpers for board and tile games.

@@ -181,15 +181,17 @@ Use it for:
 - Local-first score storage with configurable storage keys.
 - Optional remote sync through configurable API routes.
 - Run receipt and integrity payload creation.
+- Server receipt issuance, token hashing, expiry checks, and receipt
+  validation.
 - Backend validation of unknown score-submission payloads.
 - Game-specific score plausibility rules based on stat limits and score
   budgets.
 
-Backends can import `arcade-engine/high-scores` for validation helpers and pair
-them with their token signing, score storage, receipt expiry, and rate limits.
-The `Engine/Systems/New Helpers/High Scores` Storybook story shows local
-leaderboards, default-score merging, thresholds, integrity validation, and
-plausibility feedback.
+Backends can import `arcade-engine/high-scores` for receipt and submission
+validation helpers while keeping route handling, score storage, used-receipt
+updates, and rate limits app-owned. The `Engine/Systems/New Helpers/High
+Scores` Storybook story shows local leaderboards, default-score merging,
+thresholds, integrity validation, and plausibility feedback.
 
 ## 🎞️ Sprite Animation
 

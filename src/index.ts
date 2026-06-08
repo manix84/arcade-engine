@@ -13,18 +13,25 @@ export {
   defaultAchievementNotificationTiming,
 } from "./achievement-notifications.js";
 export {
+  areHighScoreTokenHashesEqual,
+  createHighScoreRunToken,
   createHighScoreIntegrity,
   createHighScoreManager,
+  createHighScoreServerRunReceipt,
   getHighScorePlausibilityReasons,
   getHighScoreStatValues,
   hashHighScoreText,
+  hashHighScoreRunToken,
   isHighScoreEntry,
   isHighScoreIntegrity,
   isHighScorePlausible,
   isHighScoreRunReceipt,
+  isHighScoreServerRunRecord,
+  isHighScoreServerRunRecordUsable,
   normalizeHighScoreName,
   sortHighScores,
   validateHighScoreIntegrity,
+  validateHighScoreServerRunReceipt,
   validateHighScoreSubmission,
 } from "./high-scores.js";
 export {
@@ -173,6 +180,7 @@ export type {
 } from "./achievement-notifications.js";
 export type {
   AcceptedHighScoreSubmission,
+  CreatedHighScoreServerRunReceipt,
   HighScoreEntry,
   HighScoreIntegrity,
   HighScoreIntegrityOptions,
@@ -180,6 +188,10 @@ export type {
   HighScoreManagerOptions,
   HighScorePlausibilityRules,
   HighScoreRunReceipt,
+  HighScoreServerReceiptOptions,
+  HighScoreServerReceiptSecret,
+  HighScoreServerReceiptValidationOptions,
+  HighScoreServerRunRecord,
   HighScoreStorage,
   HighScoreSubmissionPayload,
   HighScoreSubmissionValidationOptions,

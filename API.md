@@ -278,7 +278,11 @@ Backend code can import high-score validation helpers without importing the
 whole engine root:
 
 ```ts
-import { validateHighScoreSubmission } from "arcade-engine/high-scores";
+import {
+  createHighScoreServerRunReceipt,
+  validateHighScoreServerRunReceipt,
+  validateHighScoreSubmission,
+} from "arcade-engine/high-scores";
 ```
 
 | Export | Use It For |
@@ -287,6 +291,11 @@ import { validateHighScoreSubmission } from "arcade-engine/high-scores";
 | `createHighScoreIntegrity` | Create receipt-backed integrity data for a score submission. |
 | `validateHighScoreIntegrity` | Verify score, stats, settings, receipt, and submitted-at values still match integrity data. |
 | `validateHighScoreSubmission` | Validate unknown backend payloads before accepting remote leaderboard rows. |
+| `createHighScoreServerRunReceipt` | Issue a signed run receipt and matching stored receipt record for a backend route. |
+| `validateHighScoreServerRunReceipt` | Verify a submitted run receipt against a stored token hash, expiry, and used state. |
+| `createHighScoreRunToken` | Sign a `runId:issuedAt` pair with HMAC SHA-256. |
+| `hashHighScoreRunToken` | Hash a submitted receipt token for storage comparison. |
+| `areHighScoreTokenHashesEqual` | Compare token hashes without early exit. |
 | `isHighScorePlausible` | Check stat limits and weighted score budgets. |
 | `getHighScorePlausibilityReasons` | Return machine-readable plausibility failures. |
 | `getHighScoreStatValues` | Parse numeric stat lines such as `Enemies: 12`. |
@@ -295,6 +304,8 @@ import { validateHighScoreSubmission } from "arcade-engine/high-scores";
 | `isHighScoreEntry` | Type guard for public score rows. |
 | `isHighScoreIntegrity` | Type guard for score integrity payloads. |
 | `isHighScoreRunReceipt` | Type guard for run receipts. |
+| `isHighScoreServerRunRecord` | Type guard for stored backend receipt records. |
+| `isHighScoreServerRunRecordUsable` | Check whether a stored receipt record is unused and unexpired. |
 | `hashHighScoreText` | Stable non-cryptographic text hash used by integrity helpers. |
 
 ```ts
@@ -326,10 +337,39 @@ if (!validation.accepted) {
 }
 ```
 
-Use these helpers alongside your API routes, receipt signing, score storage,
-receipt expiry, and plausibility policy. See
-`Engine/Systems/New Helpers/High Scores` in Storybook for a local leaderboard
-and validation demo.
+```ts
+const { receipt, record } = await createHighScoreServerRunReceipt({
+  randomUUID: crypto.randomUUID,
+  secret: process.env.HIGH_SCORE_SECRET!,
+  ttlMs: 5 * 60 * 1000,
+});
+
+await runs.insert(record);
+return receipt;
+```
+
+```ts
+const validation = validateHighScoreSubmission(payload, {
+  rules: scoreRules,
+});
+
+if (!validation.accepted) {
+  throw new Error(validation.error);
+}
+
+const record = await runs.find(validation.run.runId);
+const trusted = await validateHighScoreServerRunReceipt(validation.run, record, {
+  secret: process.env.HIGH_SCORE_SECRET!,
+});
+
+if (!trusted) {
+  throw new Error("invalid_run_receipt");
+}
+```
+
+Use these helpers alongside your API routes, score storage, used-receipt
+updates, and rate limits. See `Engine/Systems/New Helpers/High Scores` in
+Storybook for a local leaderboard and validation demo.
 
 ## 🎞️ Sprite Animation
 
