@@ -1,16 +1,18 @@
 # 🕹️ Arcade Engine
 
-A small browser arcade-game engine for canvas games.
+A small browser arcade-game engine for canvas games, published on npm as
+`arcade-engine`.
 
 Arcade Engine is a standalone TypeScript package for arcade-style browser
 games. It provides a canvas arena, timing, audio, geometry, collision,
 viewport, 2.5D projection, 3D cube-cluster, and rendering helpers that are
 small enough to compose in your own game loop.
 
-The public package entry point is `src/index.ts`. Published package builds emit
-ESM JavaScript, source maps, declaration files, and declaration maps to `dist`.
-Storybook is documentation and demo output only; it builds to
-`storybook-static` and is not included in the npm package output.
+Install and import the npm package as `arcade-engine`. In this repository, the
+public source entry point is `src/index.ts`; published builds emit ESM
+JavaScript, source maps, declaration files, and declaration maps to `dist`.
+Storybook is documentation and demo output only; it builds to `storybook-static`
+and is not included in the npm package output.
 
 ## ✨ What It Provides
 
@@ -50,6 +52,9 @@ Storybook is documentation and demo output only; it builds to
 ```sh
 npm install arcade-engine
 ```
+
+The package name is lowercase for npm compatibility. The project and
+documentation use the display name Arcade Engine.
 
 ## 🚪 Package Entry
 
@@ -341,7 +346,7 @@ and box helpers, input and multiplayer helpers, 2.5D projection math, cube
 clusters, debug vectors, ticker scheduling, sound lifecycle, and helper
 math/events.
 
-## 🗺️ Migration Status
+## 🗺️ Package Modules
 
 Active package modules:
 
@@ -371,7 +376,7 @@ Active package modules:
 - [📘 API Reference](API.md)
 - [📦 Release Process](RELEASE.md)
 - [🗒️ What's New](WHATSNEW.md)
-- [🗺️ Finish Roadmap](ROADMAP.md)
+- [🗺️ Package Roadmap](ROADMAP.md)
 - [🔐 Privacy](PRIVACY.md)
 - [⚖️ Licence](LICENSE.md)
 - [🤝 Contributing](CONTRIBUTING.md)

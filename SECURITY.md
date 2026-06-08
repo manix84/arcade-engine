@@ -6,10 +6,8 @@ runtime data.
 
 ## ✅ Supported Versions
 
-The project is currently pre-release while modernization work is in progress.
-
-Security fixes apply to the current `master` branch unless a published release
-line is created later.
+Security fixes apply to the current published `arcade-engine` package line and
+the default branch of this repository.
 
 ## 📬 Reporting A Vulnerability
 
