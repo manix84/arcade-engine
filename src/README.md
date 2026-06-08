@@ -203,9 +203,9 @@ Use it for:
 
 Backends can import `arcade-engine/high-scores` for receipt and submission
 validation helpers while keeping route handling, score storage, used-receipt
-updates, and rate limits app-owned. The `Engine/Systems/Player Data/High
-Scores` Storybook story shows local leaderboards, default-score merging,
-thresholds, integrity validation, and plausibility feedback.
+updates, and rate limits app-owned. See the `Engine/Systems/Player Data/High Scores`
+Storybook story for local leaderboards, default-score merging, thresholds, integrity
+validation, and plausibility feedback.
 
 ## 🎞️ Sprite Animation
 
