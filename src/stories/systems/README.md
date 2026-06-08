@@ -36,6 +36,42 @@ does not provide a backend, matchmaking, relay, WebSocket server, or WebRTC
 signalling server. Games can send `PlayerInputIntent` objects through whichever
 transport they own.
 
+## 🏆 Achievements
+
+`Achievements` shows local achievement definition, progress, unlock, and status
+helpers.
+
+The story demonstrates:
+
+- `createAchievementState`.
+- `unlockAchievement`.
+- `addAchievementProgress`.
+- `getAchievementStatuses`.
+- Immutable state updates that can be persisted by the game.
+- Storybook actions and play-function checks for the main unlock/reset flow.
+
+Use this pattern when a game needs local achievements, progress counters, or a
+status screen without coupling unlock logic to rendering code.
+
+## 🏅 High Scores
+
+`HighScores` shows local leaderboard management and backend-importable
+validation helpers.
+
+The story demonstrates:
+
+- `createHighScoreManager`.
+- Default-score merging and top-score thresholds.
+- `createHighScoreIntegrity`.
+- `validateHighScoreSubmission`.
+- `getHighScorePlausibilityReasons`.
+- Storybook actions and play-function checks for save, validate, and tamper
+  controls.
+
+Use this pattern when a game needs a local-first score table, optional remote
+submission payloads, and server-side checks that can share the same validation
+rules.
+
 ## 🎞️ Sprite Animation And Camera
 
 `SpriteAnimationAndCamera` shows sprite-frame timing and a follow camera in the

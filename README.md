@@ -14,6 +14,13 @@ JavaScript, source maps, declaration files, and declaration maps to `dist`.
 Storybook is documentation and demo output only; it builds to `storybook-static`
 and is not included in the npm package output.
 
+## 🧭 Project History
+
+Arcade Engine began as the reusable browser-game engine code inside
+[manix84/time-pilot](https://github.com/manix84/time-pilot/). It was extracted
+into its own package so the canvas arena, timing, audio, input, scoring, and
+helper systems could support other arcade-style browser games too.
+
 ## ✨ What It Provides
 
 - Canvas arena creation, resizing, fullscreen handling, text, sprites, circles,
@@ -192,13 +199,16 @@ platformers.
 
 Achievement helpers keep definition metadata separate from persisted state.
 Games can unlock achievements, increment progress counters, and render status
-lists from the returned data.
+lists from the returned data. See the `Engine/Systems/New Helpers/Achievements`
+Storybook story for an interactive unlock/progress example.
 
 ### High Scores
 
 High-score helpers support local score tables and optional remote sync. Games
 provide their own storage key, default scores, API path, settings
-normalizers, and plausibility rules.
+normalizers, and plausibility rules. See the
+`Engine/Systems/New Helpers/High Scores` Storybook story for local leaderboard,
+threshold, integrity, and plausibility examples.
 
 Remote leaderboard submissions can use run receipts and integrity payloads. A
 backend can import `validateHighScoreSubmission` from `arcade-engine/high-scores`
@@ -291,7 +301,7 @@ Storybook contains live demos for the engine surface:
 - **Helpers**: math, geometry, object cloning, event binding, collisions,
   rotation, spawning, and 2.5D variants.
 - **Systems**: input actions, local multiplayer, sprite animation, follow
-  cameras, and spatial-audio math.
+  cameras, achievements, high scores, and spatial-audio math.
 - **Audio**: master controls, effects, music, spatial panning, and global
   playback behavior.
 - **3D**: cube-cluster pickups and modular level pieces.
@@ -367,8 +377,8 @@ canvas, media elements, animation frames, and storage.
 
 Coverage includes package imports, arena behavior, viewport calculations, grid
 and box helpers, input and multiplayer helpers, 2.5D projection math, cube
-clusters, debug vectors, ticker scheduling, sound lifecycle, and helper
-math/events.
+clusters, achievements, high scores, debug vectors, ticker scheduling, sound
+lifecycle, and helper math/events.
 
 ## 🗺️ Package Modules
 

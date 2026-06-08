@@ -1,7 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/html-vite";
+import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import {
+  addAchievementProgress,
   applyGravity2D,
   applyGravity3D,
+  createAchievementState,
+  createHighScoreIntegrity,
+  createHighScoreManager,
   createRagdoll2D,
   createRagdoll3D,
   createLocalMultiplayerController,
@@ -10,13 +15,22 @@ import {
   drawCanvasLine,
   drawCanvasPolygon,
   fillCanvasWithTrail,
+  getAchievementStatuses,
   getAnimatedSpriteFrame,
   getFollowCamera,
+  getHighScorePlausibilityReasons,
   getInputActionState,
   getSpatialAudioMix,
   mergePlayerInputIntent,
   stepRagdoll2D,
   stepRagdoll3D,
+  unlockAchievement,
+  validateHighScoreSubmission,
+  type AchievementDefinition,
+  type AchievementState,
+  type HighScoreEntry,
+  type HighScoreRunReceipt,
+  type HighScoreStorage,
   type Ragdoll2D as PhysicsRagdoll2D,
   type Ragdoll3D as PhysicsRagdoll3D,
   type RagdollConstraint,
@@ -40,7 +54,24 @@ const meta = {
 
 export default meta;
 
-type Story = StoryObj;
+type DemoAchievementId = "first-sortie" | "wave-breaker" | "precision-run";
+
+type SystemsStoryArgs = {
+  baseScoreBudget?: number;
+  highScoreValue?: number;
+  lowScoreValue?: number;
+  maxAcceptedScore?: number;
+  onAchievementProgress?: (id: DemoAchievementId) => void;
+  onAchievementReset?: () => void;
+  onAchievementUnlock?: (id: DemoAchievementId) => void;
+  onHighScoreSave?: (entry: HighScoreEntry) => void;
+  onHighScoreTamper?: (accepted: boolean, label: string) => void;
+  onHighScoreValidate?: (accepted: boolean, label: string) => void;
+  precisionGoal?: number;
+  waveGoal?: number;
+};
+
+type Story = StoryObj<SystemsStoryArgs>;
 
 const resizeCanvas = (canvas: HTMLCanvasElement, width = 720, height = 380): void => {
   canvas.width = width;
@@ -323,6 +354,452 @@ export const LocalMultiplayer: Story = {
       window.cancelAnimationFrame(animationFrame);
       multiplayer.stop();
     });
+
+    return shell;
+  },
+};
+
+const getDemoAchievementDefinitions = (
+  waveGoal: number,
+  precisionGoal: number
+): readonly AchievementDefinition<DemoAchievementId>[] => [
+  {
+    description: "Start a tracked run.",
+    id: "first-sortie",
+    name: "First Sortie",
+  },
+  {
+    description: "Clear 3 attack waves.",
+    id: "wave-breaker",
+    name: "Wave Breaker",
+    progressGoal: waveGoal,
+  },
+  {
+    description: "Land 5 precision shots.",
+    id: "precision-run",
+    name: "Precision Run",
+    progressGoal: precisionGoal,
+  },
+];
+
+const drawAchievementBoard = (
+  context: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
+  definitions: readonly AchievementDefinition<DemoAchievementId>[],
+  state: AchievementState<DemoAchievementId>
+): void => {
+  const statuses = getAchievementStatuses(definitions, state);
+
+  context.fillStyle = "#05070a";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = "#cbd5e1";
+  context.font = "18px sans-serif";
+  context.fillText("Achievement state", 38, 48);
+
+  statuses.forEach((status, index) => {
+    const y = 86 + index * 86;
+    const progress = status.progress
+      ? status.progress.current / Math.max(1, status.progress.goal)
+      : status.unlocked
+        ? 1
+        : 0;
+    const accent = status.unlocked ? "#f6e05e" : "#4fd1c5";
+
+    context.fillStyle = "rgba(245, 247, 251, 0.06)";
+    context.fillRect(38, y, canvas.width - 76, 62);
+    context.fillStyle = status.unlocked
+      ? "rgba(246, 224, 94, 0.24)"
+      : "rgba(79, 209, 197, 0.18)";
+    context.fillRect(38, y, (canvas.width - 76) * progress, 62);
+    context.strokeStyle = accent;
+    context.lineWidth = 2;
+    context.strokeRect(38, y, canvas.width - 76, 62);
+    context.fillStyle = accent;
+    context.font = "16px sans-serif";
+    context.fillText(status.name, 58, y + 25);
+    context.fillStyle = "#cbd5e1";
+    context.font = "13px sans-serif";
+    context.fillText(status.description, 58, y + 47);
+    context.fillStyle = status.unlocked ? "#f6e05e" : "#90cdf4";
+    context.textAlign = "right";
+    context.fillText(
+      status.progress
+        ? `${status.progress.current}/${status.progress.goal}`
+        : status.unlocked
+          ? "unlocked"
+          : "locked",
+      canvas.width - 58,
+      y + 36
+    );
+    context.textAlign = "start";
+  });
+};
+
+const achievementsPlay: Story["play"] = async ({
+  args,
+  canvasElement,
+}) => {
+  const canvas = within(canvasElement);
+
+  await userEvent.click(canvas.getByRole("button", { name: "Start Run" }));
+  await waitFor(() => expect(canvas.getByText("first-sortie")).toBeVisible());
+  await expect(args.onAchievementUnlock!).toHaveBeenCalledWith("first-sortie");
+
+  await userEvent.click(canvas.getByRole("button", { name: "Clear Wave" }));
+  await userEvent.click(canvas.getByRole("button", { name: "Clear Wave" }));
+  await userEvent.click(canvas.getByRole("button", { name: "Clear Wave" }));
+  await waitFor(() =>
+    expect(canvas.getByText("wave-breaker 3/3, precision-run 0/5")).toBeVisible()
+  );
+  await expect(args.onAchievementProgress!).toHaveBeenCalledTimes(3);
+
+  await userEvent.click(canvas.getByRole("button", { name: "Precision Shot" }));
+  await waitFor(() =>
+    expect(canvas.getByText("wave-breaker 3/3, precision-run 1/5")).toBeVisible()
+  );
+  await expect(args.onAchievementProgress!).toHaveBeenCalledWith("precision-run");
+
+  await userEvent.click(canvas.getByRole("button", { name: "Reset" }));
+  await waitFor(() => expect(canvas.getAllByText("none").length).toBeGreaterThan(0));
+  await expect(args.onAchievementReset!).toHaveBeenCalledTimes(1);
+};
+
+export const Achievements: Story = {
+  args: {
+    onAchievementProgress: fn(),
+    onAchievementReset: fn(),
+    onAchievementUnlock: fn(),
+    precisionGoal: 5,
+    waveGoal: 3,
+  },
+  argTypes: {
+    precisionGoal: { control: { max: 10, min: 1, step: 1, type: "range" } },
+    waveGoal: { control: { max: 10, min: 1, step: 1, type: "range" } },
+  },
+  play: achievementsPlay,
+  render: (args) => {
+    const { canvas, metrics, shell } = createSystemsLayout("Achievement helpers");
+    const context = canvas.getContext("2d");
+    const definitions = getDemoAchievementDefinitions(
+      args.waveGoal ?? 3,
+      args.precisionGoal ?? 5
+    );
+    const unlockedValue = createValue("unlocked");
+    const progressValue = createValue("progress");
+    const lastValue = createValue("last change", "ready");
+    let state = createAchievementState<DemoAchievementId>();
+    let unlockedAt = 1000;
+
+    metrics.append(
+      unlockedValue,
+      progressValue,
+      lastValue,
+      createValue("uses", "createAchievementState + addAchievementProgress")
+    );
+
+    const updateMetrics = (lastChange: string): void => {
+      const statuses = getAchievementStatuses(definitions, state);
+      const progress = statuses
+        .filter((status) => status.progress)
+        .map(
+          (status) =>
+            `${status.id} ${status.progress?.current}/${status.progress?.goal}`
+        )
+        .join(", ");
+
+      setValue(unlockedValue, state.unlocked.join(", ") || "none");
+      setValue(progressValue, progress || "none");
+      setValue(lastValue, lastChange);
+
+      if (context) {
+        drawAchievementBoard(context, canvas, definitions, state);
+      }
+    };
+
+    const unlock = (id: DemoAchievementId): void => {
+      unlockedAt += 500;
+      const result = unlockAchievement(state, id, unlockedAt);
+
+      state = result.state;
+      updateMetrics(result.unlocked ? `unlocked ${id}` : `${id} already unlocked`);
+    };
+
+    const addProgress = (id: DemoAchievementId): void => {
+      unlockedAt += 500;
+      const result = addAchievementProgress(
+        definitions,
+        state,
+        id,
+        1,
+        unlockedAt
+      );
+
+      state = result.state;
+      updateMetrics(result.unlocked ? `unlocked ${id}` : `advanced ${id}`);
+    };
+
+    const controls = document.createElement("div");
+    controls.className = "ae-controls";
+    controls.append(
+      createButton("Start Run", () => {
+        args.onAchievementUnlock?.("first-sortie");
+        unlock("first-sortie");
+      }),
+      createButton("Clear Wave", () => {
+        args.onAchievementProgress?.("wave-breaker");
+        addProgress("wave-breaker");
+      }),
+      createButton("Precision Shot", () => {
+        args.onAchievementProgress?.("precision-run");
+        addProgress("precision-run");
+      }),
+      createButton("Reset", () => {
+        args.onAchievementReset?.();
+        state = createAchievementState();
+        updateMetrics("reset");
+      })
+    );
+    metrics.append(controls);
+    updateMetrics("ready");
+
+    return shell;
+  },
+};
+
+const createStoryStorage = (): HighScoreStorage => {
+  const values = new Map<string, string>();
+
+  return {
+    getItem: (key) => values.get(key) ?? null,
+    setItem: (key, value) => {
+      values.set(key, value);
+    },
+  };
+};
+
+const demoDefaultHighScores: HighScoreEntry[] = [
+  { id: "default-1", name: "NOVA", score: 9000, stats: ["Waves: 3"] },
+  { id: "default-2", name: "BYTE", score: 6200, stats: ["Waves: 2"] },
+  { id: "default-3", name: "KAI", score: 3400, stats: ["Waves: 1"] },
+];
+
+const demoRunReceipt: HighScoreRunReceipt = {
+  issuedAt: 1700000000000,
+  runId: "story-run-1",
+  token: "story-token",
+};
+
+const drawHighScoreBoard = (
+  context: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
+  scores: readonly HighScoreEntry[],
+  validationLabel: string
+): void => {
+  const maxScore = Math.max(1, ...scores.map((score) => score.score));
+
+  context.fillStyle = "#05070a";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = "#cbd5e1";
+  context.font = "18px sans-serif";
+  context.fillText("High-score table", 38, 48);
+
+  scores.forEach((score, index) => {
+    const y = 82 + index * 54;
+    const width = (canvas.width - 210) * (score.score / maxScore);
+
+    context.fillStyle = "rgba(245, 247, 251, 0.06)";
+    context.fillRect(38, y, canvas.width - 76, 34);
+    context.fillStyle =
+      index === 0 ? "rgba(246, 224, 94, 0.38)" : "rgba(79, 209, 197, 0.28)";
+    context.fillRect(166, y, width, 34);
+    context.fillStyle = index === 0 ? "#f6e05e" : "#cbd5e1";
+    context.font = "16px monospace";
+    context.fillText(`${String(index + 1).padStart(2, "0")} ${score.name}`, 52, y + 23);
+    context.textAlign = "right";
+    context.fillText(String(score.score), canvas.width - 54, y + 23);
+    context.textAlign = "start";
+  });
+
+  context.fillStyle = validationLabel.startsWith("accepted") ? "#4fd1c5" : "#fc8181";
+  context.font = "14px sans-serif";
+  context.fillText(validationLabel, 38, canvas.height - 38);
+};
+
+const highScoresPlay: Story["play"] = async ({
+  args,
+  canvasElement,
+}) => {
+  const canvas = within(canvasElement);
+
+  await userEvent.click(canvas.getByRole("button", { name: "Save 12,400" }));
+  await waitFor(() => expect(canvas.getByText("Ace 12400")).toBeVisible());
+  await expect(args.onHighScoreSave!).toHaveBeenCalledWith(
+    expect.objectContaining({ name: "Ace", score: 12400 })
+  );
+
+  await userEvent.click(canvas.getByRole("button", { name: "Save 4,200" }));
+  await waitFor(() => expect(canvas.getByText("6200")).toBeVisible());
+  await expect(args.onHighScoreSave!).toHaveBeenCalledWith(
+    expect.objectContaining({ name: "Rae", score: 4200 })
+  );
+
+  await userEvent.click(canvas.getByRole("button", { name: "Validate" }));
+  await waitFor(() => expect(canvas.getByText("accepted 12400")).toBeVisible());
+  await expect(args.onHighScoreValidate!).toHaveBeenCalledWith(
+    true,
+    "accepted 12400"
+  );
+
+  await userEvent.click(canvas.getByRole("button", { name: "Tamper" }));
+  await waitFor(() =>
+    expect(canvas.getByText("422 invalid_score_integrity")).toBeVisible()
+  );
+  await expect(args.onHighScoreTamper!).toHaveBeenCalledWith(
+    false,
+    "422 invalid_score_integrity"
+  );
+};
+
+export const HighScores: Story = {
+  args: {
+    baseScoreBudget: 1000,
+    highScoreValue: 12400,
+    lowScoreValue: 4200,
+    maxAcceptedScore: 50000,
+    onHighScoreSave: fn(),
+    onHighScoreTamper: fn(),
+    onHighScoreValidate: fn(),
+  },
+  argTypes: {
+    baseScoreBudget: { control: { max: 5000, min: 0, step: 100, type: "range" } },
+    highScoreValue: { control: { max: 30000, min: 1000, step: 100, type: "range" } },
+    lowScoreValue: { control: { max: 10000, min: 1000, step: 100, type: "range" } },
+    maxAcceptedScore: { control: { max: 100000, min: 5000, step: 1000, type: "range" } },
+  },
+  play: highScoresPlay,
+  render: (args) => {
+    const { canvas, metrics, shell } = createSystemsLayout("High-score helpers");
+    const context = canvas.getContext("2d");
+    const leaderValue = createValue("leader");
+    const thresholdValue = createValue("top 3 threshold");
+    const validationValue = createValue("validation", "not run");
+    const plausibilityValue = createValue("plausibility", "not run");
+    let now = 1700000001000;
+    const manager = createHighScoreManager({
+      apiEnabled: false,
+      defaultScores: demoDefaultHighScores,
+      maxScores: 5,
+      now: () => {
+        now += 1000;
+        return now;
+      },
+      random: () => 0.42,
+      storage: createStoryStorage(),
+      storageKey: "storybook.highScores",
+    });
+
+    metrics.append(
+      leaderValue,
+      thresholdValue,
+      validationValue,
+      plausibilityValue,
+      createValue("uses", "createHighScoreManager + validateHighScoreSubmission")
+    );
+
+    const getValidationLabel = (): string =>
+      String(validationValue.querySelector("strong")?.textContent ?? "not run");
+
+    const refresh = (validationLabel = getValidationLabel()): void => {
+      const scores = manager.getHighScores();
+      const threshold = manager.getHighScoreThresholds(3).at(-1);
+
+      setValue(leaderValue, scores[0] ? `${scores[0].name} ${scores[0].score}` : "none");
+      setValue(thresholdValue, threshold ? String(threshold.score) : "none");
+
+      if (context) {
+        drawHighScoreBoard(context, canvas, scores, validationLabel);
+      }
+    };
+
+    const getRules = () => ({
+      baseScoreBudget: args.baseScoreBudget ?? 1000,
+      maxScore: args.maxAcceptedScore ?? 50000,
+      scoreBudget: [
+        { points: 2400, stat: "Waves" },
+        { points: 80, stat: "Accuracy" },
+      ],
+    });
+
+    const saveScore = (name: string, score: number, stats: string[]): void => {
+      const entry = manager.saveHighScore(name, score, stats, demoRunReceipt);
+      const reasons = getHighScorePlausibilityReasons(entry, getRules());
+
+      args.onHighScoreSave?.(entry);
+      setValue(plausibilityValue, reasons.join(", ") || "plausible");
+      refresh(`saved ${entry.name}`);
+    };
+
+    const validateScore = (tampered: boolean): void => {
+      const submittedAt = 1700000005000;
+      const entry: HighScoreEntry = {
+        createdAt: submittedAt,
+        id: "submitted-story-score",
+        name: "ACE",
+        score: args.highScoreValue ?? 12400,
+        stats: ["Waves: 5", "Accuracy: 80"],
+      };
+      const integrity = createHighScoreIntegrity(
+        { ...entry, submittedAt },
+        demoRunReceipt,
+        { multiplier: 151 }
+      );
+      const score = tampered ? { ...entry, score: 999999 } : entry;
+      const result = validateHighScoreSubmission(
+        {
+          entry: score,
+          gameVersion: "storybook",
+          integrity,
+          run: demoRunReceipt,
+          submittedAt,
+        },
+        {
+          isRunReceiptTrusted: (run) => run.runId === demoRunReceipt.runId,
+          rules: getRules(),
+        }
+      );
+      const label =
+        result.accepted === true
+          ? `accepted ${result.score.score}`
+          : `${result.status} ${result.error}`;
+
+      if (tampered) {
+        args.onHighScoreTamper?.(result.accepted, label);
+      } else {
+        args.onHighScoreValidate?.(result.accepted, label);
+      }
+      setValue(validationValue, label);
+      setValue(
+        plausibilityValue,
+        getHighScorePlausibilityReasons(score, getRules()).join(", ") ||
+          "plausible"
+      );
+      refresh(label);
+    };
+
+    const controls = document.createElement("div");
+    controls.className = "ae-controls";
+    controls.append(
+      createButton("Save 4,200", () => {
+        saveScore("Rae!", args.lowScoreValue ?? 4200, ["Waves: 1", "Accuracy: 40"]);
+      }),
+      createButton("Save 12,400", () => {
+        saveScore("Ace", args.highScoreValue ?? 12400, ["Waves: 5", "Accuracy: 80"]);
+      }),
+      createButton("Validate", () => validateScore(false)),
+      createButton("Tamper", () => validateScore(true))
+    );
+    metrics.append(controls);
+    refresh();
 
     return shell;
   },

@@ -106,7 +106,9 @@ Use it for:
 
 - Achievement definitions, unlock state, progress counters, and status lists.
 
-The module has no browser dependency and is exported from the package root.
+The module has no browser dependency and is exported from the package root. The
+`Engine/Systems/New Helpers/Achievements` Storybook story shows progress
+counters, direct unlocks, status lists, and immutable state updates.
 
 ## 🏅 High Scores
 
@@ -124,6 +126,9 @@ Use it for:
 
 Backends can import `arcade-engine/high-scores` for validation helpers and pair
 them with their token signing, score storage, receipt expiry, and rate limits.
+The `Engine/Systems/New Helpers/High Scores` Storybook story shows local
+leaderboards, default-score merging, thresholds, integrity validation, and
+plausibility feedback.
 
 ## 🎞️ Sprite Animation
 
