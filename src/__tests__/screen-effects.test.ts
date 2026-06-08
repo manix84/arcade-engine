@@ -9,12 +9,8 @@ import {
 } from "../index.js";
 import { createCanvasContextMock } from "../test/setup.js";
 
-const createContext = (): CanvasRenderingContext2D => {
-  const context = createCanvasContextMock() as unknown as CanvasRenderingContext2D;
-
-  context.ellipse = vi.fn(() => undefined) as unknown as CanvasRenderingContext2D["ellipse"];
-  return context;
-};
+const createContext = (): CanvasRenderingContext2D =>
+  createCanvasContextMock() as unknown as CanvasRenderingContext2D;
 
 const viewport = { height: 360, width: 640 };
 
@@ -26,20 +22,19 @@ describe("screen effect manager", () => {
 
     manager.enable(screenDropletsEffectId, {
       fadeMs: 0,
-      intensity: 0.75,
+      intensity: 1,
       settings: {
         random: () => 0.5,
-        spawnRate: 12,
+        spawnRate: 50,
       },
     });
-    manager.update(0.1, viewport);
+    manager.update(0.03, viewport);
 
     const context = createContext();
     manager.render(context, viewport);
 
-    expect(context.ellipse).toHaveBeenCalled();
-    expect(context.stroke).toHaveBeenCalled();
-    expect(context.fill).toHaveBeenCalled();
+    expect(context.fillRect).toHaveBeenCalled();
+    expect(context.imageSmoothingEnabled).toBe(false);
   });
 
   it("updates and renders active effects in priority order", () => {
@@ -160,8 +155,8 @@ describe("screen droplets effect", () => {
     effect.render(context, viewport, { intensity: 1 });
 
     expect(random).toHaveBeenCalled();
-    expect(context.ellipse).toHaveBeenCalled();
-    expect(context.lineTo).toHaveBeenCalled();
+    expect(context.fillRect).toHaveBeenCalled();
+    expect(context.lineTo).not.toHaveBeenCalled();
 
     effect.update({
       deltaTime: 10,
@@ -171,5 +166,44 @@ describe("screen droplets effect", () => {
     effect.render(context, viewport, { intensity: 1 });
 
     expect(defaultScreenDropletsConfig.fadeSpeed).toBe(0.95);
+    expect(defaultScreenDropletsConfig.focusMode).toBe("arcade");
+    expect(defaultScreenDropletsConfig.mergeEnabled).toBe(true);
+    expect(defaultScreenDropletsConfig.spawnRate).toBe(2);
+  });
+
+  it("waits briefly on impact before sliding and drawing a trail", () => {
+    const definition = createScreenDropletsEffectDefinition({
+      maxDroplets: 4,
+      maxSize: 8,
+      minSize: 8,
+      random: () => 0.5,
+      spawnRate: 50,
+      trailLength: 12,
+    });
+    const effect = definition.create();
+    const context = createContext();
+    const calls = (
+      context as unknown as {
+        calls: Array<{ method: string }>;
+      }
+    ).calls;
+
+    effect.update({
+      deltaTime: 0.02,
+      intensity: 1,
+      viewport,
+    });
+    effect.render(context, viewport, { intensity: 1 });
+    const impactFillRects = calls.filter((call) => call.method === "fillRect").length;
+
+    effect.update({
+      deltaTime: 0.35,
+      intensity: 1,
+      viewport,
+    });
+    effect.render(context, viewport, { intensity: 1 });
+    const slidingFillRects = calls.filter((call) => call.method === "fillRect").length;
+
+    expect(slidingFillRects).toBeGreaterThan(impactFillRects * 2);
   });
 });

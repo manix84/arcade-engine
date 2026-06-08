@@ -1118,7 +1118,7 @@ export const DisplayFilters: Story = {
 export const ScreenDroplets: Story = {
   args: {
     onScreenEffectChange: fn(),
-    screenEffectIntensity: 0.45,
+    screenEffectIntensity: 0.04,
   },
   argTypes: {
     screenEffectIntensity: {
@@ -1139,7 +1139,7 @@ export const ScreenDroplets: Story = {
     const dropletValue = createValue("effect");
     const usesValue = createValue("uses", "ScreenEffectManager");
     const manager = new ScreenEffectManager();
-    let intensity = args.screenEffectIntensity ?? 0.72;
+    let intensity = args.screenEffectIntensity ?? 0.04;
     let animationFrame = 0;
     let lastTime = performance.now();
 
@@ -1147,11 +1147,15 @@ export const ScreenDroplets: Story = {
       fadeMs: 0,
       intensity,
       settings: {
-        maxDroplets: 42,
+        focusMode: "arcade",
+        gravity: 96,
+        maxDroplets: 58,
         maxSize: 8,
+        mergeEnabled: true,
         minSize: 3,
         slideSpeed: 145,
-        spawnRate: 13,
+        spawnRate: 50,
+        trailFadeSpeed: 3.4,
         trailLength: 12,
       },
     });
@@ -1166,7 +1170,7 @@ export const ScreenDroplets: Story = {
     const controls = document.createElement("div");
     controls.className = "ae-controls";
     controls.append(
-      createButton("Light Rain", () => setIntensity(0.35)),
+      createButton("Light Rain", () => setIntensity(0.04)),
       createButton("Heavy Rain", () => setIntensity(1)),
       createButton("Clear Lens", () => setIntensity(0))
     );
