@@ -175,6 +175,20 @@ ticker.start();
 That starter covers the usual first pieces: canvas setup, a fixed simulation
 loop, keyboard/mouse/touch/gamepad input, simple movement, and drawing.
 
+## 🖼️ Demo Screenshots
+
+| Arcade loop | GameArena |
+| --- | --- |
+| ![Arcade Engine animated arcade loop Storybook demo](docs/screenshots/animated-arcade-loop.png) | ![GameArena canvas Storybook demo](docs/screenshots/complete-arena.png) |
+
+| 3D racer | Isometric room |
+| --- | --- |
+| ![Neon vector racer Storybook demo](docs/screenshots/neon-vector-racer.png) | ![Isometric dungeon room Storybook demo](docs/screenshots/isometric-dungeon-room.png) |
+
+| Cube clusters | Display filters |
+| --- | --- |
+| ![Destructible cube pickup Storybook demo](docs/screenshots/destructible-pickup.png) | ![Display filter Storybook demo](docs/screenshots/display-filters.png) |
+
 ## 🧱 Core Modules
 
 ### 🎬 `GameArena`
