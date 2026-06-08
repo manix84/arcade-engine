@@ -5,6 +5,7 @@ import {
   getHighScorePlausibilityReasons,
   getHighScoreStatValues,
   isHighScoreRunReceipt,
+  normalizeHighScoreName,
   validateHighScoreIntegrity,
   validateHighScoreSubmission,
 } from "../index.js";
@@ -58,6 +59,12 @@ describe("high score helpers", () => {
       "CPU",
     ]);
     expect(manager.getHighScoreThresholds(1)[0]?.name).toBe("Ace Pilot");
+  });
+
+  it("normalizes high-score names after filtering unsupported characters", () => {
+    expect(normalizeHighScoreName(" Saved !!! ")).toBe("Saved");
+    expect(normalizeHighScoreName(" Pilot    One ")).toBe("Pilot One");
+    expect(normalizeHighScoreName(" !!! ", "ACE")).toBe("ACE");
   });
 
   it("sorts saved and default high scores together before slicing", () => {
@@ -130,7 +137,7 @@ describe("high score helpers", () => {
         createdAt: 2000.8,
         id: "saved-score",
         integrity: undefined,
-        name: "Saved ",
+        name: "Saved",
         receivedAt: undefined,
         run: undefined,
         score: 1200,

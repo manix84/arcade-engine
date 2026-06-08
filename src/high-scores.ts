@@ -140,7 +140,10 @@ export const normalizeHighScoreName = (name: string, fallback = "PLAYER"): strin
     .trim()
     .replace(/\s+/g, " ")
     .replace(/[^a-z0-9 .'_-]/gi, "")
-    .slice(0, 16);
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 16)
+    .trim();
 
   return normalized || fallback;
 };
