@@ -1,6 +1,9 @@
 import type { Meta } from "@storybook/html-vite";
 
-import { SideScroller2_5D, SideScroller2D } from "./arcade-camera-demos.js";
+import {
+  SideScroller2_5D as SideScroller2_5DStory,
+  SideScroller2D as SideScroller2DStory,
+} from "./arcade-camera-demos.js";
 
 const meta = {
   title: "Engine/Demos/Arcade Camera Styles/Side Scrollers",
@@ -8,4 +11,5 @@ const meta = {
 
 export default meta;
 
-export { SideScroller2_5D, SideScroller2D };
+export const SideScroller2_5D = SideScroller2_5DStory;
+export const SideScroller2D = SideScroller2DStory;

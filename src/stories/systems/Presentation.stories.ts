@@ -1,6 +1,9 @@
 import type { Meta } from "@storybook/html-vite";
 
-import { DisplayFilters, SpriteAnimationAndCamera } from "./systems-demos.js";
+import {
+  DisplayFilters as DisplayFiltersStory,
+  SpriteAnimationAndCamera as SpriteAnimationAndCameraStory,
+} from "./systems-demos.js";
 
 const meta = {
   title: "Engine/Systems/Presentation",
@@ -8,4 +11,5 @@ const meta = {
 
 export default meta;
 
-export { DisplayFilters, SpriteAnimationAndCamera };
+export const DisplayFilters = DisplayFiltersStory;
+export const SpriteAnimationAndCamera = SpriteAnimationAndCameraStory;

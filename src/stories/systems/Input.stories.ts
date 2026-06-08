@@ -1,6 +1,6 @@
 import type { Meta } from "@storybook/html-vite";
 
-import { InputActions, LocalMultiplayer } from "./systems-demos.js";
+import { InputActions as InputActionsStory, LocalMultiplayer as LocalMultiplayerStory } from "./systems-demos.js";
 
 const meta = {
   title: "Engine/Systems/Input",
@@ -8,4 +8,5 @@ const meta = {
 
 export default meta;
 
-export { InputActions, LocalMultiplayer };
+export const InputActions = InputActionsStory;
+export const LocalMultiplayer = LocalMultiplayerStory;

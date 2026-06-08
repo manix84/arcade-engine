@@ -1,6 +1,6 @@
 import type { Meta } from "@storybook/html-vite";
 
-import { HighScores, UserOptions } from "./systems-demos.js";
+import { HighScores as HighScoresStory, UserOptions as UserOptionsStory } from "./systems-demos.js";
 
 const meta = {
   title: "Engine/Systems/Player Data",
@@ -8,4 +8,5 @@ const meta = {
 
 export default meta;
 
-export { HighScores, UserOptions };
+export const HighScores = HighScoresStory;
+export const UserOptions = UserOptionsStory;

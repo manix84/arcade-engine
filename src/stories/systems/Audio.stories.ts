@@ -1,6 +1,6 @@
 import type { Meta } from "@storybook/html-vite";
 
-import { SpatialAudioMath } from "./systems-demos.js";
+import { SpatialAudioMath as SpatialAudioMathStory } from "./systems-demos.js";
 
 const meta = {
   title: "Engine/Systems/Audio",
@@ -8,4 +8,4 @@ const meta = {
 
 export default meta;
 
-export { SpatialAudioMath };
+export const SpatialAudioMath = SpatialAudioMathStory;

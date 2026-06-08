@@ -1,6 +1,10 @@
 import type { Meta } from "@storybook/html-vite";
 
-import { HyperspaceGate, NeonVectorRacer, StarfighterRun } from "./arcade-camera-demos.js";
+import {
+  HyperspaceGate as HyperspaceGateStory,
+  NeonVectorRacer as NeonVectorRacerStory,
+  StarfighterRun as StarfighterRunStory,
+} from "./arcade-camera-demos.js";
 
 const meta = {
   title: "Engine/Demos/Arcade Camera Styles/Pseudo 3D",
@@ -8,4 +12,6 @@ const meta = {
 
 export default meta;
 
-export { HyperspaceGate, NeonVectorRacer, StarfighterRun };
+export const HyperspaceGate = HyperspaceGateStory;
+export const NeonVectorRacer = NeonVectorRacerStory;
+export const StarfighterRun = StarfighterRunStory;
