@@ -128,6 +128,23 @@ Use it for:
 The module returns settings data only; games decide how to apply the visual
 effect in CSS, canvas, WebGL, or another renderer.
 
+## 🌧️ Screen Effects
+
+[screen-effects.ts](screen-effects.ts) contains a generic camera-surface effect
+manager and the built-in `screen-droplets` effect.
+
+Use it for:
+
+- Registering screen overlay effects by id.
+- Enabling, disabling, clearing, updating, and rendering active effects.
+- Multiple simultaneous effects with priority ordering.
+- Intensity fade in/out.
+- Pooled rain-on-camera droplets rendered with Canvas 2D.
+
+Games call `update(deltaTime, viewport)` and `render(context, viewport)` from
+their own render loop. Custom effects can register the same `update`, `render`,
+and optional `destroy` lifecycle used by the built-in droplet effect.
+
 ## ⚙️ User Options
 
 [user-options.ts](user-options.ts) contains a generic local user-options store.

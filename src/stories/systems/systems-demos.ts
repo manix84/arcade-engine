@@ -18,6 +18,8 @@ import {
   createLocalMultiplayerController,
   createMultiplayerSession,
   createPlayerInputIntent,
+  ScreenEffectManager,
+  screenDropletsEffectId,
   drawCanvasLine,
   drawCanvasPolygon,
   fillCanvasWithTrail,
@@ -72,6 +74,8 @@ type SystemsStoryArgs = {
   onHighScoreSave?: (entry: HighScoreEntry) => void;
   onHighScoreTamper?: (accepted: boolean, label: string) => void;
   onHighScoreValidate?: (accepted: boolean, label: string) => void;
+  onScreenEffectChange?: (intensity: number) => void;
+  screenEffectIntensity?: number;
   onUserOptionsChange?: (options: Record<string, unknown>) => void;
   precisionGoal?: number;
   waveGoal?: number;
@@ -1106,6 +1110,118 @@ export const DisplayFilters: Story = {
       context.font = "20px sans-serif";
       context.fillText(displayFilterModeLabels[mode], 42, 46);
     }
+
+    return shell;
+  },
+};
+
+export const ScreenDroplets: Story = {
+  args: {
+    onScreenEffectChange: fn(),
+    screenEffectIntensity: 0.45,
+  },
+  argTypes: {
+    screenEffectIntensity: {
+      control: { max: 1, min: 0, step: 0.05, type: "range" },
+      name: "Intensity",
+    },
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    await userEvent.click(canvas.getByRole("button", { name: "Heavy Rain" }));
+    await waitFor(() => expect(args.onScreenEffectChange).toHaveBeenCalledWith(1));
+  },
+  render: (args) => {
+    const { canvas, metrics, shell } = createSystemsLayout("Screen droplets");
+    const context = canvas.getContext("2d");
+    const intensityValue = createValue("intensity");
+    const dropletValue = createValue("effect");
+    const usesValue = createValue("uses", "ScreenEffectManager");
+    const manager = new ScreenEffectManager();
+    let intensity = args.screenEffectIntensity ?? 0.72;
+    let animationFrame = 0;
+    let lastTime = performance.now();
+
+    manager.enable(screenDropletsEffectId, {
+      fadeMs: 0,
+      intensity,
+      settings: {
+        maxDroplets: 42,
+        maxSize: 8,
+        minSize: 3,
+        slideSpeed: 145,
+        spawnRate: 13,
+        trailLength: 12,
+      },
+    });
+
+    const setIntensity = (nextIntensity: number): void => {
+      intensity = Math.min(1, Math.max(0, nextIntensity));
+      manager.setIntensity(screenDropletsEffectId, intensity, 260);
+      setValue(intensityValue, intensity.toFixed(2));
+      args.onScreenEffectChange?.(intensity);
+    };
+
+    const controls = document.createElement("div");
+    controls.className = "ae-controls";
+    controls.append(
+      createButton("Light Rain", () => setIntensity(0.35)),
+      createButton("Heavy Rain", () => setIntensity(1)),
+      createButton("Clear Lens", () => setIntensity(0))
+    );
+    metrics.append(intensityValue, dropletValue, usesValue, controls);
+
+    const render = (): void => {
+      if (!context) {
+        return;
+      }
+
+      const now = performance.now();
+      const delta = Math.min(0.05, (now - lastTime) / 1000);
+      const shipX = canvas.width / 2 + Math.sin(now / 650) * 180;
+
+      lastTime = now;
+      fillCanvasWithTrail(context, canvas, "#07101a", 0.2);
+
+      for (let y = 52; y < canvas.height; y += 56) {
+        drawCanvasLine(
+          context,
+          { x: 0, y },
+          { x: canvas.width, y: y + Math.sin(now / 700 + y) * 10 },
+          "rgba(79, 209, 197, 0.12)",
+          2
+        );
+      }
+
+      drawCanvasLine(
+        context,
+        { x: 70, y: 285 },
+        { x: canvas.width - 70, y: 285 },
+        "rgba(203, 213, 225, 0.28)",
+        3
+      );
+      drawTopDownShip(context, shipX, 220, {
+        accent: "#f6e05e",
+        heading: Math.sin(now / 480) * 18,
+        label: "visor",
+        scale: 1.08,
+        thrust: 0.72,
+      });
+
+      manager.update(delta, { height: canvas.height, width: canvas.width });
+      manager.render(context, { height: canvas.height, width: canvas.width });
+
+      setValue(intensityValue, intensity.toFixed(2));
+      setValue(dropletValue, screenDropletsEffectId);
+      animationFrame = window.requestAnimationFrame(render);
+    };
+
+    animationFrame = window.requestAnimationFrame(render);
+    onRemove(shell, () => {
+      window.cancelAnimationFrame(animationFrame);
+      manager.clear();
+    });
 
     return shell;
   },

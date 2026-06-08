@@ -127,6 +127,12 @@ export {
   normalizeDisplayFilterIntensity,
   normalizeDisplayFilterSettings,
 } from "./display-filters.js";
+export {
+  createScreenDropletsEffectDefinition,
+  defaultScreenDropletsConfig,
+  screenDropletsEffectId,
+  ScreenEffectManager,
+} from "./screen-effects.js";
 export { drawDebugVectors } from "./debug-vectors.js";
 export { default as GameArena } from "./arena.js";
 export {
@@ -264,6 +270,18 @@ export type {
   DisplayFilterSettingKey,
   DisplayFilterSettings,
 } from "./display-filters.js";
+export type {
+  ScreenDroplet,
+  ScreenDropletsConfig,
+  ScreenEffectDefinition,
+  ScreenEffectEnableOptions,
+  ScreenEffectInstance,
+  ScreenEffectManagerOptions,
+  ScreenEffectRegistration,
+  ScreenEffectRenderState,
+  ScreenEffectUpdateState,
+  ScreenEffectViewport,
+} from "./screen-effects.js";
 export type { GridCell, GridDefinition, GridPosition } from "./grid.js";
 export type {
   AssetProgress,

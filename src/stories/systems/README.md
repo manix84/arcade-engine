@@ -84,6 +84,22 @@ The story demonstrates:
 Use this pattern when a game needs local achievements, progress counters, or a
 status screen without coupling unlock logic to rendering code.
 
+## 🌧️ Screen Droplets
+
+`ScreenDroplets` shows the reusable screen-effect manager with the built-in
+`screen-droplets` camera-surface effect.
+
+The story demonstrates:
+
+- `ScreenEffectManager`.
+- Built-in effect registration.
+- Intensity controls.
+- Canvas 2D droplet, highlight, and trail rendering.
+- Storybook actions and play-function checks for effect controls.
+
+Use this pattern when a game needs temporary overlay effects such as rain on a
+camera lens, frost, embers, mud, or other visor-style feedback.
+
 ## 🏆 Achievement Notifications
 
 `AchievementNotifications` shows a canvas unlock-popup queue.
