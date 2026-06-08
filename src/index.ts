@@ -36,6 +36,15 @@ export {
   wrapDepth,
 } from "./arcade-3d.js";
 export {
+  appExitBlockedEventName,
+  canLockOrientation,
+  canUseFullscreen,
+  canUseScreenWakeLock,
+  enterImmersiveMode,
+  exitInstalledApp,
+  ScreenWakeLockController,
+} from "./browser-capabilities.js";
+export {
   getAnimatedSpriteFrame,
   getSpriteFrameIndex,
   getSpriteSheetFrame,
@@ -198,6 +207,17 @@ export type {
   LoopedDepthOptions,
   PerspectiveProjectionOptions,
 } from "./arcade-3d.js";
+export type {
+  ImmersiveModeOptions,
+  ImmersiveModeResult,
+  InstalledAppExitOptions,
+  LockableScreen,
+  LockableScreenOrientation,
+  ScreenWakeLockControllerOptions,
+  ScreenWakeLockNavigator,
+  ScreenWakeLockSentinel,
+  ScreenOrientationLock,
+} from "./browser-capabilities.js";
 export type {
   ArcadeLookInput,
   FirstPersonCamera,

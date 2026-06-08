@@ -98,6 +98,21 @@ Use it when a game needs player one/player two controls, assigned gamepad
 indexes, or serializable `PlayerInputIntent` objects that can be sent through a
 game-owned backend, relay, WebSocket, or WebRTC connection.
 
+## 📱 Browser Capabilities
+
+[browser-capabilities.ts](browser-capabilities.ts) wraps optional browser/PWA
+APIs behind small best-effort helpers.
+
+Use it for:
+
+- Screen Wake Lock support detection and lifecycle management.
+- Fullscreen and orientation-lock requests from trusted user gestures.
+- Installed-app close attempts with a blocked-exit fallback event.
+
+These helpers are exported from the package root. Games still decide when to
+request these capabilities and what fallback UI to show when the browser denies
+them.
+
 ## ⚙️ User Options
 
 [user-options.ts](user-options.ts) contains a generic local user-options store.

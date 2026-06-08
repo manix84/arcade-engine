@@ -49,6 +49,8 @@
   gamepad inputs to game actions.
 - Added multiplayer helpers for local player-scoped input, assigned gamepads,
   co-op/PvP session metadata, and serializable remote player input intents.
+- Added browser capability helpers for screen wake locks, immersive fullscreen
+  orientation requests, and installed-app exit fallback events.
 - Added generic user option store helpers for defaults, normalization,
   localStorage persistence, reset, subscribers, and change events.
 - Added generic achievement helpers for unlock state, progress counters, and
@@ -101,8 +103,8 @@
   and storage.
 - Added tests covering arena behavior, ticker timing, sound behavior,
   viewport math, debug vectors, grid helpers, box collision, 2.5D projection,
-  cube clusters, user options, achievements, high scores, canvas rendering, and
-  helper utilities.
+  cube clusters, browser capabilities, user options, achievements, high scores,
+  canvas rendering, and helper utilities.
 
 ## 🧹 Legacy Cleanup
 

@@ -117,6 +117,34 @@ Remote multiplayer is supported as data contracts rather than a bundled
 network stack. Games can send `PlayerInputIntent` objects through WebSocket,
 WebRTC, a hosted relay, or their own backend.
 
+## 📱 Browser Capabilities
+
+| Export | Use It For |
+| --- | --- |
+| `canUseScreenWakeLock` | Detect whether the browser exposes the Screen Wake Lock API. |
+| `ScreenWakeLockController` | Acquire, release, and reacquire best-effort screen wake locks around gameplay state. |
+| `canUseFullscreen` | Detect fullscreen request support on an element. |
+| `canLockOrientation` | Detect Screen Orientation lock support. |
+| `enterImmersiveMode` | Request fullscreen and an optional orientation lock from a trusted user gesture. |
+| `exitInstalledApp` | Attempt to close an installed app window and dispatch a fallback event if blocked. |
+| `appExitBlockedEventName` | Default event name used by `exitInstalledApp`. |
+
+```ts
+const wakeLock = new ScreenWakeLockController();
+
+wakeLock.setActive(true);
+
+await enterImmersiveMode({ orientation: "landscape" });
+
+window.addEventListener(appExitBlockedEventName, () => {
+  showExitFallback();
+});
+exitInstalledApp();
+```
+
+These helpers treat browser capability calls as optional. Denied or unsupported
+requests should not interrupt gameplay.
+
 ## ⚙️ User Options
 
 | Export | Use It For |

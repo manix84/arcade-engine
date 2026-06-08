@@ -34,6 +34,8 @@ helper systems could support other arcade-style browser games too.
 - Local multiplayer input helpers for player one/player two keyboard,
   mouse/touch, and assigned gamepad controls, plus backend-agnostic remote
   player intent contracts.
+- Browser capability helpers for screen wake locks, fullscreen/orientation
+  immersive mode, and installed-app exit fallbacks.
 - User option stores with schema defaults, caller-provided normalization,
   localStorage persistence, reset behavior, subscribers, and change events.
 - Achievement state helpers for local unlocks, progress counters, and status
@@ -81,6 +83,7 @@ import {
   createHighScoreManager,
   createUserOptionsStore,
   detectBoxCollision,
+  enterImmersiveMode,
   drawDebugVectors,
   fillCanvasWithTrail,
   getFirstPersonCamera,
@@ -227,6 +230,14 @@ best-effort writes, reset, subscriptions, and optional DOM change events.
 
 See the `Engine/Systems/New Helpers/User Options` Storybook story for a live
 options-store example.
+
+### Browser Capabilities
+
+Browser capability helpers wrap optional PWA APIs behind best-effort helpers.
+Use `ScreenWakeLockController` for screen wake locks,
+`enterImmersiveMode()` for trusted-click fullscreen/orientation requests, and
+`exitInstalledApp()` when an installed app should attempt to close and report a
+blocked exit.
 
 ### Canvas Rendering
 
@@ -403,6 +414,7 @@ Active package modules:
 - `src/Sound.ts`
 - `src/input.ts`
 - `src/multiplayer.ts`
+- `src/browser-capabilities.ts`
 - `src/user-options.ts`
 - `src/achievements.ts`
 - `src/high-scores.ts`
