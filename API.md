@@ -117,6 +117,38 @@ Remote multiplayer is supported as data contracts rather than a bundled
 network stack. Games can send `PlayerInputIntent` objects through WebSocket,
 WebRTC, a hosted relay, or their own backend.
 
+## ⚙️ User Options
+
+| Export | Use It For |
+| --- | --- |
+| `createUserOptionsStore` | Create a typed local options store with defaults, normalization, persistence, reset, subscribers, and optional DOM change events. |
+| `normalizeUserOptions` | Shallow-merge unknown stored values over defaults before app-specific validation. |
+| `userOptionsChangedEventName` | Default DOM event name dispatched after option changes. |
+
+```ts
+const options = createUserOptionsStore({
+  defaults: {
+    fullscreen: false,
+    inputMode: "keyboard",
+    volume: 6,
+  },
+  normalize: (stored, defaults) => ({
+    ...normalizeUserOptions(stored, defaults),
+    volume: Math.max(0, Math.min(10, Number((stored as { volume?: unknown }).volume ?? defaults.volume))),
+  }),
+  storageKey: "myGame.options",
+  version: 1,
+});
+
+options.setOption("volume", 8);
+options.subscribe(({ changedKeys, options }) => {
+  console.info("Options changed", changedKeys, options);
+});
+```
+
+Games own their concrete schema and validation rules. The store owns the
+browser-safe mechanics of reading, writing, resetting, and notifying.
+
 ## 🏆 Achievements
 
 | Export | Use It For |

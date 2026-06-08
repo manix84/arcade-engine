@@ -15,6 +15,8 @@ They verify package behavior without requiring a real browser window.
   clamping, snapping, box movement, containment, and collision.
 - [arcade-3d.test.ts](arcade-3d.test.ts) checks perspective, isometric, looped
   depth, and canvas rendering helper behavior.
+- [user-options.test.ts](user-options.test.ts) checks option defaults,
+  normalization, persistence, reset behavior, subscribers, and change events.
 - [achievements.test.ts](achievements.test.ts) checks achievement state
   normalization, progress clamping, unlock timestamps, and unknown-id failures.
 - [high-scores.test.ts](high-scores.test.ts) checks local high-score storage,
@@ -48,6 +50,7 @@ Add tests when changing:
 - Canvas rendering helpers.
 - Timing behavior.
 - Input or multiplayer helpers.
+- User option persistence helpers.
 - Achievement helpers.
 - High-score storage, sync, integrity, or validation helpers.
 - Sound lifecycle.

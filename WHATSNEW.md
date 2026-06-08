@@ -49,6 +49,8 @@
   gamepad inputs to game actions.
 - Added multiplayer helpers for local player-scoped input, assigned gamepads,
   co-op/PvP session metadata, and serializable remote player input intents.
+- Added generic user option store helpers for defaults, normalization,
+  localStorage persistence, reset, subscribers, and change events.
 - Added generic achievement helpers for unlock state, progress counters, and
   status lists.
 - Added high-score helpers for local leaderboards, optional remote sync,
@@ -85,6 +87,7 @@
 - Added systems demos for input actions, local multiplayer, sprite animation,
   follow cameras, and spatial-audio math.
 - Added systems demos for gravity and 2D/3D ragdoll helpers.
+- Added a systems demo for persisted user option stores.
 - Added systems demos for achievement progress/unlocks and high-score
   leaderboard validation helpers, including Storybook actions and interaction
   checks for their controls.
@@ -98,8 +101,8 @@
   and storage.
 - Added tests covering arena behavior, ticker timing, sound behavior,
   viewport math, debug vectors, grid helpers, box collision, 2.5D projection,
-  cube clusters, achievements, high scores, canvas rendering, and helper
-  utilities.
+  cube clusters, user options, achievements, high scores, canvas rendering, and
+  helper utilities.
 
 ## 🧹 Legacy Cleanup
 

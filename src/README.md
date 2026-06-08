@@ -98,6 +98,22 @@ Use it when a game needs player one/player two controls, assigned gamepad
 indexes, or serializable `PlayerInputIntent` objects that can be sent through a
 game-owned backend, relay, WebSocket, or WebRTC connection.
 
+## ⚙️ User Options
+
+[user-options.ts](user-options.ts) contains a generic local user-options store.
+
+Use it for:
+
+- Schema defaults and caller-provided normalization.
+- Best-effort localStorage persistence.
+- Reset behavior that removes stored preferences.
+- Store subscribers and optional DOM change events.
+
+Games keep their concrete option schema, migrations, and validation rules. The
+module is exported from the package root, and the
+`Engine/Systems/New Helpers/User Options` Storybook story shows a small
+settings store.
+
 ## 🏆 Achievements
 
 [achievements.ts](achievements.ts) contains generic achievement state helpers.

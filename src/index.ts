@@ -21,6 +21,11 @@ export {
   validateHighScoreSubmission,
 } from "./high-scores.js";
 export {
+  createUserOptionsStore,
+  normalizeUserOptions,
+  userOptionsChangedEventName,
+} from "./user-options.js";
+export {
   getLoopedDepth,
   getDepthProgress,
   getIsometricTileCorners,
@@ -145,6 +150,13 @@ export type {
   RejectedHighScoreSubmission,
   StoredHighScoreEntry,
 } from "./high-scores.js";
+export type {
+  UserOptionsChange,
+  UserOptionsChangeListener,
+  UserOptionsStorage,
+  UserOptionsStore,
+  UserOptionsStoreOptions,
+} from "./user-options.js";
 export type {
   CubeBlock,
   CubeCluster,

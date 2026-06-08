@@ -7,6 +7,7 @@ import {
   createAchievementState,
   createHighScoreIntegrity,
   createHighScoreManager,
+  createUserOptionsStore,
   createRagdoll2D,
   createRagdoll3D,
   createLocalMultiplayerController,
@@ -31,6 +32,7 @@ import {
   type HighScoreEntry,
   type HighScoreRunReceipt,
   type HighScoreStorage,
+  type UserOptionsStorage,
   type Ragdoll2D as PhysicsRagdoll2D,
   type Ragdoll3D as PhysicsRagdoll3D,
   type RagdollConstraint,
@@ -67,6 +69,7 @@ type SystemsStoryArgs = {
   onHighScoreSave?: (entry: HighScoreEntry) => void;
   onHighScoreTamper?: (accepted: boolean, label: string) => void;
   onHighScoreValidate?: (accepted: boolean, label: string) => void;
+  onUserOptionsChange?: (options: Record<string, unknown>) => void;
   precisionGoal?: number;
   waveGoal?: number;
 };
@@ -802,6 +805,153 @@ export const HighScores: Story = {
     );
     metrics.append(controls);
     refresh();
+
+    return shell;
+  },
+};
+
+type DemoUserOptions = {
+  fullscreen: boolean;
+  inputMode: "keyboard" | "touch";
+  volume: number;
+};
+
+const createDemoUserOptionsStorage = (): UserOptionsStorage => {
+  const values = new Map<string, string>();
+
+  return {
+    getItem: (key) => values.get(key) ?? null,
+    removeItem: (key) => {
+      values.delete(key);
+    },
+    setItem: (key, value) => {
+      values.set(key, value);
+    },
+  };
+};
+
+export const UserOptions: Story = {
+  args: {
+    onUserOptionsChange: fn(),
+  },
+  render: (args) => {
+    const { canvas, metrics, shell } = createSystemsLayout("User option store");
+    const context = canvas.getContext("2d");
+    const optionsValue = createValue("options");
+    const sourceValue = createValue("last source", "ready");
+    const changedValue = createValue("changed keys", "none");
+    const storageValue = createValue("stored", "defaults");
+    const storage = createDemoUserOptionsStorage();
+    const store = createUserOptionsStore<DemoUserOptions>({
+      defaults: {
+        fullscreen: false,
+        inputMode: "keyboard",
+        volume: 6,
+      },
+      normalize: (stored, defaults) => {
+        const value = stored && typeof stored === "object" ? stored : {};
+        const record = value as Partial<DemoUserOptions>;
+
+        return {
+          fullscreen:
+            typeof record.fullscreen === "boolean"
+              ? record.fullscreen
+              : defaults.fullscreen,
+          inputMode: record.inputMode === "touch" ? "touch" : defaults.inputMode,
+          volume:
+            typeof record.volume === "number" && Number.isFinite(record.volume)
+              ? Math.max(0, Math.min(10, Math.round(record.volume)))
+              : defaults.volume,
+        };
+      },
+      storage,
+      storageKey: "storybook.userOptions",
+      version: 1,
+    });
+
+    metrics.append(
+      optionsValue,
+      sourceValue,
+      changedValue,
+      storageValue,
+      createValue("uses", "createUserOptionsStore")
+    );
+
+    const drawOptions = (): void => {
+      if (!context) {
+        return;
+      }
+
+      const current = store.getOptions();
+
+      context.fillStyle = "#05070a";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.fillStyle = "#cbd5e1";
+      context.font = "18px sans-serif";
+      context.fillText("Persisted user options", 38, 48);
+      [
+        ["Volume", `${current.volume}/10`, current.volume / 10],
+        ["Input", current.inputMode, current.inputMode === "touch" ? 1 : 0.35],
+        ["Fullscreen", current.fullscreen ? "on" : "off", current.fullscreen ? 1 : 0.25],
+      ].forEach(([label, value, percent], index) => {
+        const y = 92 + index * 64;
+        const progress = typeof percent === "number" ? percent : 0;
+
+        context.fillStyle = "rgba(245, 247, 251, 0.06)";
+        context.fillRect(38, y, canvas.width - 76, 36);
+        context.fillStyle = "rgba(79, 209, 197, 0.26)";
+        context.fillRect(38, y, (canvas.width - 76) * progress, 36);
+        context.fillStyle = "#f5f7fb";
+        context.font = "15px sans-serif";
+        context.fillText(String(label), 54, y + 23);
+        context.textAlign = "right";
+        context.fillText(String(value), canvas.width - 54, y + 23);
+        context.textAlign = "start";
+      });
+    };
+
+    const updateValues = (source = "ready", changedKeys: string[] = []): void => {
+      const current = store.getOptions();
+
+      setValue(optionsValue, JSON.stringify(current));
+      setValue(sourceValue, source);
+      setValue(changedValue, changedKeys.join(", ") || "none");
+      setValue(storageValue, storage.getItem("storybook.userOptions") ?? "none");
+      args.onUserOptionsChange?.(current);
+      drawOptions();
+    };
+
+    store.subscribe((change) => {
+      updateValues(String(change.source), change.changedKeys.map(String));
+    });
+
+    const controls = document.createElement("div");
+    controls.className = "ae-controls";
+    controls.append(
+      createButton("Volume Up", () => {
+        const current = store.getOptions();
+
+        store.setOption("volume", Math.min(10, current.volume + 1));
+      }),
+      createButton("Toggle Input", () => {
+        const current = store.getOptions();
+
+        store.setOption(
+          "inputMode",
+          current.inputMode === "keyboard" ? "touch" : "keyboard"
+        );
+      }),
+      createButton("Fullscreen", () => {
+        const current = store.getOptions();
+
+        store.setOption("fullscreen", !current.fullscreen);
+      }),
+      createButton("Reset", () => {
+        store.reset();
+      })
+    );
+    metrics.append(controls);
+    updateValues();
 
     return shell;
   },

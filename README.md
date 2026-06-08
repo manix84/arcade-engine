@@ -34,6 +34,8 @@ helper systems could support other arcade-style browser games too.
 - Local multiplayer input helpers for player one/player two keyboard,
   mouse/touch, and assigned gamepad controls, plus backend-agnostic remote
   player intent contracts.
+- User option stores with schema defaults, caller-provided normalization,
+  localStorage persistence, reset behavior, subscribers, and change events.
 - Achievement state helpers for local unlocks, progress counters, and status
   lists.
 - High-score helpers for local leaderboards, optional remote sync, receipt
@@ -77,6 +79,7 @@ import {
   Ticker,
   createCubeClusterFromPattern,
   createHighScoreManager,
+  createUserOptionsStore,
   detectBoxCollision,
   drawDebugVectors,
   fillCanvasWithTrail,
@@ -215,6 +218,16 @@ backend can import `validateHighScoreSubmission` from `arcade-engine/high-scores
 and pair it with the game's token signing, receipt storage, expiry, and rate
 limits.
 
+### User Options
+
+User option stores keep game-specific settings schemas outside the engine while
+providing reusable persistence mechanics. Games provide defaults, optional
+normalization, and a storage key; the store handles localStorage access,
+best-effort writes, reset, subscriptions, and optional DOM change events.
+
+See the `Engine/Systems/New Helpers/User Options` Storybook story for a live
+options-store example.
+
 ### Canvas Rendering
 
 Canvas rendering helpers are small drawing utilities used by the demos and
@@ -300,8 +313,8 @@ Storybook contains live demos for the engine surface:
 - **Core**: `GameArena`, ticker behavior, viewport scaling, and debug vectors.
 - **Helpers**: math, geometry, object cloning, event binding, collisions,
   rotation, spawning, and 2.5D variants.
-- **Systems**: input actions, local multiplayer, sprite animation, follow
-  cameras, achievements, high scores, and spatial-audio math.
+- **Systems**: input actions, local multiplayer, user options, achievements,
+  high scores, sprite animation, follow cameras, and spatial-audio math.
 - **Audio**: master controls, effects, music, spatial panning, and global
   playback behavior.
 - **3D**: cube-cluster pickups and modular level pieces.
@@ -390,6 +403,7 @@ Active package modules:
 - `src/Sound.ts`
 - `src/input.ts`
 - `src/multiplayer.ts`
+- `src/user-options.ts`
 - `src/achievements.ts`
 - `src/high-scores.ts`
 - `src/animation.ts`

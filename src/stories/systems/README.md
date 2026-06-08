@@ -36,6 +36,21 @@ does not provide a backend, matchmaking, relay, WebSocket server, or WebRTC
 signalling server. Games can send `PlayerInputIntent` objects through whichever
 transport they own.
 
+## ⚙️ User Options
+
+`UserOptions` shows a generic persisted settings store.
+
+The story demonstrates:
+
+- `createUserOptionsStore`.
+- Schema defaults and caller-provided normalization.
+- Best-effort local storage writes.
+- Reset behavior.
+- Store subscribers and change telemetry.
+
+Use this pattern when a game needs persistent player preferences while keeping
+its concrete settings schema and validation rules in game code.
+
 ## 🏆 Achievements
 
 `Achievements` shows local achievement definition, progress, unlock, and status
