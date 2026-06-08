@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 
 const requiredFiles = [
+  "README.md",
   "dist/index.js",
   "dist/index.js.map",
   "dist/index.d.ts",
@@ -18,6 +19,11 @@ const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
 
 if (packageJson.private) {
   console.error("Package cannot be published while package.json private is true.");
+  process.exit(1);
+}
+
+if (packageJson.readmeFilename !== "README.md") {
+  console.error("Package readmeFilename must point at README.md.");
   process.exit(1);
 }
 
