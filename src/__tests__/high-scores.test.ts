@@ -59,6 +59,37 @@ describe("high score helpers", () => {
     expect(manager.getHighScoreThresholds(1)[0]?.name).toBe("Ace Pilot");
   });
 
+  it("sorts saved and default high scores together before slicing", () => {
+    const manager = createHighScoreManager({
+      apiEnabled: false,
+      defaultScores: [
+        {
+          createdAt: 1,
+          id: "default-score",
+          name: "CPU",
+          score: 1000,
+          stats: [],
+        },
+      ],
+      maxScores: 1,
+      now: () => 2000,
+      storageKey,
+    });
+
+    manager.saveHighScore("Low", 10, []);
+
+    expect(manager.getHighScores()).toEqual([
+      {
+        createdAt: 1,
+        id: "default-score",
+        name: "CPU",
+        score: 1000,
+        stats: [],
+      },
+    ]);
+    expect(manager.getHighScoreThresholds(1)).toEqual(manager.getHighScores());
+  });
+
   it("creates and validates receipt-backed score integrity", () => {
     const entry = {
       id: "score-1",
@@ -283,6 +314,47 @@ describe("high score helpers", () => {
     ).toEqual({
       accepted: false,
       error: "invalid_run_receipt",
+      status: 401,
+    });
+  });
+
+  it("rejects non-finite submitted timestamps and run receipt issue times", () => {
+    const entry = {
+      id: "score-3",
+      name: "ACE",
+      score: 1000,
+      stats: [],
+      submittedAt: 2000,
+    };
+    const run = {
+      issuedAt: 1000,
+      runId: "run-3",
+      token: "receipt-token",
+    };
+    const integrity = createHighScoreIntegrity(entry, run, { multiplier: 151 });
+
+    expect(
+      validateHighScoreSubmission({
+        entry,
+        integrity,
+        run,
+        submittedAt: Number.NaN,
+      })
+    ).toEqual({
+      accepted: false,
+      error: "invalid_score",
+      status: 400,
+    });
+    expect(
+      validateHighScoreSubmission({
+        entry,
+        integrity,
+        run: { ...run, issuedAt: Number.POSITIVE_INFINITY },
+        submittedAt: 2000,
+      })
+    ).toEqual({
+      accepted: false,
+      error: "missing_run_receipt",
       status: 401,
     });
   });
