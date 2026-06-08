@@ -638,10 +638,12 @@ const highScoresPlay: Story["play"] = async ({
   );
 
   await userEvent.click(canvas.getByRole("button", { name: "Save 4,200" }));
-  await waitFor(() => expect(canvas.getByText("6200")).toBeVisible());
-  await expect(args.onHighScoreSave!).toHaveBeenCalledWith(
-    expect.objectContaining({ name: "Rae", score: 4200 })
+  await waitFor(() =>
+    expect(args.onHighScoreSave!).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Rae", score: 4200 })
+    )
   );
+  await expect(args.onHighScoreSave!).toHaveBeenCalledTimes(2);
 
   await userEvent.click(canvas.getByRole("button", { name: "Validate" }));
   await waitFor(() => expect(canvas.getByText("accepted 12400")).toBeVisible());
