@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/html-vite";
+import type { StoryObj } from "@storybook/html-vite";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import {
   addAchievementProgress,
@@ -55,12 +55,6 @@ import {
   onRemove,
   setValue,
 } from "../story-utils.js";
-
-const meta = {
-  title: "Engine/Systems/New Helpers",
-} satisfies Meta;
-
-export default meta;
 
 type DemoAchievementId = "first-sortie" | "wave-breaker" | "precision-run";
 

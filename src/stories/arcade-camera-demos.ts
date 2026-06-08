@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/html-vite";
+import type { StoryObj } from "@storybook/html-vite";
 import {
   colorWithAlpha,
   detectBoxCollision,
@@ -25,12 +25,6 @@ import {
   onRemove,
   setValue,
 } from "./story-utils.js";
-
-const meta = {
-  title: "Engine/Demos/Arcade Camera Styles",
-} satisfies Meta;
-
-export default meta;
 
 type Arcade3DStoryArgs = {
   accentColor: string;

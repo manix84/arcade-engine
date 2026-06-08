@@ -296,7 +296,7 @@ platformers.
 
 Achievement helpers keep definition metadata separate from persisted state.
 Games can unlock achievements, increment progress counters, and render status
-lists from the returned data. See the `Engine/Systems/New Helpers/Achievements`
+lists from the returned data. See the `Engine/Systems/Achievements/Achievements`
 Storybook story for an interactive unlock/progress example.
 
 ### Achievement Notifications
@@ -306,7 +306,7 @@ context. Games provide the achievement text, optional icon frame, viewport, and
 render loop; the renderer owns queue timing, slide/hold/exit animation, text
 wrapping, and placeholder icons.
 
-See the `Engine/Systems/New Helpers/Achievement Notifications` Storybook story
+See the `Engine/Systems/Achievements/Achievement Notifications` Storybook story
 for a popup queue demo.
 
 ### High Scores
@@ -314,7 +314,7 @@ for a popup queue demo.
 High-score helpers support local score tables and optional remote sync. Games
 provide their own storage key, default scores, API path, settings
 normalizers, and plausibility rules. See the
-`Engine/Systems/New Helpers/High Scores` Storybook story for local leaderboard,
+`Engine/Systems/Player Data/High Scores` Storybook story for local leaderboard,
 threshold, integrity, and plausibility examples.
 
 Remote leaderboard submissions can use run receipts and integrity payloads.
@@ -330,7 +330,7 @@ providing reusable persistence mechanics. Games provide defaults, optional
 normalization, and a storage key; the store handles localStorage access,
 best-effort writes, reset, subscriptions, and optional DOM change events.
 
-See the `Engine/Systems/New Helpers/User Options` Storybook story for a live
+See the `Engine/Systems/Player Data/User Options` Storybook story for a live
 options-store example.
 
 ### Runtime Utilities
@@ -355,7 +355,7 @@ normalization math. Use them to offer CRT/VHS/custom settings menus, clamp
 untrusted stored intensities, and layer temporary runtime boosts into effective
 filter settings.
 
-See the `Engine/Systems/New Helpers/Display Filters` Storybook story for a
+See the `Engine/Systems/Presentation/Display Filters` Storybook story for a
 visual preset demo.
 
 ### Canvas Rendering
