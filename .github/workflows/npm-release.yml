@@ -161,6 +161,6 @@ jobs:
             echo "Expected GitHub package manifest at ./github-package/package/package.json, but it was not found."
             exit 1
           fi
-          npm publish ./github-package/package --registry=https://npm.pkg.github.com --access public
+          npm publish ./github-package/package --registry=https://npm.pkg.github.com --access public --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{ github.token }}
