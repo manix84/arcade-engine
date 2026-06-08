@@ -128,9 +128,17 @@ export {
   normalizeDisplayFilterSettings,
 } from "./display-filters.js";
 export {
+  createScreenFireEffectDefinition,
+  createScreenFrostEffectDefinition,
+  createScreenLowHealthEffectDefinition,
+  createScreenPoisonEffectDefinition,
   createScreenDropletsEffectDefinition,
   defaultScreenDropletsConfig,
   screenDropletsEffectId,
+  screenFireEffectId,
+  screenFrostEffectId,
+  screenLowHealthEffectId,
+  screenPoisonEffectId,
   ScreenEffectManager,
 } from "./screen-effects.js";
 export { drawDebugVectors } from "./debug-vectors.js";
@@ -271,6 +279,9 @@ export type {
   DisplayFilterSettings,
 } from "./display-filters.js";
 export type {
+  PixelScreenEffectConfig,
+  PixelScreenEffectKind,
+  PixelScreenEffectParticle,
   ScreenDroplet,
   ScreenDropletsConfig,
   ScreenEffectDefinition,

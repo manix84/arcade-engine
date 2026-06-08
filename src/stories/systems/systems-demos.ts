@@ -20,6 +20,10 @@ import {
   createPlayerInputIntent,
   ScreenEffectManager,
   screenDropletsEffectId,
+  screenFireEffectId,
+  screenFrostEffectId,
+  screenLowHealthEffectId,
+  screenPoisonEffectId,
   drawCanvasLine,
   drawCanvasPolygon,
   fillCanvasWithTrail,
@@ -1115,10 +1119,41 @@ export const DisplayFilters: Story = {
   },
 };
 
-export const ScreenDroplets: Story = {
+type ScreenEffectStoryOptions = {
+  effectId: string;
+  heavyLabel: string;
+  heavyValue: number;
+  lightLabel: string;
+  lightValue: number;
+  settings?: Record<string, unknown>;
+  title: string;
+};
+
+const screenDropletStorySettings = {
+  focusMode: "arcade",
+  gravity: 96,
+  maxDroplets: 58,
+  maxSize: 8,
+  mergeEnabled: true,
+  minSize: 3,
+  slideSpeed: 145,
+  spawnRate: 50,
+  trailFadeSpeed: 3.4,
+  trailLength: 12,
+};
+
+const createScreenEffectStory = ({
+  effectId,
+  heavyLabel,
+  heavyValue,
+  lightLabel,
+  lightValue,
+  settings,
+  title,
+}: ScreenEffectStoryOptions): Story => ({
   args: {
     onScreenEffectChange: fn(),
-    screenEffectIntensity: 0.04,
+    screenEffectIntensity: lightValue,
   },
   argTypes: {
     screenEffectIntensity: {
@@ -1126,43 +1161,26 @@ export const ScreenDroplets: Story = {
       name: "Intensity",
     },
   },
-  play: async ({ args, canvasElement }) => {
-    const canvas = within(canvasElement);
-
-    await userEvent.click(canvas.getByRole("button", { name: "Heavy Rain" }));
-    await waitFor(() => expect(args.onScreenEffectChange).toHaveBeenCalledWith(1));
-  },
   render: (args) => {
-    const { canvas, metrics, shell } = createSystemsLayout("Screen droplets");
+    const { canvas, metrics, shell } = createSystemsLayout(title);
     const context = canvas.getContext("2d");
     const intensityValue = createValue("intensity");
-    const dropletValue = createValue("effect");
+    const effectValue = createValue("effect");
     const usesValue = createValue("uses", "ScreenEffectManager");
     const manager = new ScreenEffectManager();
-    let intensity = args.screenEffectIntensity ?? 0.04;
+    let intensity = args.screenEffectIntensity ?? lightValue;
     let animationFrame = 0;
     let lastTime = performance.now();
 
-    manager.enable(screenDropletsEffectId, {
+    manager.enable(effectId, {
       fadeMs: 0,
       intensity,
-      settings: {
-        focusMode: "arcade",
-        gravity: 96,
-        maxDroplets: 58,
-        maxSize: 8,
-        mergeEnabled: true,
-        minSize: 3,
-        slideSpeed: 145,
-        spawnRate: 50,
-        trailFadeSpeed: 3.4,
-        trailLength: 12,
-      },
+      settings,
     });
 
     const setIntensity = (nextIntensity: number): void => {
       intensity = Math.min(1, Math.max(0, nextIntensity));
-      manager.setIntensity(screenDropletsEffectId, intensity, 260);
+      manager.setIntensity(effectId, intensity, 260);
       setValue(intensityValue, intensity.toFixed(2));
       args.onScreenEffectChange?.(intensity);
     };
@@ -1170,11 +1188,11 @@ export const ScreenDroplets: Story = {
     const controls = document.createElement("div");
     controls.className = "ae-controls";
     controls.append(
-      createButton("Light Rain", () => setIntensity(0.04)),
-      createButton("Heavy Rain", () => setIntensity(1)),
+      createButton(lightLabel, () => setIntensity(lightValue)),
+      createButton(heavyLabel, () => setIntensity(heavyValue)),
       createButton("Clear Lens", () => setIntensity(0))
     );
-    metrics.append(intensityValue, dropletValue, usesValue, controls);
+    metrics.append(intensityValue, effectValue, usesValue, controls);
 
     const render = (): void => {
       if (!context) {
@@ -1217,7 +1235,7 @@ export const ScreenDroplets: Story = {
       manager.render(context, { height: canvas.height, width: canvas.width });
 
       setValue(intensityValue, intensity.toFixed(2));
-      setValue(dropletValue, screenDropletsEffectId);
+      setValue(effectValue, effectId);
       animationFrame = window.requestAnimationFrame(render);
     };
 
@@ -1229,7 +1247,61 @@ export const ScreenDroplets: Story = {
 
     return shell;
   },
+});
+
+export const ScreenDroplets: Story = {
+  ...createScreenEffectStory({
+    effectId: screenDropletsEffectId,
+    heavyLabel: "Heavy Rain",
+    heavyValue: 1,
+    lightLabel: "Light Rain",
+    lightValue: 0.04,
+    settings: screenDropletStorySettings,
+    title: "Screen droplets",
+  }),
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    await userEvent.click(canvas.getByRole("button", { name: "Heavy Rain" }));
+    await waitFor(() => expect(args.onScreenEffectChange).toHaveBeenCalledWith(1));
+  },
 };
+
+export const ScreenFire: Story = createScreenEffectStory({
+  effectId: screenFireEffectId,
+  heavyLabel: "Near Flames",
+  heavyValue: 0.9,
+  lightLabel: "Heat Flicker",
+  lightValue: 0.35,
+  title: "Screen fire",
+});
+
+export const ScreenFrost: Story = createScreenEffectStory({
+  effectId: screenFrostEffectId,
+  heavyLabel: "Frozen",
+  heavyValue: 0.86,
+  lightLabel: "Cold Air",
+  lightValue: 0.32,
+  title: "Screen frost",
+});
+
+export const ScreenPoison: Story = createScreenEffectStory({
+  effectId: screenPoisonEffectId,
+  heavyLabel: "Toxic Cloud",
+  heavyValue: 0.85,
+  lightLabel: "Gas Trace",
+  lightValue: 0.28,
+  title: "Screen poison",
+});
+
+export const ScreenLowHealth: Story = createScreenEffectStory({
+  effectId: screenLowHealthEffectId,
+  heavyLabel: "Critical",
+  heavyValue: 0.94,
+  lightLabel: "Injured",
+  lightValue: 0.34,
+  title: "Low health",
+});
 
 export const SpriteAnimationAndCamera: Story = {
   render: () => {

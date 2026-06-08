@@ -1,8 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  createScreenFireEffectDefinition,
+  createScreenFrostEffectDefinition,
+  createScreenLowHealthEffectDefinition,
+  createScreenPoisonEffectDefinition,
   createScreenDropletsEffectDefinition,
   defaultScreenDropletsConfig,
   screenDropletsEffectId,
+  screenFireEffectId,
+  screenFrostEffectId,
+  screenLowHealthEffectId,
+  screenPoisonEffectId,
   ScreenEffectManager,
   type ScreenEffectDefinition,
   type ScreenEffectInstance,
@@ -18,7 +26,13 @@ describe("screen effect manager", () => {
   it("registers built-in screen droplets by default", () => {
     const manager = new ScreenEffectManager();
 
-    expect(manager.getRegisteredEffects()).toContain(screenDropletsEffectId);
+    expect(manager.getRegisteredEffects()).toEqual([
+      screenDropletsEffectId,
+      screenFireEffectId,
+      screenFrostEffectId,
+      screenLowHealthEffectId,
+      screenPoisonEffectId,
+    ]);
 
     manager.enable(screenDropletsEffectId, {
       fadeMs: 0,
@@ -128,6 +142,36 @@ describe("screen effect manager", () => {
     expect(() => manager.enable("missing")).toThrow(
       'Screen effect "missing" has not been registered.'
     );
+  });
+});
+
+describe("pixel screen feedback effects", () => {
+  it.each([
+    ["fire", createScreenFireEffectDefinition],
+    ["frost", createScreenFrostEffectDefinition],
+    ["low-health", createScreenLowHealthEffectDefinition],
+    ["poison", createScreenPoisonEffectDefinition],
+  ] as const)("draws pixel-art %s feedback with rectangles", (_label, createDefinition) => {
+    const definition = createDefinition({
+      maxParticles: 4,
+      pixelSize: 6,
+      random: () => 0.5,
+      spawnRate: 80,
+    });
+    const effect = definition.create();
+    const context = createContext();
+
+    effect.update({
+      deltaTime: 0.1,
+      intensity: 1,
+      viewport,
+    });
+    effect.render(context, viewport, { intensity: 1 });
+
+    expect(context.fillRect).toHaveBeenCalled();
+    expect(context.arc).not.toHaveBeenCalled();
+    expect(context.lineTo).not.toHaveBeenCalled();
+    expect(context.imageSmoothingEnabled).toBe(false);
   });
 });
 

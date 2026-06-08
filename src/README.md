@@ -131,7 +131,8 @@ effect in CSS, canvas, WebGL, or another renderer.
 ## 🌧️ Screen Effects
 
 [screen-effects.ts](screen-effects.ts) contains a generic camera-surface effect
-manager and the built-in `screen-droplets` effect.
+manager and built-in pixel-art feedback effects for screen droplets, fire,
+frost, poison, and low health.
 
 Use it for:
 
@@ -140,6 +141,7 @@ Use it for:
 - Multiple simultaneous effects with priority ordering.
 - Intensity fade in/out.
 - Pooled rain-on-camera droplets rendered with Canvas 2D.
+- Pixel-snapped screen-edge fire, frost, poison, and low-health feedback.
 
 Games call `update(deltaTime, viewport)` and `render(context, viewport)` from
 their own render loop. Custom effects can register the same `update`, `render`,
