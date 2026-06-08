@@ -79,40 +79,101 @@ documentation use the display name Arcade Engine.
 
 ## 🚪 Package Entry
 
+Most browser games import the pieces they need from the package root:
+
 ```ts
 import {
-  addAchievementProgress,
-  AchievementNotificationRenderer,
   GameArena,
   Sound,
   Ticker,
-  createCubeClusterFromPattern,
-  createHighScoreManager,
-  createHighScoreServerRunReceipt,
-  createRuntimeLogger,
-  createUserOptionsStore,
-  getDisplayFilterSettingsForMode,
+  createInputController,
   detectBoxCollision,
-  enterImmersiveMode,
-  drawDebugVectors,
-  fillCanvasWithTrail,
-  getFirstPersonCamera,
-  getGridCell,
-  getLoopedScrollerPosition,
-  getPerspectiveScale,
-  getScaledViewportLimit,
-  getViewportScale,
   helpers,
-  projectIsometricPoint,
-  projectPerspectivePoint,
-  removeStorageNamespace,
-  validateHighScoreServerRunReceipt,
-  validateHighScoreSubmission,
 } from "arcade-engine";
 ```
 
-The package is ESM-only. Import from `arcade-engine`; do not import from
-individual source files in consuming projects.
+Backend score-validation code can import the smaller high-score subpath:
+
+```ts
+import {
+  createHighScoreServerRunReceipt,
+  validateHighScoreServerRunReceipt,
+  validateHighScoreSubmission,
+} from "arcade-engine/high-scores";
+```
+
+The package is ESM-only. Import from `arcade-engine` or a documented package
+subpath such as `arcade-engine/high-scores`; do not import from individual
+source files in consuming projects.
+
+## 🚀 Quick Start
+
+Create a host element with a stable size:
+
+```html
+<div id="game"></div>
+```
+
+```css
+#game {
+  width: 800px;
+  height: 600px;
+  background: #05070d;
+}
+```
+
+Then wire an arena, ticker, and input controller:
+
+```ts
+import {
+  GameArena,
+  Ticker,
+  createInputController,
+  helpers,
+} from "arcade-engine";
+
+const host = document.querySelector("#game") as HTMLElement;
+const arena = new GameArena(host, {
+  defaultTextColor: "#f8fbff",
+  fontFamily: "system-ui, sans-serif",
+});
+const input = createInputController({
+  fire: ["Space", "MouseLeft", "TouchPrimary", "Gamepad0"],
+  left: ["ArrowLeft", "KeyA", "GamepadAxisLeftXNegative"],
+  right: ["ArrowRight", "KeyD", "GamepadAxisLeftXPositive"],
+});
+const ticker = new Ticker({ fixedStepFps: 60 });
+const player = { heading: 90, posX: 0, posY: 0 };
+
+input.start();
+arena.setBackgroundColor("#05070d");
+
+ticker.addSchedule(() => {
+  input.updateGamepads();
+
+  if (input.isPressed("left")) {
+    player.heading = helpers.rotateTo(270, player.heading, 6);
+  }
+
+  if (input.isPressed("right")) {
+    player.heading = helpers.rotateTo(90, player.heading, 6);
+  }
+
+  player.posX += Math.cos((player.heading * Math.PI) / 180) * 3;
+  player.posY += Math.sin((player.heading * Math.PI) / 180) * 3;
+
+  arena.clear();
+  arena.drawCircle(player.posX, player.posY, 12, {
+    backgroundColor: input.isPressed("fire") ? "#f2b84b" : "#4fd1c5",
+  });
+  arena.renderText("READY", 0, -260, { align: "center", size: 18 });
+}, 1);
+
+ticker.start();
+```
+
+That starter covers the usual first pieces: canvas setup, a fixed simulation
+loop, keyboard/mouse/touch/gamepad input, simple movement, and drawing.
 
 ## 🧱 Core Modules
 

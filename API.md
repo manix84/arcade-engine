@@ -15,6 +15,36 @@ Import from the package root:
 import { GameArena, Ticker, helpers } from "arcade-engine";
 ```
 
+Minimal loop:
+
+Give `#game` a CSS width and height before constructing `GameArena`.
+
+```ts
+import { GameArena, Ticker, createInputController } from "arcade-engine";
+
+const arena = new GameArena(document.querySelector("#game") as HTMLElement);
+const input = createInputController({
+  fire: ["Space", "MouseLeft", "TouchPrimary", "Gamepad0"],
+  moveLeft: ["ArrowLeft", "KeyA", "GamepadAxisLeftXNegative"],
+});
+const ticker = new Ticker({ fixedStepFps: 60 });
+
+input.start();
+
+ticker.addSchedule(() => {
+  input.updateGamepads();
+  arena.clear();
+  arena.drawCircle(input.isPressed("moveLeft") ? -24 : 24, 0, 12, {
+    backgroundColor: input.isPressed("fire") ? "#f2b84b" : "#4fd1c5",
+  });
+}, 1);
+
+ticker.start();
+```
+
+Use the package root for browser game code. Use `arcade-engine/high-scores`
+from backend routes when you only need score validation and receipt helpers.
+
 ## 🎬 Core Classes
 
 | Export | What It Does | See Also |
