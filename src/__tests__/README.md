@@ -15,12 +15,14 @@ They verify package behavior without requiring a real browser window.
   clamping, snapping, box movement, containment, and collision.
 - [arcade-3d.test.ts](arcade-3d.test.ts) checks perspective, isometric, looped
   depth, and canvas rendering helper behavior.
+- [achievements.test.ts](achievements.test.ts) checks achievement state
+  normalization, progress clamping, unlock timestamps, and unknown-id failures.
 - [high-scores.test.ts](high-scores.test.ts) checks local high-score storage,
   receipt-backed integrity, optional remote sync, and backend submission
   validation.
 - [systems.test.ts](systems.test.ts) checks input action mapping, multiplayer
-  input contracts, achievement helpers, sprite animation frame helpers,
-  follow-camera behavior, and spatial-audio math.
+  input contracts, sprite animation frame helpers, follow-camera behavior, and
+  spatial-audio math.
 - [cube-cluster.test.ts](cube-cluster.test.ts) checks cluster creation, links,
   centering, bounds, vectors, explosions, and visibility filtering.
 - [coverage.test.ts](coverage.test.ts) protects package exports and broad test

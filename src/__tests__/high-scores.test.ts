@@ -4,6 +4,7 @@ import {
   createHighScoreManager,
   getHighScorePlausibilityReasons,
   getHighScoreStatValues,
+  isHighScoreRunReceipt,
   validateHighScoreIntegrity,
   validateHighScoreSubmission,
 } from "../index.js";
@@ -88,6 +89,57 @@ describe("high score helpers", () => {
       },
     ]);
     expect(manager.getHighScoreThresholds(1)).toEqual(manager.getHighScores());
+  });
+
+  it("loads stored score records defensively and normalizes cached entries", () => {
+    const manager = createHighScoreManager({
+      apiEnabled: false,
+      maxStats: 2,
+      now: () => 3000,
+      storageKey,
+    });
+
+    localStorage.setItem(storageKey, "{not json");
+    expect(manager.loadStoredScoreRecords()).toEqual([]);
+
+    localStorage.setItem(
+      storageKey,
+      JSON.stringify([
+        {
+          createdAt: 2000.8,
+          id: "saved-score",
+          name: " Saved !!! ",
+          run: { issuedAt: Number.NaN, runId: "bad", token: "bad" },
+          score: 1200.9,
+          stats: ["Wave: 2", "Shots: 30", "Ignored: 1"],
+          submittedAt: 2100.4,
+          syncState: "pending",
+        },
+        {
+          id: "invalid-score",
+          name: "Broken",
+          score: "nope",
+          stats: [],
+          submittedAt: 1,
+        },
+      ])
+    );
+
+    expect(manager.loadStoredScoreRecords()).toEqual([
+      {
+        createdAt: 2000.8,
+        id: "saved-score",
+        integrity: undefined,
+        name: "Saved ",
+        receivedAt: undefined,
+        run: undefined,
+        score: 1200,
+        settings: undefined,
+        stats: ["Wave: 2", "Shots: 30"],
+        submittedAt: 2100.4,
+        syncState: "pending",
+      },
+    ]);
   });
 
   it("creates and validates receipt-backed score integrity", () => {
@@ -192,6 +244,64 @@ describe("high score helpers", () => {
       syncState: "synced",
     });
     expect(manager.getHighScoreSyncStatus()).toBe("success");
+  });
+
+  it("starts remote high-score runs and expires transient sync success status", async () => {
+    let now = 5000;
+    const run = {
+      issuedAt: 5000,
+      runId: "run-started",
+      token: "receipt-token",
+    };
+    const fetchMock = vi.fn(() => Promise.resolve(createJsonResponse(run)));
+    const manager = createHighScoreManager({
+      fetch: fetchMock,
+      now: () => now,
+      storageKey,
+      syncSuccessDisplayMs: 1000,
+    });
+
+    await expect(manager.startHighScoreRun({ difficulty: "hard" })).resolves.toEqual(
+      run
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/high-scores/runs",
+      expect.objectContaining({
+        body: JSON.stringify({
+          gameVersion: "unknown",
+          settings: { difficulty: "hard" },
+          startedAt: 5000,
+        }),
+        method: "POST",
+      })
+    );
+    expect(isHighScoreRunReceipt(run)).toBe(true);
+    expect(manager.getHighScoreSyncStatus()).toBe("success");
+
+    now = 6500;
+    expect(manager.getHighScoreSyncStatus()).toBe("waiting");
+  });
+
+  it("reports sync errors when remote run creation fails or returns bad data", async () => {
+    const failedFetch = vi.fn(() => Promise.resolve(createJsonResponse({}, 500)));
+    const failedManager = createHighScoreManager({
+      fetch: failedFetch,
+      storageKey,
+    });
+
+    await expect(failedManager.startHighScoreRun()).resolves.toBeNull();
+    expect(failedManager.getHighScoreSyncStatus()).toBe("error");
+
+    const invalidFetch = vi.fn(() =>
+      Promise.resolve(createJsonResponse({ issuedAt: Number.POSITIVE_INFINITY }))
+    );
+    const invalidManager = createHighScoreManager({
+      fetch: invalidFetch,
+      storageKey,
+    });
+
+    await expect(invalidManager.startHighScoreRun()).resolves.toBeNull();
+    expect(invalidManager.getHighScoreSyncStatus()).toBe("error");
   });
 
   it("downgrades pending scores with invalid local integrity to local-only", async () => {
@@ -356,6 +466,62 @@ describe("high score helpers", () => {
       accepted: false,
       error: "missing_run_receipt",
       status: 401,
+    });
+  });
+
+  it("rejects malformed or implausible backend score submissions", () => {
+    const entry = {
+      id: "score-4",
+      name: "ACE",
+      score: 12000,
+      stats: ["Enemies: 1"],
+      submittedAt: 2000,
+    };
+    const run = {
+      issuedAt: 1000,
+      runId: "run-4",
+      token: "receipt-token",
+    };
+    const integrity = createHighScoreIntegrity(entry, run, { multiplier: 151 });
+
+    expect(validateHighScoreSubmission(null)).toEqual({
+      accepted: false,
+      error: "invalid_payload",
+      status: 400,
+    });
+    expect(
+      validateHighScoreSubmission({
+        entry: { ...entry, stats: Array.from({ length: 17 }, () => "Too many: 1") },
+        integrity,
+        run,
+        submittedAt: 2000,
+      })
+    ).toEqual({
+      accepted: false,
+      error: "invalid_score",
+      status: 400,
+    });
+    expect(
+      validateHighScoreSubmission(
+        {
+          entry,
+          gameVersion: "x".repeat(40),
+          integrity,
+          run,
+          submittedAt: 2000,
+        },
+        {
+          rules: {
+            baseScoreBudget: 0,
+            maxScore: 20000,
+            scoreBudget: [{ points: 1000, stat: "Enemies" }],
+          },
+        }
+      )
+    ).toEqual({
+      accepted: false,
+      error: "implausible_score",
+      status: 422,
     });
   });
 });
