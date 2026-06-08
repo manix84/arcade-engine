@@ -7,6 +7,7 @@ and keep changes focused.
 ## 🕹️ Project Shape
 
 - Arcade Engine is a standalone browser arcade-game engine package.
+- It is published on npm as `arcade-engine`.
 - It is not Time-Pilot-specific, even though Time-Pilot uses or will use it.
 - The public package entry point is `src/index.ts`.
 - Package builds emit ESM JavaScript, source maps, declaration files, and

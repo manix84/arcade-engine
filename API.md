@@ -3,6 +3,12 @@
 This reference maps the public exports from `arcade-engine` to what they do,
 where to see them, and the simplest way to start using them.
 
+Install the package from npm:
+
+```sh
+npm install arcade-engine
+```
+
 Import from the package root:
 
 ```ts

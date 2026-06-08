@@ -4,11 +4,19 @@
 
 - Expanded the root README into a fuller package map covering core modules,
   helper families, 2.5D projection, canvas rendering, 3D cube clusters,
-  Storybook sections, testing, and migration status.
+  Storybook sections, testing, and package modules.
 - Added local subsection README files so users can understand what each source
   or demo folder contains and how to use it.
 - Clarified contribution expectations for documentation, Storybook examples,
   and API changes.
+
+## 📦 Published Package
+
+- Arcade Engine is available from npm as `arcade-engine`.
+- The npm package exposes the typed ESM build from `dist` and includes the
+  package README, API reference, license, privacy, release, and what's-new docs.
+- Storybook remains live documentation and demo output; it is not included in
+  the npm package.
 
 ## 🧱 TypeScript Package Modernization
 

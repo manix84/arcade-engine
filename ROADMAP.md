@@ -1,7 +1,7 @@
-# 🗺️ Finish Roadmap
+# 🗺️ Package Roadmap
 
-This roadmap describes the remaining work to take Arcade Engine from a
-modernized package-in-progress to a release-ready browser game engine.
+This roadmap records how Arcade Engine became a standalone browser game engine
+package and tracks follow-up work after the npm package release.
 
 ## ✅ Stage 1: Package Readiness Baseline
 
@@ -176,9 +176,9 @@ Verification notes:
 - Added Systems Storybook stories for input actions, local multiplayer,
   sprite animation, follow cameras, and spatial-audio math.
 
-## 📦 Stage 5: Release Candidate
+## 📦 Stage 5: Published Package Baseline
 
-Goal: prepare the package for publishing.
+Goal: keep the published npm package verifiable and complete.
 
 ### Work
 
@@ -198,7 +198,7 @@ npm run pack:dry-run
   declaration maps.
 - Confirm `storybook-static` is excluded from the npm package.
 - Confirm README, license, privacy, and what's-new docs are included.
-- Tag or publish only after the verification baseline is clean.
+- Publish only after the verification baseline is clean.
 
 ### Current Status
 
@@ -219,6 +219,7 @@ Latest verification: June 2, 2026.
 - `storybook-static` is excluded from the npm package.
 - `README.md`, `API.md`, `LICENSE.md`, `PRIVACY.md`, `RELEASE.md`, and
   `WHATSNEW.md` are included in the npm package.
+- Arcade Engine is published to npm as `arcade-engine`.
 - Automatic release publishing is configured through the `NPM Release` GitHub
   Actions workflow for pushes to `main`, with manual dispatches for selected
   tags.
@@ -238,8 +239,8 @@ Verification notes:
 
 ## 🔭 Post-Release Backlog
 
-These items would make Arcade Engine more capable, but they should not block the
-Stage 5 release candidate unless a real game depends on them immediately.
+These items would make Arcade Engine more capable, but they should be driven by
+real game needs after the published package baseline.
 
 ### Entity And Pool Helpers
 

@@ -2,20 +2,19 @@
 
 Thanks for taking the time to improve Arcade Engine.
 
-Arcade Engine is a standalone browser arcade-game engine package. The package is
-being modernized from older JavaScript modules into a typed ESM package, so
-small, focused changes are easier to review and safer to ship.
+Arcade Engine is a standalone browser arcade-game engine package published on
+npm as `arcade-engine`. Small, focused changes are easier to review and safer
+to ship.
 
 ## 🧭 Before You Start
 
-- Check the current package status in [README.md](README.md).
+- Check the package overview in [README.md](README.md).
 - Read the local folder README when working inside a documented subsection.
 - Keep changes scoped to one concern.
 - Prefer existing helpers and story utilities before adding a new abstraction.
-- Avoid broad formatting-only rewrites while legacy modules are still being
-  reviewed.
-- Do not remove legacy files unless the replacement path is clear, documented,
-  and tested.
+- Avoid broad formatting-only rewrites.
+- Do not remove compatibility behavior unless the replacement path is clear,
+  documented, and tested.
 
 ## 🛠️ Local Setup
 
@@ -73,7 +72,7 @@ Add or update tests when a change affects:
 - Sound lifecycle, channel volume, fades, or spatial audio.
 - Geometry, collision, heading, viewport, grid, or box helper behavior.
 - 2.5D projection or 3D cube-cluster helper behavior.
-- Migration decisions that remove or replace legacy modules.
+- Compatibility decisions that remove or replace existing behavior.
 
 For documentation-only changes, tests are not usually required. Inspect links,
 headings, examples, and formatting; run `git diff --check` before finishing.
@@ -102,15 +101,15 @@ When adding or changing docs:
 - Use ASCII in source files unless a file already has a reason to use Unicode.
 - Use emoji in Markdown headings and documentation, matching the project style.
 
-## 🧱 Migration Guidance
+## 🧱 Package Boundary Guidance
 
-When porting legacy modules:
+When changing package behavior:
 
 - Preserve behavior before changing design.
-- Add tests around behavior before deleting the old file.
+- Add tests around behavior before deleting or replacing existing code.
 - Keep compatibility notes in `WHATSNEW.md`.
-- Prefer consolidating behavior into the new TypeScript package surface instead
-  of recreating every old AMD module one-for-one.
+- Prefer consolidating reusable behavior into the TypeScript package surface
+  instead of adding demo-only copies.
 - Update local folder documentation when package responsibilities move.
 
 ## 📖 Storybook Guidance

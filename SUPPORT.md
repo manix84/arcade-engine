@@ -4,8 +4,7 @@ Arcade Engine is a personal project, so support is best-effort.
 
 ## 🧭 Start Here
 
-- Use [README.md](README.md) for package installation, imports, and the module
-  map.
+- Use [README.md](README.md) for npm installation, imports, and the module map.
 - Use [src/README.md](src/README.md) to understand the source modules exported
   by the package.
 - Use [src/stories/README.md](src/stories/README.md) to understand the
@@ -43,5 +42,5 @@ Do not open public issues for security problems. Follow
 
 ## 📚 Documentation
 
-Documentation fixes are welcome, especially when they clarify package status,
-public APIs, Storybook demos, or test expectations.
+Documentation fixes are welcome, especially when they clarify package
+installation, public APIs, Storybook demos, or test expectations.

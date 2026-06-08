@@ -4,9 +4,9 @@ This folder contains the source for the published `arcade-engine` package and
 the Storybook demos that document it.
 
 The public package boundary is [index.ts](index.ts). Consumers should import
-from `arcade-engine`, not from individual source files. Internal files are
-documented here so contributors can understand what each module owns and where
-new behavior should live.
+from the npm package root, `arcade-engine`, not from individual source files.
+Internal files are documented here so contributors can understand what each
+module owns and where new behavior should live.
 
 ## 🚪 Public Entry Point
 
