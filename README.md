@@ -14,6 +14,13 @@ JavaScript, source maps, declaration files, and declaration maps to `dist`.
 Storybook is documentation and demo output only; it builds to `storybook-static`
 and is not included in the npm package output.
 
+## 🧭 Project History
+
+Arcade Engine began as the reusable browser-game engine code inside
+[manix84/time-pilot](https://github.com/manix84/time-pilot/). It was extracted
+into its own package so the canvas arena, timing, audio, input, scoring, and
+helper systems could support other arcade-style browser games too.
+
 ## ✨ What It Provides
 
 - Canvas arena creation, resizing, fullscreen handling, text, sprites, circles,
