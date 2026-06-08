@@ -6,6 +6,21 @@ export {
   unlockAchievement,
 } from "./achievements.js";
 export {
+  createHighScoreIntegrity,
+  createHighScoreManager,
+  getHighScorePlausibilityReasons,
+  getHighScoreStatValues,
+  hashHighScoreText,
+  isHighScoreEntry,
+  isHighScoreIntegrity,
+  isHighScorePlausible,
+  isHighScoreRunReceipt,
+  normalizeHighScoreName,
+  sortHighScores,
+  validateHighScoreIntegrity,
+  validateHighScoreSubmission,
+} from "./high-scores.js";
+export {
   getLoopedDepth,
   getDepthProgress,
   getIsometricTileCorners,
@@ -112,6 +127,24 @@ export type {
   AchievementStatus,
   AchievementUnlockResult,
 } from "./achievements.js";
+export type {
+  AcceptedHighScoreSubmission,
+  HighScoreEntry,
+  HighScoreIntegrity,
+  HighScoreIntegrityOptions,
+  HighScoreManager,
+  HighScoreManagerOptions,
+  HighScorePlausibilityRules,
+  HighScoreRunReceipt,
+  HighScoreStorage,
+  HighScoreSubmissionPayload,
+  HighScoreSubmissionValidationOptions,
+  HighScoreSubmissionValidationResult,
+  HighScoreSyncState,
+  HighScoreSyncStatus,
+  RejectedHighScoreSubmission,
+  StoredHighScoreEntry,
+} from "./high-scores.js";
 export type {
   CubeBlock,
   CubeCluster,

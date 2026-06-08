@@ -15,6 +15,9 @@ They verify package behavior without requiring a real browser window.
   clamping, snapping, box movement, containment, and collision.
 - [arcade-3d.test.ts](arcade-3d.test.ts) checks perspective, isometric, looped
   depth, and canvas rendering helper behavior.
+- [high-scores.test.ts](high-scores.test.ts) checks local high-score storage,
+  receipt-backed integrity, optional remote sync, and backend submission
+  validation.
 - [systems.test.ts](systems.test.ts) checks input action mapping, multiplayer
   input contracts, achievement helpers, sprite animation frame helpers,
   follow-camera behavior, and spatial-audio math.
@@ -44,6 +47,7 @@ Add tests when changing:
 - Timing behavior.
 - Input or multiplayer helpers.
 - Achievement helpers.
+- High-score storage, sync, integrity, or validation helpers.
 - Sound lifecycle.
 - Helper math.
 - Grid or box collision.

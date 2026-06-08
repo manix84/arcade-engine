@@ -51,6 +51,8 @@
   co-op/PvP session metadata, and serializable remote player input intents.
 - Added generic achievement helpers for unlock state, progress counters, and
   status lists.
+- Added high-score helpers for local leaderboards, optional remote sync,
+  receipt-backed integrity, and backend submission validation.
 - Added sprite animation helpers for frame timing and sprite-sheet frame data.
 - Added follow-camera helpers for 2D worlds.
 - Added grid helpers for board and tile games.

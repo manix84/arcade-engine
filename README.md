@@ -29,6 +29,8 @@ and is not included in the npm package output.
   player intent contracts.
 - Achievement state helpers for local unlocks, progress counters, and status
   lists.
+- High-score helpers for local leaderboards, optional remote sync, receipt
+  integrity payloads, and backend submission validation.
 - Sprite animation helpers for frame timing and sprite-sheet frame selection.
 - Math, heading, spawn, collision, area-exit, cloning, random-color, and
   browser-event helpers.
@@ -67,6 +69,7 @@ import {
   Sound,
   Ticker,
   createCubeClusterFromPattern,
+  createHighScoreManager,
   detectBoxCollision,
   drawDebugVectors,
   fillCanvasWithTrail,
@@ -78,6 +81,7 @@ import {
   helpers,
   projectIsometricPoint,
   projectPerspectivePoint,
+  validateHighScoreSubmission,
 } from "arcade-engine";
 ```
 
@@ -188,8 +192,18 @@ platformers.
 
 Achievement helpers keep definition metadata separate from persisted state.
 Games can unlock achievements, increment progress counters, and render status
-lists from the returned data. They are local game-state helpers; remote
-leaderboard validation belongs in the high-score system.
+lists from the returned data.
+
+### High Scores
+
+High-score helpers support local score tables and optional remote sync. Games
+provide their own storage key, default scores, API path, settings
+normalizers, and plausibility rules.
+
+Remote leaderboard submissions can use run receipts and integrity payloads. A
+backend can import `validateHighScoreSubmission` from `arcade-engine/high-scores`
+and pair it with the game's token signing, receipt storage, expiry, and rate
+limits.
 
 ### Canvas Rendering
 
@@ -367,6 +381,7 @@ Active package modules:
 - `src/input.ts`
 - `src/multiplayer.ts`
 - `src/achievements.ts`
+- `src/high-scores.ts`
 - `src/animation.ts`
 - `src/camera.ts`
 - `src/helpers.ts`
