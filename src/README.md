@@ -113,6 +113,21 @@ These helpers are exported from the package root. Games still decide when to
 request these capabilities and what fallback UI to show when the browser denies
 them.
 
+## 📺 Display Filters
+
+[display-filters.ts](display-filters.ts) contains retro display preset data and
+normalization helpers.
+
+Use it for:
+
+- CRT, VHS, off, and custom display-filter modes.
+- Settings labels and descriptions for menus.
+- Normalizing untrusted filter intensities.
+- Resolving presets plus temporary runtime boosts into effective settings.
+
+The module returns settings data only; games decide how to apply the visual
+effect in CSS, canvas, WebGL, or another renderer.
+
 ## ⚙️ User Options
 
 [user-options.ts](user-options.ts) contains a generic local user-options store.

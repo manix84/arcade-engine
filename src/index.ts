@@ -87,6 +87,20 @@ export {
   parseHexColor,
   shadeHexColor,
 } from "./canvas-rendering.js";
+export {
+  defaultCustomDisplayFilterSettings,
+  defaultDisplayFilterMode,
+  defaultDisplayFilterRuntimeBoosts,
+  displayFilterModeLabels,
+  displayFilterModes,
+  displayFilterPresets,
+  displayFilterSettingDescriptions,
+  displayFilterSettingKeys,
+  displayFilterSettingLabels,
+  getDisplayFilterSettingsForMode,
+  normalizeDisplayFilterIntensity,
+  normalizeDisplayFilterSettings,
+} from "./display-filters.js";
 export { drawDebugVectors } from "./debug-vectors.js";
 export { default as GameArena } from "./arena.js";
 export {
@@ -178,6 +192,12 @@ export type {
   Vector3,
 } from "./cube-cluster.js";
 export type { DebugVectorColors, DebugVectorOptions } from "./debug-vectors.js";
+export type {
+  DisplayFilterMode,
+  DisplayFilterRuntimeBoosts,
+  DisplayFilterSettingKey,
+  DisplayFilterSettings,
+} from "./display-filters.js";
 export type { GridCell, GridDefinition, GridPosition } from "./grid.js";
 export type {
   AssetProgress,

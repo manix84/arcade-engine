@@ -51,6 +51,22 @@ The story demonstrates:
 Use this pattern when a game needs persistent player preferences while keeping
 its concrete settings schema and validation rules in game code.
 
+## 📺 Display Filters
+
+`DisplayFilters` shows retro display preset settings as renderer-agnostic data.
+
+The story demonstrates:
+
+- `displayFilterModes`.
+- `displayFilterModeLabels`.
+- `defaultCustomDisplayFilterSettings`.
+- `getDisplayFilterSettingsForMode`.
+- Runtime boost composition for glow, curvature, dithering, flicker, and
+  interference values.
+
+Use this pattern when a game needs CRT/VHS/custom display options but wants the
+renderer to stay game-owned.
+
 ## 🏆 Achievements
 
 `Achievements` shows local achievement definition, progress, unlock, and status

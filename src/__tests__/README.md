@@ -17,6 +17,8 @@ They verify package behavior without requiring a real browser window.
   depth, and canvas rendering helper behavior.
 - [browser-capabilities.test.ts](browser-capabilities.test.ts) checks wake
   locks, immersive mode requests, and installed-app exit fallbacks.
+- [display-filters.test.ts](display-filters.test.ts) checks CRT/VHS preset
+  metadata, intensity normalization, setting normalization, and runtime boosts.
 - [user-options.test.ts](user-options.test.ts) checks option defaults,
   normalization, persistence, reset behavior, subscribers, and change events.
 - [achievements.test.ts](achievements.test.ts) checks achievement state
@@ -53,6 +55,7 @@ Add tests when changing:
 - Timing behavior.
 - Input or multiplayer helpers.
 - Browser capability wrappers.
+- Display filter presets and normalization.
 - User option persistence helpers.
 - Achievement helpers.
 - High-score storage, sync, integrity, or validation helpers.

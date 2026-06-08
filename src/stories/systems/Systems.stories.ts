@@ -8,6 +8,10 @@ import {
   createHighScoreIntegrity,
   createHighScoreManager,
   createUserOptionsStore,
+  defaultCustomDisplayFilterSettings,
+  displayFilterModeLabels,
+  displayFilterModes,
+  getDisplayFilterSettingsForMode,
   createRagdoll2D,
   createRagdoll3D,
   createLocalMultiplayerController,
@@ -32,6 +36,7 @@ import {
   type HighScoreEntry,
   type HighScoreRunReceipt,
   type HighScoreStorage,
+  type DisplayFilterMode,
   type UserOptionsStorage,
   type Ragdoll2D as PhysicsRagdoll2D,
   type Ragdoll3D as PhysicsRagdoll3D,
@@ -60,6 +65,8 @@ type DemoAchievementId = "first-sortie" | "wave-breaker" | "precision-run";
 
 type SystemsStoryArgs = {
   baseScoreBudget?: number;
+  displayFilterMode?: DisplayFilterMode;
+  displayFilterBoost?: number;
   highScoreValue?: number;
   lowScoreValue?: number;
   maxAcceptedScore?: number;
@@ -952,6 +959,83 @@ export const UserOptions: Story = {
     );
     metrics.append(controls);
     updateValues();
+
+    return shell;
+  },
+};
+
+export const DisplayFilters: Story = {
+  args: {
+    displayFilterBoost: 18,
+    displayFilterMode: "arcade-crt",
+  },
+  argTypes: {
+    displayFilterBoost: {
+      control: { max: 60, min: 0, step: 1, type: "range" },
+    },
+    displayFilterMode: {
+      control: "select",
+      labels: displayFilterModeLabels,
+      options: displayFilterModes.filter((mode) => mode !== "custom"),
+    },
+  },
+  render: (args) => {
+    const { canvas, metrics, shell } = createSystemsLayout("Display filters");
+    const context = canvas.getContext("2d");
+    const mode = args.displayFilterMode ?? "arcade-crt";
+    const boost = args.displayFilterBoost ?? 18;
+    const settings = getDisplayFilterSettingsForMode(
+      mode,
+      defaultCustomDisplayFilterSettings,
+      {
+        bulletPersistenceBoost: boost,
+        explosionBloomBoost: boost,
+        lowHealthInstabilityBoost: Math.round(boost / 2),
+        timeWarpDistortionBoost: Math.round(boost / 3),
+      }
+    );
+    const modeValue = createValue("mode", displayFilterModeLabels[mode]);
+    const bloomValue = createValue("bloom", settings.bloom);
+    const scanlineValue = createValue("scanlines", settings.scanlines);
+    const interferenceValue = createValue("interference", settings.interference);
+    const usesValue = createValue("uses", "getDisplayFilterSettingsForMode");
+
+    metrics.append(modeValue, bloomValue, scanlineValue, interferenceValue, usesValue);
+
+    if (context) {
+      context.fillStyle = "#05070a";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+
+      const cellSize = 32;
+
+      for (let y = 0; y < canvas.height; y += cellSize) {
+        for (let x = 0; x < canvas.width; x += cellSize) {
+          const lit = (x / cellSize + y / cellSize) % 2 === 0;
+          const alpha = lit ? 0.78 : 0.34;
+
+          context.fillStyle = `rgba(79, 209, 197, ${alpha})`;
+          context.fillRect(x + 8, y + 8, cellSize - 12, cellSize - 12);
+        }
+      }
+
+      context.fillStyle = `rgba(246, 224, 94, ${settings.bloom / 160})`;
+      context.beginPath();
+      context.arc(canvas.width / 2, canvas.height / 2, 110, 0, Math.PI * 2);
+      context.fill();
+
+      context.fillStyle = `rgba(5, 7, 10, ${settings.scanlines / 120})`;
+      for (let y = 0; y < canvas.height; y += 8) {
+        context.fillRect(0, y, canvas.width, 3);
+      }
+
+      context.strokeStyle = `rgba(252, 129, 129, ${settings.colourBleed / 120})`;
+      context.lineWidth = 4;
+      context.strokeRect(42, 42, canvas.width - 84, canvas.height - 84);
+
+      context.fillStyle = "#f5f7fb";
+      context.font = "20px sans-serif";
+      context.fillText(displayFilterModeLabels[mode], 42, 46);
+    }
 
     return shell;
   },

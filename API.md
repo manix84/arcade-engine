@@ -177,6 +177,35 @@ options.subscribe(({ changedKeys, options }) => {
 Games own their concrete schema and validation rules. The store owns the
 browser-safe mechanics of reading, writing, resetting, and notifying.
 
+## 📺 Display Filters
+
+| Export | Use It For |
+| --- | --- |
+| `displayFilterModes` | Ordered preset list for settings menus. |
+| `displayFilterModeLabels` | User-facing labels for built-in display filter modes. |
+| `displayFilterSettingKeys` | Ordered setting keys for custom filter controls. |
+| `displayFilterSettingLabels` | User-facing labels for individual filter settings. |
+| `displayFilterSettingDescriptions` | Short descriptions for settings UI. |
+| `displayFilterPresets` | Built-in CRT/VHS/off settings. |
+| `defaultCustomDisplayFilterSettings` | Default custom settings object. |
+| `defaultDisplayFilterRuntimeBoosts` | Zeroed temporary boost values. |
+| `normalizeDisplayFilterIntensity` | Clamp unknown values to integer `0..100`. |
+| `normalizeDisplayFilterSettings` | Normalize partial or untrusted settings into a complete settings object. |
+| `getDisplayFilterSettingsForMode` | Resolve preset/custom settings plus runtime boosts into effective settings. |
+
+```ts
+const settings = getDisplayFilterSettingsForMode(
+  "arcade-crt",
+  defaultCustomDisplayFilterSettings,
+  { explosionBloomBoost: 20 }
+);
+
+applyCanvasFilter(settings);
+```
+
+The helpers produce settings data only. Games choose how to render scanlines,
+masking, curvature, bloom, and other presentation effects.
+
 ## 🏆 Achievements
 
 | Export | Use It For |

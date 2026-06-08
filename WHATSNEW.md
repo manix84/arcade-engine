@@ -53,6 +53,8 @@
   orientation requests, and installed-app exit fallback events.
 - Added generic user option store helpers for defaults, normalization,
   localStorage persistence, reset, subscribers, and change events.
+- Added retro display filter helpers for CRT/VHS presets, custom settings,
+  normalization, and runtime boost composition.
 - Added generic achievement helpers for unlock state, progress counters, and
   status lists.
 - Added high-score helpers for local leaderboards, optional remote sync,
@@ -90,6 +92,7 @@
   follow cameras, and spatial-audio math.
 - Added systems demos for gravity and 2D/3D ragdoll helpers.
 - Added a systems demo for persisted user option stores.
+- Added a systems demo for CRT/VHS display filter presets.
 - Added systems demos for achievement progress/unlocks and high-score
   leaderboard validation helpers, including Storybook actions and interaction
   checks for their controls.
@@ -103,8 +106,8 @@
   and storage.
 - Added tests covering arena behavior, ticker timing, sound behavior,
   viewport math, debug vectors, grid helpers, box collision, 2.5D projection,
-  cube clusters, browser capabilities, user options, achievements, high scores,
-  canvas rendering, and helper utilities.
+  cube clusters, browser capabilities, display filters, user options,
+  achievements, high scores, canvas rendering, and helper utilities.
 
 ## 🧹 Legacy Cleanup
 

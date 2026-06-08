@@ -38,6 +38,8 @@ helper systems could support other arcade-style browser games too.
   immersive mode, and installed-app exit fallbacks.
 - User option stores with schema defaults, caller-provided normalization,
   localStorage persistence, reset behavior, subscribers, and change events.
+- Retro display filter presets and normalization helpers for CRT, VHS, custom,
+  and runtime-boosted presentation settings.
 - Achievement state helpers for local unlocks, progress counters, and status
   lists.
 - High-score helpers for local leaderboards, optional remote sync, receipt
@@ -82,6 +84,7 @@ import {
   createCubeClusterFromPattern,
   createHighScoreManager,
   createUserOptionsStore,
+  getDisplayFilterSettingsForMode,
   detectBoxCollision,
   enterImmersiveMode,
   drawDebugVectors,
@@ -239,6 +242,16 @@ Use `ScreenWakeLockController` for screen wake locks,
 `exitInstalledApp()` when an installed app should attempt to close and report a
 blocked exit.
 
+### Display Filters
+
+Display filter helpers provide reusable retro presentation presets and
+normalization math. Use them to offer CRT/VHS/custom settings menus, clamp
+untrusted stored intensities, and layer temporary runtime boosts into effective
+filter settings.
+
+See the `Engine/Systems/New Helpers/Display Filters` Storybook story for a
+visual preset demo.
+
 ### Canvas Rendering
 
 Canvas rendering helpers are small drawing utilities used by the demos and
@@ -325,7 +338,8 @@ Storybook contains live demos for the engine surface:
 - **Helpers**: math, geometry, object cloning, event binding, collisions,
   rotation, spawning, and 2.5D variants.
 - **Systems**: input actions, local multiplayer, user options, achievements,
-  high scores, sprite animation, follow cameras, and spatial-audio math.
+  high scores, display filters, sprite animation, follow cameras, and
+  spatial-audio math.
 - **Audio**: master controls, effects, music, spatial panning, and global
   playback behavior.
 - **3D**: cube-cluster pickups and modular level pieces.
@@ -416,6 +430,7 @@ Active package modules:
 - `src/multiplayer.ts`
 - `src/browser-capabilities.ts`
 - `src/user-options.ts`
+- `src/display-filters.ts`
 - `src/achievements.ts`
 - `src/high-scores.ts`
 - `src/animation.ts`
