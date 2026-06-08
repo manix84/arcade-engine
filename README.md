@@ -27,6 +27,8 @@ and is not included in the npm package output.
 - Local multiplayer input helpers for player one/player two keyboard,
   mouse/touch, and assigned gamepad controls, plus backend-agnostic remote
   player intent contracts.
+- Achievement state helpers for local unlocks, progress counters, and status
+  lists.
 - Sprite animation helpers for frame timing and sprite-sheet frame selection.
 - Math, heading, spawn, collision, area-exit, cloning, random-color, and
   browser-event helpers.
@@ -60,6 +62,7 @@ documentation use the display name Arcade Engine.
 
 ```ts
 import {
+  addAchievementProgress,
   GameArena,
   Sound,
   Ticker,
@@ -180,6 +183,13 @@ Grid helpers convert between pixel coordinates and cells, clamp cells to a
 board, and snap entities to a grid. Box helpers move and collide top-left
 `posX`/`posY` rectangles for games like Breakout, Space Invaders, and simple
 platformers.
+
+### Achievements
+
+Achievement helpers keep definition metadata separate from persisted state.
+Games can unlock achievements, increment progress counters, and render status
+lists from the returned data. They are local game-state helpers; remote
+leaderboard validation belongs in the high-score system.
 
 ### Canvas Rendering
 
@@ -356,6 +366,7 @@ Active package modules:
 - `src/Sound.ts`
 - `src/input.ts`
 - `src/multiplayer.ts`
+- `src/achievements.ts`
 - `src/animation.ts`
 - `src/camera.ts`
 - `src/helpers.ts`

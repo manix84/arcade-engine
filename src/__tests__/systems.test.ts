@@ -1,11 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  addAchievementProgress,
+  createAchievementState,
   createInputController,
   createKeyboardInputController,
   createLocalMultiplayerController,
   createMultiplayerSession,
   createPlayerInputIntent,
   getAnimatedSpriteFrame,
+  getAchievementStatuses,
   getDistanceGain,
   getFollowCamera,
   getGamepadInputCodes,
@@ -17,6 +20,7 @@ import {
   getSpriteFrameIndex,
   getSpriteSheetFrame,
   mergePlayerInputIntent,
+  unlockAchievement,
 } from "../index.js";
 
 describe("game system helpers", () => {
@@ -392,4 +396,68 @@ describe("game system helpers", () => {
 
     controller.stop();
   });
+
+  it("tracks achievement unlocks and progress without mutating previous state", () => {
+    const definitions = [
+      {
+        description: "Start one run.",
+        id: "first-run",
+        name: "First Run",
+      },
+      {
+        description: "Collect three medals.",
+        id: "medals",
+        name: "Medals",
+        progressGoal: 3,
+      },
+    ] as const;
+    const initial = createAchievementState<"first-run" | "medals">();
+    const unlocked = unlockAchievement(initial, "first-run", 1000);
+    const duplicate = unlockAchievement(unlocked.state, "first-run", 2000);
+    const progress = addAchievementProgress(
+      definitions,
+      duplicate.state,
+      "medals",
+      2,
+      3000
+    );
+    const completed = addAchievementProgress(
+      definitions,
+      progress.state,
+      "medals",
+      1,
+      4000
+    );
+
+    expect(initial.unlocked).toEqual([]);
+    expect(unlocked).toMatchObject({
+      unlocked: true,
+      state: {
+        unlocked: ["first-run"],
+        unlockedAt: { "first-run": 1000 },
+      },
+    });
+    expect(duplicate.unlocked).toBe(false);
+    expect(progress.unlocked).toBe(false);
+    expect(completed.unlocked).toBe(true);
+    expect(getAchievementStatuses(definitions, completed.state)).toEqual([
+      {
+        description: "Start one run.",
+        id: "first-run",
+        name: "First Run",
+        unlocked: true,
+        unlockedAt: 1000,
+      },
+      {
+        description: "Collect three medals.",
+        id: "medals",
+        name: "Medals",
+        progress: { current: 3, goal: 3 },
+        progressGoal: 3,
+        unlocked: true,
+        unlockedAt: 4000,
+      },
+    ]);
+  });
+
 });
