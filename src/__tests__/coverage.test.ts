@@ -686,10 +686,12 @@ describe("coverage-focused engine branches", () => {
     const engine = await import("../index.js");
 
     expect(Object.keys(engine).sort()).toEqual([
+      "AchievementNotificationRenderer",
       "GameArena",
       "ScreenWakeLockController",
       "Sound",
       "Ticker",
+      "achievementNotificationEventName",
       "addAchievementProgress",
       "appExitBlockedEventName",
       "applyGravity2D",
@@ -717,6 +719,9 @@ describe("coverage-focused engine branches", () => {
       "createRagdoll2D",
       "createRagdoll3D",
       "createUserOptionsStore",
+      "defaultAchievementNotificationLayout",
+      "defaultAchievementNotificationTheme",
+      "defaultAchievementNotificationTiming",
       "defaultCustomDisplayFilterSettings",
       "defaultDisplayFilterMode",
       "defaultDisplayFilterRuntimeBoosts",

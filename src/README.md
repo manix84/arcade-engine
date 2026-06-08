@@ -156,6 +156,21 @@ The module has no browser dependency and is exported from the package root. The
 `Engine/Systems/New Helpers/Achievements` Storybook story shows progress
 counters, direct unlocks, status lists, and immutable state updates.
 
+## 🏆 Achievement Notifications
+
+[achievement-notifications.ts](achievement-notifications.ts) contains a generic
+canvas unlock-popup renderer.
+
+Use it for:
+
+- Queued achievement unlock notifications.
+- Slide, hold, and exit timing.
+- Optional icon sprite frames or placeholder icons.
+- Event-driven enqueueing with caller-owned event names and targets.
+
+The renderer depends only on a canvas context and caller-provided viewport data.
+Games still own achievement definitions, icon assets, and when to render.
+
 ## 🏅 High Scores
 
 [high-scores.ts](high-scores.ts) contains local leaderboard, remote sync, and

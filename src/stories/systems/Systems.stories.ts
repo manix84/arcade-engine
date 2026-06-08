@@ -4,6 +4,7 @@ import {
   addAchievementProgress,
   applyGravity2D,
   applyGravity3D,
+  AchievementNotificationRenderer,
   createAchievementState,
   createHighScoreIntegrity,
   createHighScoreManager,
@@ -71,6 +72,7 @@ type SystemsStoryArgs = {
   lowScoreValue?: number;
   maxAcceptedScore?: number;
   onAchievementProgress?: (id: DemoAchievementId) => void;
+  onAchievementNotification?: (name: string) => void;
   onAchievementReset?: () => void;
   onAchievementUnlock?: (id: DemoAchievementId) => void;
   onHighScoreSave?: (entry: HighScoreEntry) => void;
@@ -571,6 +573,80 @@ export const Achievements: Story = {
     );
     metrics.append(controls);
     updateMetrics("ready");
+
+    return shell;
+  },
+};
+
+export const AchievementNotifications: Story = {
+  args: {
+    onAchievementNotification: fn(),
+  },
+  render: (args) => {
+    const { canvas, metrics, shell } = createSystemsLayout("Achievement notifications");
+    const context = canvas.getContext("2d");
+    const queueValue = createValue("queue", 0);
+    const lastValue = createValue("last unlock", "none");
+    const usesValue = createValue("uses", "AchievementNotificationRenderer");
+    let animationFrame = 0;
+
+    metrics.append(queueValue, lastValue, usesValue);
+
+    if (!context) {
+      return shell;
+    }
+
+    const renderer = new AchievementNotificationRenderer({
+      context,
+      getViewport: () => ({ height: canvas.height, width: canvas.width }),
+      layout: {
+        bottomOffset: 54,
+      },
+      scale: 1,
+    });
+
+    const drawBackdrop = (): void => {
+      context.fillStyle = "#05070a";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.strokeStyle = "rgba(245, 247, 251, 0.12)";
+      context.strokeRect(48, 54, canvas.width - 96, canvas.height - 108);
+      context.fillStyle = "#cbd5e1";
+      context.font = "18px sans-serif";
+      context.fillText("Achievement popup queue", 64, 88);
+    };
+
+    const enqueue = (name: string, description: string): void => {
+      renderer.enqueue({ description, name });
+      args.onAchievementNotification?.(name);
+      setValue(lastValue, name);
+      setValue(queueValue, renderer.getQueueLength());
+    };
+
+    const controls = document.createElement("div");
+    controls.className = "ae-controls";
+    controls.append(
+      createButton("Unlock Wave", () =>
+        enqueue("Wave Breaker", "Clear a full wave without losing momentum.")
+      ),
+      createButton("Unlock Precision", () =>
+        enqueue("Precision Run", "Land five clean shots in a row.")
+      )
+    );
+    metrics.append(controls);
+
+    const render = (): void => {
+      drawBackdrop();
+      renderer.render();
+      setValue(queueValue, renderer.getQueueLength());
+      animationFrame = window.requestAnimationFrame(render);
+    };
+
+    enqueue("First Sortie", "Start a tracked run and survive the opening pass.");
+    animationFrame = window.requestAnimationFrame(render);
+    onRemove(shell, () => {
+      window.cancelAnimationFrame(animationFrame);
+      renderer.destroy();
+    });
 
     return shell;
   },

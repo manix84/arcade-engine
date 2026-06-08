@@ -84,6 +84,20 @@ The story demonstrates:
 Use this pattern when a game needs local achievements, progress counters, or a
 status screen without coupling unlock logic to rendering code.
 
+## 🏆 Achievement Notifications
+
+`AchievementNotifications` shows a canvas unlock-popup queue.
+
+The story demonstrates:
+
+- `AchievementNotificationRenderer`.
+- Queued notifications.
+- Slide/hold/exit timing.
+- Canvas text and icon-placeholder rendering.
+
+Use this pattern when a game needs achievement popups while keeping achievement
+definitions, assets, and render-loop ownership in game code.
+
 ## 🏅 High Scores
 
 `HighScores` shows local leaderboard management and backend-importable

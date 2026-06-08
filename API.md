@@ -246,6 +246,32 @@ validation is handled by the high-score helpers. See
 `Engine/Systems/New Helpers/Achievements` in Storybook for an interactive
 progress and unlock demo.
 
+## 🏆 Achievement Notifications
+
+| Export | Use It For |
+| --- | --- |
+| `AchievementNotificationRenderer` | Queue and render animated canvas achievement unlock popups. |
+| `achievementNotificationEventName` | Default event name for event-driven notification enqueueing. |
+| `defaultAchievementNotificationLayout` | Default popup width, height, icon size, margin, and slide distance. |
+| `defaultAchievementNotificationTheme` | Default popup colors. |
+| `defaultAchievementNotificationTiming` | Default slide, hold, and exit durations. |
+
+```ts
+const renderer = new AchievementNotificationRenderer({
+  context,
+  getViewport: () => ({ width: canvas.width, height: canvas.height }),
+});
+
+renderer.enqueue({
+  name: "Wave Breaker",
+  description: "Clear three waves.",
+});
+renderer.render();
+```
+
+The renderer works directly with canvas contexts. Games own their achievement
+definitions, icon assets, and render loop timing.
+
 ## 🏅 High Scores
 
 Backend code can import high-score validation helpers without importing the

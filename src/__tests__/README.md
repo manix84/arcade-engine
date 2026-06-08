@@ -23,6 +23,8 @@ They verify package behavior without requiring a real browser window.
   normalization, persistence, reset behavior, subscribers, and change events.
 - [achievements.test.ts](achievements.test.ts) checks achievement state
   normalization, progress clamping, unlock timestamps, and unknown-id failures.
+- [achievement-notifications.test.ts](achievement-notifications.test.ts) checks
+  canvas popup queueing, event enqueueing, icon drawing/fallbacks, and timing.
 - [high-scores.test.ts](high-scores.test.ts) checks local high-score storage,
   receipt-backed integrity, optional remote sync, and backend submission
   validation.
@@ -58,6 +60,7 @@ Add tests when changing:
 - Display filter presets and normalization.
 - User option persistence helpers.
 - Achievement helpers.
+- Achievement notification rendering.
 - High-score storage, sync, integrity, or validation helpers.
 - Sound lifecycle.
 - Helper math.

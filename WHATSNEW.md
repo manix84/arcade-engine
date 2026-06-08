@@ -57,6 +57,7 @@
   normalization, and runtime boost composition.
 - Added generic achievement helpers for unlock state, progress counters, and
   status lists.
+- Added canvas achievement notification helpers for queued unlock popups.
 - Added high-score helpers for local leaderboards, optional remote sync,
   receipt-backed integrity, and backend submission validation.
 - Added sprite animation helpers for frame timing and sprite-sheet frame data.
@@ -93,6 +94,7 @@
 - Added systems demos for gravity and 2D/3D ragdoll helpers.
 - Added a systems demo for persisted user option stores.
 - Added a systems demo for CRT/VHS display filter presets.
+- Added a systems demo for achievement notification popups.
 - Added systems demos for achievement progress/unlocks and high-score
   leaderboard validation helpers, including Storybook actions and interaction
   checks for their controls.
@@ -107,7 +109,8 @@
 - Added tests covering arena behavior, ticker timing, sound behavior,
   viewport math, debug vectors, grid helpers, box collision, 2.5D projection,
   cube clusters, browser capabilities, display filters, user options,
-  achievements, high scores, canvas rendering, and helper utilities.
+  achievements, achievement notifications, high scores, canvas rendering, and
+  helper utilities.
 
 ## 🧹 Legacy Cleanup
 

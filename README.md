@@ -42,6 +42,7 @@ helper systems could support other arcade-style browser games too.
   and runtime-boosted presentation settings.
 - Achievement state helpers for local unlocks, progress counters, and status
   lists.
+- Canvas achievement notification helpers for queued unlock popups.
 - High-score helpers for local leaderboards, optional remote sync, receipt
   integrity payloads, and backend submission validation.
 - Sprite animation helpers for frame timing and sprite-sheet frame selection.
@@ -78,6 +79,7 @@ documentation use the display name Arcade Engine.
 ```ts
 import {
   addAchievementProgress,
+  AchievementNotificationRenderer,
   GameArena,
   Sound,
   Ticker,
@@ -211,6 +213,16 @@ Games can unlock achievements, increment progress counters, and render status
 lists from the returned data. See the `Engine/Systems/New Helpers/Achievements`
 Storybook story for an interactive unlock/progress example.
 
+### Achievement Notifications
+
+Achievement notification helpers render queued unlock popups to a canvas
+context. Games provide the achievement text, optional icon frame, viewport, and
+render loop; the renderer owns queue timing, slide/hold/exit animation, text
+wrapping, and placeholder icons.
+
+See the `Engine/Systems/New Helpers/Achievement Notifications` Storybook story
+for a popup queue demo.
+
 ### High Scores
 
 High-score helpers support local score tables and optional remote sync. Games
@@ -338,8 +350,8 @@ Storybook contains live demos for the engine surface:
 - **Helpers**: math, geometry, object cloning, event binding, collisions,
   rotation, spawning, and 2.5D variants.
 - **Systems**: input actions, local multiplayer, user options, achievements,
-  high scores, display filters, sprite animation, follow cameras, and
-  spatial-audio math.
+  achievement notifications, high scores, display filters, sprite animation,
+  follow cameras, and spatial-audio math.
 - **Audio**: master controls, effects, music, spatial panning, and global
   playback behavior.
 - **3D**: cube-cluster pickups and modular level pieces.
@@ -432,6 +444,7 @@ Active package modules:
 - `src/user-options.ts`
 - `src/display-filters.ts`
 - `src/achievements.ts`
+- `src/achievement-notifications.ts`
 - `src/high-scores.ts`
 - `src/animation.ts`
 - `src/camera.ts`

@@ -6,6 +6,13 @@ export {
   unlockAchievement,
 } from "./achievements.js";
 export {
+  achievementNotificationEventName,
+  AchievementNotificationRenderer,
+  defaultAchievementNotificationLayout,
+  defaultAchievementNotificationTheme,
+  defaultAchievementNotificationTiming,
+} from "./achievement-notifications.js";
+export {
   createHighScoreIntegrity,
   createHighScoreManager,
   getHighScorePlausibilityReasons,
@@ -155,6 +162,15 @@ export type {
   AchievementStatus,
   AchievementUnlockResult,
 } from "./achievements.js";
+export type {
+  AchievementNotificationDetails,
+  AchievementNotificationIcon,
+  AchievementNotificationLayout,
+  AchievementNotificationRenderOptions,
+  AchievementNotificationTheme,
+  AchievementNotificationTiming,
+  AchievementNotificationViewport,
+} from "./achievement-notifications.js";
 export type {
   AcceptedHighScoreSubmission,
   HighScoreEntry,

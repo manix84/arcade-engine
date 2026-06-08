@@ -63,9 +63,9 @@ focused helper stories live in [helpers/README.md](helpers/README.md).
 
 [systems/Systems.stories.ts](systems/Systems.stories.ts) documents newer
 system-level helpers for input actions, local multiplayer, sprite animation,
-follow cameras, user options, display filters, achievements, high scores,
-gravity, 2D/3D ragdolls, and spatial-audio math. See
-[systems/README.md](systems/README.md).
+follow cameras, user options, display filters, achievements, achievement
+notifications, high scores, gravity, 2D/3D ragdolls, and spatial-audio math.
+See [systems/README.md](systems/README.md).
 
 ### Audio
 
