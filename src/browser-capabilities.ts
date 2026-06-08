@@ -121,6 +121,15 @@ export class ScreenWakeLockController {
         this.navigatorRef as ScreenWakeLockNavigator
       ).wakeLock!.request("screen");
 
+      if (!this.isRequested || this.documentRef.visibilityState !== "visible") {
+        try {
+          await sentinel.release();
+        } catch {
+          // Releasing is best effort; the browser may have already released it.
+        }
+        return;
+      }
+
       this.sentinel = sentinel;
       sentinel.addEventListener("release", this.handleSentinelRelease, {
         once: true,

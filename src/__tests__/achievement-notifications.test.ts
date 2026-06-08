@@ -37,6 +37,37 @@ describe("achievement notification renderer", () => {
     expect(renderer.getQueueLength()).toBe(0);
   });
 
+  it("positions notifications from the viewport bottom-right edge", () => {
+    let now = 2000;
+    const context = createContext();
+    const renderer = new AchievementNotificationRenderer({
+      context,
+      getViewport: () => ({ height: 380, width: 720 }),
+      layout: {
+        bottomOffset: 20,
+        height: 50,
+        margin: 12,
+        slideDistance: 30,
+        width: 200,
+      },
+      now: () => now,
+      timing: {
+        exitMs: 100,
+        holdMs: 1000,
+        slideMs: 100,
+      },
+    });
+
+    renderer.enqueue({
+      description: "Bottom edge positioning.",
+      name: "Positioned",
+    });
+    now = 2100;
+    renderer.render();
+
+    expect(context.fillRect).toHaveBeenCalledWith(508, 310, 200, 50);
+  });
+
   it("listens for custom achievement notification events", () => {
     const context = createContext();
     const eventTarget = new EventTarget();

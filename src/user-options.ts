@@ -169,10 +169,16 @@ export const normalizeUserOptions = <T extends Record<string, unknown>>(
     return cloneUserOptions(defaults);
   }
 
-  return {
-    ...cloneUserOptions(defaults),
-    ...(stored as Partial<T>),
-  };
+  const storedOptions = stored as Record<string, unknown>;
+  const normalized = cloneUserOptions(defaults);
+
+  (Object.keys(defaults) as Array<keyof T>).forEach((key) => {
+    if (Object.prototype.hasOwnProperty.call(storedOptions, key)) {
+      normalized[key] = storedOptions[String(key)] as T[typeof key];
+    }
+  });
+
+  return normalized;
 };
 
 const persistOptions = <T extends Record<string, unknown>>(

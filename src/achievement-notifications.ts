@@ -175,10 +175,10 @@ export class AchievementNotificationRenderer {
     const uiWidth = viewport.width / scale;
     const uiHeight = viewport.height / scale;
     const progress = this.easeOutCubic(this.getAnimationProgress(elapsed));
-    const hiddenX = uiWidth / 2 + this.layout.slideDistance;
-    const visibleX = uiWidth / 2 - this.layout.margin - this.layout.width;
+    const visibleX = uiWidth - this.layout.margin - this.layout.width;
+    const hiddenX = uiWidth + this.layout.slideDistance;
     const x = visibleX + (hiddenX - visibleX) * (1 - progress);
-    const y = uiHeight / 2 - this.layout.bottomOffset - this.layout.height;
+    const y = uiHeight - this.layout.bottomOffset - this.layout.height;
 
     this.context.save();
     this.context.scale(scale, scale);

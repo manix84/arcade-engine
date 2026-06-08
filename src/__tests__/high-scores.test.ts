@@ -105,6 +105,19 @@ describe("high score helpers", () => {
     expect(manager.getHighScoreThresholds(1)).toEqual(manager.getHighScores());
   });
 
+  it("does not mark local-only saves as sync errors", () => {
+    const manager = createHighScoreManager({
+      apiEnabled: false,
+      now: () => 2000,
+      storageKey,
+    });
+
+    manager.saveHighScore("Local", 100, []);
+
+    expect(manager.getHighScoreSyncStatus()).toBe("waiting");
+    expect(manager.loadStoredScoreRecords()[0]?.syncState).toBe("local");
+  });
+
   it("loads stored score records defensively and normalizes cached entries", () => {
     const manager = createHighScoreManager({
       apiEnabled: false,
@@ -244,6 +257,13 @@ describe("high score helpers", () => {
       )
     ).resolves.toBe(false);
     await expect(
+      validateHighScoreServerRunReceipt(
+        { ...created.receipt, issuedAt: 1001 },
+        created.record,
+        { now: () => 5999, secret: "server-secret" }
+      )
+    ).resolves.toBe(false);
+    await expect(
       validateHighScoreServerRunReceipt(created.receipt, created.record, {
         now: () => 6001,
         secret: "server-secret",
@@ -265,6 +285,20 @@ describe("high score helpers", () => {
     expect(areHighScoreTokenHashesEqual(created.record.tokenHash, "short")).toBe(
       false
     );
+  });
+
+  it("hashes server run tokens without browser btoa when Buffer is available", async () => {
+    const originalBtoa = globalThis.btoa;
+
+    try {
+      vi.stubGlobal("btoa", undefined);
+
+      await expect(
+        hashHighScoreRunToken("receipt-token", "server-secret")
+      ).resolves.toEqual(expect.any(String));
+    } finally {
+      vi.stubGlobal("btoa", originalBtoa);
+    }
   });
 
   it("submits pending receipt-backed scores and stores remote results", async () => {

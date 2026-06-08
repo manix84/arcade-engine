@@ -373,7 +373,8 @@ export const validateHighScoreServerRunReceipt = async (
     !normalizedReceipt ||
     !isHighScoreServerRunRecord(record) ||
     !isHighScoreServerRunRecordUsable(record, options.now?.() ?? Date.now()) ||
-    normalizedReceipt.runId !== record.runId
+    normalizedReceipt.runId !== record.runId ||
+    normalizedReceipt.issuedAt !== normalizeTimestamp(record.issuedAt)
   ) {
     return false;
   }
@@ -919,7 +920,9 @@ export const createHighScoreManager = <Settings = unknown>(
       saveStoredScoreRecords(
         trimStoredScoreRecords(upsertScoreRecords(loadStoredScoreRecords(), [entry]))
       );
-      void syncHighScores();
+      if (entry.syncState === "pending") {
+        void syncHighScores();
+      }
 
       return toHighScoreEntry(entry);
     },
@@ -1179,6 +1182,26 @@ const getHighScoreServerSecretBytes = (
 };
 
 const toBase64Url = (bytes: Uint8Array): string => {
+  const bufferConstructor = (
+    globalThis as typeof globalThis & {
+      Buffer?: {
+        from: (bytes: Uint8Array) => {
+          toString: (encoding: "base64url") => string;
+        };
+      };
+    }
+  ).Buffer;
+
+  if (bufferConstructor) {
+    return bufferConstructor.from(bytes).toString("base64url");
+  }
+
+  if (typeof btoa !== "function") {
+    throw new Error(
+      "High-score server receipt signing requires btoa or Buffer for base64url encoding."
+    );
+  }
+
   let binary = "";
 
   for (const byte of bytes) {

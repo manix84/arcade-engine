@@ -148,6 +148,51 @@ describe("browser capability helpers", () => {
     denied.destroy();
   });
 
+  it("releases a wake lock that resolves after deactivation", async () => {
+    const documentRef = document.implementation.createHTMLDocument(
+      "wake-lock-race"
+    ) as MutableDocument;
+    const sentinel = new EventTarget() as ScreenWakeLockSentinel;
+    const release = vi.fn(async () => {
+      sentinel.released = true;
+    });
+    let resolveRequest: (sentinel: ScreenWakeLockSentinel) => void = () => {};
+    const request = vi.fn(
+      () =>
+        new Promise<ScreenWakeLockSentinel>((resolve) => {
+          resolveRequest = resolve;
+        })
+    );
+    const navigatorRef = {
+      wakeLock: {
+        request,
+      },
+    } as unknown as Navigator;
+
+    sentinel.released = false;
+    sentinel.release = release;
+    setVisibilityState(documentRef, "visible");
+
+    const controller = new ScreenWakeLockController({
+      document: documentRef,
+      navigator: navigatorRef,
+    });
+
+    controller.setActive(true);
+    controller.setActive(false);
+    resolveRequest(sentinel);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(release).toHaveBeenCalledTimes(1);
+
+    sentinel.dispatchEvent(new Event("release"));
+    await Promise.resolve();
+    expect(request).toHaveBeenCalledTimes(1);
+
+    controller.destroy();
+  });
+
   it("enters immersive mode with fullscreen and orientation lock when available", async () => {
     const documentRef = document.implementation.createHTMLDocument("immersive");
     const element = {

@@ -27,7 +27,10 @@ describe("user option store", () => {
   });
 
   it("loads defaults and merges plain stored values", () => {
-    localStorage.setItem(storageKey, JSON.stringify({ volume: 9 }));
+    localStorage.setItem(
+      storageKey,
+      JSON.stringify({ optionsVersion: 2, unknown: true, volume: 9 })
+    );
 
     const store = createUserOptionsStore<TestOptions>({
       defaults,
@@ -39,7 +42,9 @@ describe("user option store", () => {
       inputMode: "keyboard",
       volume: 9,
     });
-    expect(normalizeUserOptions({ fullscreen: true }, defaults)).toEqual({
+    expect(
+      normalizeUserOptions({ fullscreen: true, optionsVersion: 2 }, defaults)
+    ).toEqual({
       fullscreen: true,
       inputMode: "keyboard",
       volume: 6,
@@ -105,6 +110,34 @@ describe("user option store", () => {
       optionsVersion: 2,
       volume: 3,
     });
+  });
+
+  it("does not load persisted version metadata as an option", () => {
+    localStorage.setItem(
+      storageKey,
+      JSON.stringify({
+        fullscreen: true,
+        optionsVersion: 2,
+        volume: 4,
+      })
+    );
+
+    const store = createUserOptionsStore<TestOptions>({
+      defaults,
+      storageKey,
+      version: 2,
+    });
+
+    expect(store.getOptions()).toEqual({
+      fullscreen: true,
+      inputMode: "keyboard",
+      volume: 4,
+    });
+    expect(Object.keys(store.getOptions())).toEqual([
+      "fullscreen",
+      "inputMode",
+      "volume",
+    ]);
   });
 
   it("notifies subscribers and DOM listeners with changed keys", () => {
