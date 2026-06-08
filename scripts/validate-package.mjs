@@ -11,7 +11,7 @@ const requiredFiles = [
 const missingFiles = requiredFiles.filter((file) => !existsSync(file));
 
 if (missingFiles.length) {
-  console.error(`Build output missing: ${missingFiles.join(", ")}`);
+  console.error(`Package validation missing required file(s): ${missingFiles.join(", ")}`);
   process.exit(1);
 }
 
@@ -23,7 +23,11 @@ if (packageJson.private) {
 }
 
 if (packageJson.readmeFilename !== "README.md") {
-  console.error("Package readmeFilename must point at README.md.");
+  console.error(
+    `Package readmeFilename must point at README.md; found ${JSON.stringify(
+      packageJson.readmeFilename
+    )}.`
+  );
   process.exit(1);
 }
 
