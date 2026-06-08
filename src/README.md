@@ -98,6 +98,66 @@ Use it when a game needs player one/player two controls, assigned gamepad
 indexes, or serializable `PlayerInputIntent` objects that can be sent through a
 game-owned backend, relay, WebSocket, or WebRTC connection.
 
+## 📱 Browser Capabilities
+
+[browser-capabilities.ts](browser-capabilities.ts) wraps optional browser/PWA
+APIs behind small best-effort helpers.
+
+Use it for:
+
+- Screen Wake Lock support detection and lifecycle management.
+- Fullscreen and orientation-lock requests from trusted user gestures.
+- Installed-app close attempts with a blocked-exit fallback event.
+
+These helpers are exported from the package root. Games still decide when to
+request these capabilities and what fallback UI to show when the browser denies
+them.
+
+## 📺 Display Filters
+
+[display-filters.ts](display-filters.ts) contains retro display preset data and
+normalization helpers.
+
+Use it for:
+
+- CRT, VHS, off, and custom display-filter modes.
+- Settings labels and descriptions for menus.
+- Normalizing untrusted filter intensities.
+- Resolving presets plus temporary runtime boosts into effective settings.
+
+The module returns settings data only; games decide how to apply the visual
+effect in CSS, canvas, WebGL, or another renderer.
+
+## ⚙️ User Options
+
+[user-options.ts](user-options.ts) contains a generic local user-options store.
+
+Use it for:
+
+- Schema defaults and caller-provided normalization.
+- Best-effort localStorage persistence.
+- Reset behavior that removes stored preferences.
+- Store subscribers and optional DOM change events.
+
+Games keep their concrete option schema, migrations, and validation rules. The
+module is exported from the package root, and the
+`Engine/Systems/New Helpers/User Options` Storybook story shows a small
+settings store.
+
+## 🧰 Runtime Utilities
+
+[runtime-logger.ts](runtime-logger.ts) contains configurable log-level helpers
+and a small console logger factory.
+
+[storage-reset.ts](storage-reset.ts) contains best-effort localStorage access
+and cleanup helpers for namespaced or score-like keys.
+
+[viewport-scale.ts](viewport-scale.ts) contains manual zoom normalization,
+stepping, formatting, and responsive viewport scale helpers.
+
+Use these modules for debug menus, player-facing zoom settings, and maintenance
+actions without coupling games to one option schema or storage namespace.
+
 ## 🏆 Achievements
 
 [achievements.ts](achievements.ts) contains generic achievement state helpers.
@@ -110,6 +170,21 @@ The module has no browser dependency and is exported from the package root. The
 `Engine/Systems/New Helpers/Achievements` Storybook story shows progress
 counters, direct unlocks, status lists, and immutable state updates.
 
+## 🏆 Achievement Notifications
+
+[achievement-notifications.ts](achievement-notifications.ts) contains a generic
+canvas unlock-popup renderer.
+
+Use it for:
+
+- Queued achievement unlock notifications.
+- Slide, hold, and exit timing.
+- Optional icon sprite frames or placeholder icons.
+- Event-driven enqueueing with caller-owned event names and targets.
+
+The renderer depends only on a canvas context and caller-provided viewport data.
+Games still own achievement definitions, icon assets, and when to render.
+
 ## 🏅 High Scores
 
 [high-scores.ts](high-scores.ts) contains local leaderboard, remote sync, and
@@ -120,15 +195,17 @@ Use it for:
 - Local-first score storage with configurable storage keys.
 - Optional remote sync through configurable API routes.
 - Run receipt and integrity payload creation.
+- Server receipt issuance, token hashing, expiry checks, and receipt
+  validation.
 - Backend validation of unknown score-submission payloads.
 - Game-specific score plausibility rules based on stat limits and score
   budgets.
 
-Backends can import `arcade-engine/high-scores` for validation helpers and pair
-them with their token signing, score storage, receipt expiry, and rate limits.
-The `Engine/Systems/New Helpers/High Scores` Storybook story shows local
-leaderboards, default-score merging, thresholds, integrity validation, and
-plausibility feedback.
+Backends can import `arcade-engine/high-scores` for receipt and submission
+validation helpers while keeping route handling, score storage, used-receipt
+updates, and rate limits app-owned. The `Engine/Systems/New Helpers/High
+Scores` Storybook story shows local leaderboards, default-score merging,
+thresholds, integrity validation, and plausibility feedback.
 
 ## 🎞️ Sprite Animation
 
@@ -150,6 +227,9 @@ viewport follows a player or focus object.
 
 [viewport.ts](viewport.ts) calculates radius, padded radius, area scale, and
 scaled viewport limits from dimensions.
+
+[viewport-scale.ts](viewport-scale.ts) covers reference-size scaling and manual
+zoom percentages for UI/game surfaces.
 
 [debug-vectors.ts](debug-vectors.ts) draws visual movement/debug overlays to a
 canvas context. Use it to make heading, velocity, and target relationships

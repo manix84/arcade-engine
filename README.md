@@ -34,10 +34,20 @@ helper systems could support other arcade-style browser games too.
 - Local multiplayer input helpers for player one/player two keyboard,
   mouse/touch, and assigned gamepad controls, plus backend-agnostic remote
   player intent contracts.
+- Browser capability helpers for screen wake locks, fullscreen/orientation
+  immersive mode, and installed-app exit fallbacks.
+- User option stores with schema defaults, caller-provided normalization,
+  localStorage persistence, reset behavior, subscribers, and change events.
+- Runtime logger helpers with configurable log levels and console routing.
+- Storage reset helpers for namespaced and score-like localStorage cleanup.
+- Viewport zoom helpers for responsive UI/game scaling and manual zoom values.
+- Retro display filter presets and normalization helpers for CRT, VHS, custom,
+  and runtime-boosted presentation settings.
 - Achievement state helpers for local unlocks, progress counters, and status
   lists.
+- Canvas achievement notification helpers for queued unlock popups.
 - High-score helpers for local leaderboards, optional remote sync, receipt
-  integrity payloads, and backend submission validation.
+  integrity payloads, backend receipt issuance, and submission validation.
 - Sprite animation helpers for frame timing and sprite-sheet frame selection.
 - Math, heading, spawn, collision, area-exit, cloning, random-color, and
   browser-event helpers.
@@ -69,31 +79,115 @@ documentation use the display name Arcade Engine.
 
 ## 🚪 Package Entry
 
+Most browser games import the pieces they need from the package root:
+
 ```ts
 import {
-  addAchievementProgress,
   GameArena,
   Sound,
   Ticker,
-  createCubeClusterFromPattern,
-  createHighScoreManager,
+  createInputController,
   detectBoxCollision,
-  drawDebugVectors,
-  fillCanvasWithTrail,
-  getFirstPersonCamera,
-  getGridCell,
-  getLoopedScrollerPosition,
-  getPerspectiveScale,
-  getScaledViewportLimit,
   helpers,
-  projectIsometricPoint,
-  projectPerspectivePoint,
-  validateHighScoreSubmission,
 } from "arcade-engine";
 ```
 
-The package is ESM-only. Import from `arcade-engine`; do not import from
-individual source files in consuming projects.
+Backend score-validation code can import the smaller high-score subpath:
+
+```ts
+import {
+  createHighScoreServerRunReceipt,
+  validateHighScoreServerRunReceipt,
+  validateHighScoreSubmission,
+} from "arcade-engine/high-scores";
+```
+
+The package is ESM-only. Import from `arcade-engine` or a documented package
+subpath such as `arcade-engine/high-scores`; do not import from individual
+source files in consuming projects.
+
+## 🚀 Quick Start
+
+Create a host element with a stable size:
+
+```html
+<div id="game"></div>
+```
+
+```css
+#game {
+  width: 800px;
+  height: 600px;
+  background: #05070d;
+}
+```
+
+Then wire an arena, ticker, and input controller:
+
+```ts
+import {
+  GameArena,
+  Ticker,
+  createInputController,
+  helpers,
+} from "arcade-engine";
+
+const host = document.querySelector("#game") as HTMLElement;
+const arena = new GameArena(host, {
+  defaultTextColor: "#f8fbff",
+  fontFamily: "system-ui, sans-serif",
+});
+const input = createInputController({
+  fire: ["Space", "MouseLeft", "TouchPrimary", "Gamepad0"],
+  left: ["ArrowLeft", "KeyA", "GamepadAxisLeftXNegative"],
+  right: ["ArrowRight", "KeyD", "GamepadAxisLeftXPositive"],
+});
+const ticker = new Ticker({ fixedStepFps: 60 });
+const player = { heading: 90, posX: 0, posY: 0 };
+
+input.start();
+arena.setBackgroundColor("#05070d");
+
+ticker.addSchedule(() => {
+  input.updateGamepads();
+
+  if (input.isPressed("left")) {
+    player.heading = helpers.rotateTo(270, player.heading, 6);
+  }
+
+  if (input.isPressed("right")) {
+    player.heading = helpers.rotateTo(90, player.heading, 6);
+  }
+
+  player.posX += Math.cos((player.heading * Math.PI) / 180) * 3;
+  player.posY += Math.sin((player.heading * Math.PI) / 180) * 3;
+
+  arena.clear();
+  arena.drawCircle(player.posX, player.posY, 12, {
+    backgroundColor: input.isPressed("fire") ? "#f2b84b" : "#4fd1c5",
+  });
+  arena.renderText("READY", 0, -260, { align: "center", size: 18 });
+}, 1);
+
+ticker.start();
+```
+
+That starter covers the usual first pieces: canvas setup, a fixed simulation
+loop, keyboard/mouse/touch/gamepad input, simple movement, and drawing.
+
+## 🖼️ Demo Screenshots
+
+| Arcade loop | GameArena |
+| --- | --- |
+| ![Arcade Engine animated arcade loop Storybook demo](docs/screenshots/animated-arcade-loop.png) | ![GameArena canvas Storybook demo](docs/screenshots/complete-arena.png) |
+
+| 3D racer | Isometric room |
+| --- | --- |
+| ![Neon vector racer Storybook demo](docs/screenshots/neon-vector-racer.png) | ![Isometric dungeon room Storybook demo](docs/screenshots/isometric-dungeon-room.png) |
+
+| Cube clusters | Display filters |
+| --- | --- |
+| ![Destructible cube pickup Storybook demo](docs/screenshots/destructible-pickup.png) | ![Display filter Storybook demo](docs/screenshots/display-filters.png) |
 
 ## 🧱 Core Modules
 
@@ -188,6 +282,9 @@ Viewport helpers calculate radius and scale limits from the current arena size.
 Debug vectors draw velocity, heading, and target overlays so movement logic is
 visible while developing.
 
+Viewport-scale helpers separately cover manual zoom percentages and responsive
+UI/game scaling from a reference viewport.
+
 ### Grid And Box Collision
 
 Grid helpers convert between pixel coordinates and cells, clamp cells to a
@@ -202,6 +299,16 @@ Games can unlock achievements, increment progress counters, and render status
 lists from the returned data. See the `Engine/Systems/New Helpers/Achievements`
 Storybook story for an interactive unlock/progress example.
 
+### Achievement Notifications
+
+Achievement notification helpers render queued unlock popups to a canvas
+context. Games provide the achievement text, optional icon frame, viewport, and
+render loop; the renderer owns queue timing, slide/hold/exit animation, text
+wrapping, and placeholder icons.
+
+See the `Engine/Systems/New Helpers/Achievement Notifications` Storybook story
+for a popup queue demo.
+
 ### High Scores
 
 High-score helpers support local score tables and optional remote sync. Games
@@ -210,10 +317,46 @@ normalizers, and plausibility rules. See the
 `Engine/Systems/New Helpers/High Scores` Storybook story for local leaderboard,
 threshold, integrity, and plausibility examples.
 
-Remote leaderboard submissions can use run receipts and integrity payloads. A
-backend can import `validateHighScoreSubmission` from `arcade-engine/high-scores`
-and pair it with the game's token signing, receipt storage, expiry, and rate
-limits.
+Remote leaderboard submissions can use run receipts and integrity payloads.
+Backends can import `createHighScoreServerRunReceipt`,
+`validateHighScoreServerRunReceipt`, and `validateHighScoreSubmission` from
+`arcade-engine/high-scores`, while keeping route handling, receipt storage, and
+rate limits app-owned.
+
+### User Options
+
+User option stores keep game-specific settings schemas outside the engine while
+providing reusable persistence mechanics. Games provide defaults, optional
+normalization, and a storage key; the store handles localStorage access,
+best-effort writes, reset, subscriptions, and optional DOM change events.
+
+See the `Engine/Systems/New Helpers/User Options` Storybook story for a live
+options-store example.
+
+### Runtime Utilities
+
+Runtime utility helpers cover common app-service behavior that games usually
+wire into debug menus: configurable log levels, prefixed console logging,
+best-effort localStorage access, namespaced storage cleanup, score-key cleanup,
+and manual zoom normalization.
+
+### Browser Capabilities
+
+Browser capability helpers wrap optional PWA APIs behind best-effort helpers.
+Use `ScreenWakeLockController` for screen wake locks,
+`enterImmersiveMode()` for trusted-click fullscreen/orientation requests, and
+`exitInstalledApp()` when an installed app should attempt to close and report a
+blocked exit.
+
+### Display Filters
+
+Display filter helpers provide reusable retro presentation presets and
+normalization math. Use them to offer CRT/VHS/custom settings menus, clamp
+untrusted stored intensities, and layer temporary runtime boosts into effective
+filter settings.
+
+See the `Engine/Systems/New Helpers/Display Filters` Storybook story for a
+visual preset demo.
 
 ### Canvas Rendering
 
@@ -300,8 +443,9 @@ Storybook contains live demos for the engine surface:
 - **Core**: `GameArena`, ticker behavior, viewport scaling, and debug vectors.
 - **Helpers**: math, geometry, object cloning, event binding, collisions,
   rotation, spawning, and 2.5D variants.
-- **Systems**: input actions, local multiplayer, sprite animation, follow
-  cameras, achievements, high scores, and spatial-audio math.
+- **Systems**: input actions, local multiplayer, user options, achievements,
+  achievement notifications, high scores, display filters, sprite animation,
+  follow cameras, and spatial-audio math.
 - **Audio**: master controls, effects, music, spatial panning, and global
   playback behavior.
 - **3D**: cube-cluster pickups and modular level pieces.
@@ -390,7 +534,14 @@ Active package modules:
 - `src/Sound.ts`
 - `src/input.ts`
 - `src/multiplayer.ts`
+- `src/browser-capabilities.ts`
+- `src/user-options.ts`
+- `src/runtime-logger.ts`
+- `src/storage-reset.ts`
+- `src/viewport-scale.ts`
+- `src/display-filters.ts`
 - `src/achievements.ts`
+- `src/achievement-notifications.ts`
 - `src/high-scores.ts`
 - `src/animation.ts`
 - `src/camera.ts`

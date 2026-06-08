@@ -15,6 +15,36 @@ Import from the package root:
 import { GameArena, Ticker, helpers } from "arcade-engine";
 ```
 
+Minimal loop:
+
+Give `#game` a CSS width and height before constructing `GameArena`.
+
+```ts
+import { GameArena, Ticker, createInputController } from "arcade-engine";
+
+const arena = new GameArena(document.querySelector("#game") as HTMLElement);
+const input = createInputController({
+  fire: ["Space", "MouseLeft", "TouchPrimary", "Gamepad0"],
+  moveLeft: ["ArrowLeft", "KeyA", "GamepadAxisLeftXNegative"],
+});
+const ticker = new Ticker({ fixedStepFps: 60 });
+
+input.start();
+
+ticker.addSchedule(() => {
+  input.updateGamepads();
+  arena.clear();
+  arena.drawCircle(input.isPressed("moveLeft") ? -24 : 24, 0, 12, {
+    backgroundColor: input.isPressed("fire") ? "#f2b84b" : "#4fd1c5",
+  });
+}, 1);
+
+ticker.start();
+```
+
+Use the package root for browser game code. Use `arcade-engine/high-scores`
+from backend routes when you only need score validation and receipt helpers.
+
 ## 🎬 Core Classes
 
 | Export | What It Does | See Also |
@@ -117,6 +147,124 @@ Remote multiplayer is supported as data contracts rather than a bundled
 network stack. Games can send `PlayerInputIntent` objects through WebSocket,
 WebRTC, a hosted relay, or their own backend.
 
+## 📱 Browser Capabilities
+
+| Export | Use It For |
+| --- | --- |
+| `canUseScreenWakeLock` | Detect whether the browser exposes the Screen Wake Lock API. |
+| `ScreenWakeLockController` | Acquire, release, and reacquire best-effort screen wake locks around gameplay state. |
+| `canUseFullscreen` | Detect fullscreen request support on an element. |
+| `canLockOrientation` | Detect Screen Orientation lock support. |
+| `enterImmersiveMode` | Request fullscreen and an optional orientation lock from a trusted user gesture. |
+| `exitInstalledApp` | Attempt to close an installed app window and dispatch a fallback event if blocked. |
+| `appExitBlockedEventName` | Default event name used by `exitInstalledApp`. |
+
+```ts
+const wakeLock = new ScreenWakeLockController();
+
+wakeLock.setActive(true);
+
+await enterImmersiveMode({ orientation: "landscape" });
+
+window.addEventListener(appExitBlockedEventName, () => {
+  showExitFallback();
+});
+exitInstalledApp();
+```
+
+These helpers treat browser capability calls as optional. Denied or unsupported
+requests should not interrupt gameplay.
+
+## ⚙️ User Options
+
+| Export | Use It For |
+| --- | --- |
+| `createUserOptionsStore` | Create a typed local options store with defaults, normalization, persistence, reset, subscribers, and optional DOM change events. |
+| `normalizeUserOptions` | Shallow-merge unknown stored values over defaults before app-specific validation. |
+| `userOptionsChangedEventName` | Default DOM event name dispatched after option changes. |
+
+```ts
+const options = createUserOptionsStore({
+  defaults: {
+    fullscreen: false,
+    inputMode: "keyboard",
+    volume: 6,
+  },
+  normalize: (stored, defaults) => ({
+    ...normalizeUserOptions(stored, defaults),
+    volume: Math.max(0, Math.min(10, Number((stored as { volume?: unknown }).volume ?? defaults.volume))),
+  }),
+  storageKey: "myGame.options",
+  version: 1,
+});
+
+options.setOption("volume", 8);
+options.subscribe(({ changedKeys, options }) => {
+  console.info("Options changed", changedKeys, options);
+});
+```
+
+Games own their concrete schema and validation rules. The store owns the
+browser-safe mechanics of reading, writing, resetting, and notifying.
+
+## 🧰 Runtime Utilities
+
+| Export | Use It For |
+| --- | --- |
+| `runtimeLogLevels` | Ordered log-level values for settings menus. |
+| `isRuntimeLogLevel` | Type guard for unknown persisted log-level values. |
+| `getNextRuntimeLogLevel` | Cycle through supported log levels. |
+| `createRuntimeLogger` | Create a prefixed console logger controlled by a log-level getter. |
+| `getAvailableLocalStorage` | Safely access localStorage when available. |
+| `removeStorageKeysMatching` | Best-effort removal for keys matching a predicate. |
+| `removeStorageNamespace` | Remove all keys under a caller-owned storage prefix. |
+| `removeScoreStorageKeys` | Remove score-like keys under a caller-owned storage prefix. |
+| `clampZoomPercent` | Clamp manual zoom values. |
+| `getSteppedZoomPercent` | Snap manual zoom values to a configured step. |
+| `getZoomScale` | Convert a zoom percent to a scale multiplier. |
+| `formatZoomPercent` | Format zoom percentages for settings UI. |
+| `getViewportScale` | Calculate responsive scale from viewport and reference dimensions. |
+| `getManualViewportScale` | Combine responsive viewport scale with a manual scale multiplier. |
+
+```ts
+const logger = createRuntimeLogger({
+  getLevel: () => options.logLevel,
+  prefix: "[My Game]",
+});
+
+logger.warning("Resetting scores");
+removeScoreStorageKeys("myGame.");
+```
+
+## 📺 Display Filters
+
+| Export | Use It For |
+| --- | --- |
+| `displayFilterModes` | Ordered preset list for settings menus. |
+| `displayFilterModeLabels` | User-facing labels for built-in display filter modes. |
+| `displayFilterSettingKeys` | Ordered setting keys for custom filter controls. |
+| `displayFilterSettingLabels` | User-facing labels for individual filter settings. |
+| `displayFilterSettingDescriptions` | Short descriptions for settings UI. |
+| `displayFilterPresets` | Built-in CRT/VHS/off settings. |
+| `defaultCustomDisplayFilterSettings` | Default custom settings object. |
+| `defaultDisplayFilterRuntimeBoosts` | Zeroed temporary boost values. |
+| `normalizeDisplayFilterIntensity` | Clamp unknown values to integer `0..100`. |
+| `normalizeDisplayFilterSettings` | Normalize partial or untrusted settings into a complete settings object. |
+| `getDisplayFilterSettingsForMode` | Resolve preset/custom settings plus runtime boosts into effective settings. |
+
+```ts
+const settings = getDisplayFilterSettingsForMode(
+  "arcade-crt",
+  defaultCustomDisplayFilterSettings,
+  { explosionBloomBoost: 20 }
+);
+
+applyCanvasFilter(settings);
+```
+
+The helpers produce settings data only. Games choose how to render scanlines,
+masking, curvature, bloom, and other presentation effects.
+
 ## 🏆 Achievements
 
 | Export | Use It For |
@@ -157,13 +305,43 @@ validation is handled by the high-score helpers. See
 `Engine/Systems/New Helpers/Achievements` in Storybook for an interactive
 progress and unlock demo.
 
+## 🏆 Achievement Notifications
+
+| Export | Use It For |
+| --- | --- |
+| `AchievementNotificationRenderer` | Queue and render animated canvas achievement unlock popups. |
+| `achievementNotificationEventName` | Default event name for event-driven notification enqueueing. |
+| `defaultAchievementNotificationLayout` | Default popup width, height, icon size, margin, and slide distance. |
+| `defaultAchievementNotificationTheme` | Default popup colors. |
+| `defaultAchievementNotificationTiming` | Default slide, hold, and exit durations. |
+
+```ts
+const renderer = new AchievementNotificationRenderer({
+  context,
+  getViewport: () => ({ width: canvas.width, height: canvas.height }),
+});
+
+renderer.enqueue({
+  name: "Wave Breaker",
+  description: "Clear three waves.",
+});
+renderer.render();
+```
+
+The renderer works directly with canvas contexts. Games own their achievement
+definitions, icon assets, and render loop timing.
+
 ## 🏅 High Scores
 
 Backend code can import high-score validation helpers without importing the
 whole engine root:
 
 ```ts
-import { validateHighScoreSubmission } from "arcade-engine/high-scores";
+import {
+  createHighScoreServerRunReceipt,
+  validateHighScoreServerRunReceipt,
+  validateHighScoreSubmission,
+} from "arcade-engine/high-scores";
 ```
 
 | Export | Use It For |
@@ -172,6 +350,11 @@ import { validateHighScoreSubmission } from "arcade-engine/high-scores";
 | `createHighScoreIntegrity` | Create receipt-backed integrity data for a score submission. |
 | `validateHighScoreIntegrity` | Verify score, stats, settings, receipt, and submitted-at values still match integrity data. |
 | `validateHighScoreSubmission` | Validate unknown backend payloads before accepting remote leaderboard rows. |
+| `createHighScoreServerRunReceipt` | Issue a signed run receipt and matching stored receipt record for a backend route. |
+| `validateHighScoreServerRunReceipt` | Verify a submitted run receipt against a stored token hash, expiry, and used state. |
+| `createHighScoreRunToken` | Sign a `runId:issuedAt` pair with HMAC SHA-256. |
+| `hashHighScoreRunToken` | Hash a submitted receipt token for storage comparison. |
+| `areHighScoreTokenHashesEqual` | Compare token hashes without early exit. |
 | `isHighScorePlausible` | Check stat limits and weighted score budgets. |
 | `getHighScorePlausibilityReasons` | Return machine-readable plausibility failures. |
 | `getHighScoreStatValues` | Parse numeric stat lines such as `Enemies: 12`. |
@@ -180,6 +363,8 @@ import { validateHighScoreSubmission } from "arcade-engine/high-scores";
 | `isHighScoreEntry` | Type guard for public score rows. |
 | `isHighScoreIntegrity` | Type guard for score integrity payloads. |
 | `isHighScoreRunReceipt` | Type guard for run receipts. |
+| `isHighScoreServerRunRecord` | Type guard for stored backend receipt records. |
+| `isHighScoreServerRunRecordUsable` | Check whether a stored receipt record is unused and unexpired. |
 | `hashHighScoreText` | Stable non-cryptographic text hash used by integrity helpers. |
 
 ```ts
@@ -211,10 +396,39 @@ if (!validation.accepted) {
 }
 ```
 
-Use these helpers alongside your API routes, receipt signing, score storage,
-receipt expiry, and plausibility policy. See
-`Engine/Systems/New Helpers/High Scores` in Storybook for a local leaderboard
-and validation demo.
+```ts
+const { receipt, record } = await createHighScoreServerRunReceipt({
+  randomUUID: crypto.randomUUID,
+  secret: process.env.HIGH_SCORE_SECRET!,
+  ttlMs: 5 * 60 * 1000,
+});
+
+await runs.insert(record);
+return receipt;
+```
+
+```ts
+const validation = validateHighScoreSubmission(payload, {
+  rules: scoreRules,
+});
+
+if (!validation.accepted) {
+  throw new Error(validation.error);
+}
+
+const record = await runs.find(validation.run.runId);
+const trusted = await validateHighScoreServerRunReceipt(validation.run, record, {
+  secret: process.env.HIGH_SCORE_SECRET!,
+});
+
+if (!trusted) {
+  throw new Error("invalid_run_receipt");
+}
+```
+
+Use these helpers alongside your API routes, score storage, used-receipt
+updates, and rate limits. See `Engine/Systems/New Helpers/High Scores` in
+Storybook for a local leaderboard and validation demo.
 
 ## 🎞️ Sprite Animation
 
@@ -289,6 +503,12 @@ body = applyGravity2D(body, {
 | `getViewportPaddedRadius` | Radius with padding. |
 | `getViewportAreaScale` | Scale values against viewport area. |
 | `getScaledViewportLimit` | Responsive spawn/entity limits. |
+| `getViewportScale` | Responsive UI/game scale from a reference viewport. |
+| `getManualViewportScale` | Responsive viewport scale plus manual zoom scale. |
+| `clampZoomPercent` | Clamp manual zoom percentages. |
+| `getSteppedZoomPercent` | Snap zoom percentages to a menu/control step. |
+| `getZoomScale` | Convert zoom percentage to a scale multiplier. |
+| `formatZoomPercent` | Format zoom values for display. |
 | `drawDebugVectors` | Canvas overlays for heading, velocity, and target vectors. |
 
 ## 📷 Camera

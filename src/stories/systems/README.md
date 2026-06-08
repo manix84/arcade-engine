@@ -36,6 +36,37 @@ does not provide a backend, matchmaking, relay, WebSocket server, or WebRTC
 signalling server. Games can send `PlayerInputIntent` objects through whichever
 transport they own.
 
+## ⚙️ User Options
+
+`UserOptions` shows a generic persisted settings store.
+
+The story demonstrates:
+
+- `createUserOptionsStore`.
+- Schema defaults and caller-provided normalization.
+- Best-effort local storage writes.
+- Reset behavior.
+- Store subscribers and change telemetry.
+
+Use this pattern when a game needs persistent player preferences while keeping
+its concrete settings schema and validation rules in game code.
+
+## 📺 Display Filters
+
+`DisplayFilters` shows retro display preset settings as renderer-agnostic data.
+
+The story demonstrates:
+
+- `displayFilterModes`.
+- `displayFilterModeLabels`.
+- `defaultCustomDisplayFilterSettings`.
+- `getDisplayFilterSettingsForMode`.
+- Runtime boost composition for glow, curvature, dithering, flicker, and
+  interference values.
+
+Use this pattern when a game needs CRT/VHS/custom display options but wants the
+renderer to stay game-owned.
+
 ## 🏆 Achievements
 
 `Achievements` shows local achievement definition, progress, unlock, and status
@@ -52,6 +83,20 @@ The story demonstrates:
 
 Use this pattern when a game needs local achievements, progress counters, or a
 status screen without coupling unlock logic to rendering code.
+
+## 🏆 Achievement Notifications
+
+`AchievementNotifications` shows a canvas unlock-popup queue.
+
+The story demonstrates:
+
+- `AchievementNotificationRenderer`.
+- Queued notifications.
+- Slide/hold/exit timing.
+- Canvas text and icon-placeholder rendering.
+
+Use this pattern when a game needs achievement popups while keeping achievement
+definitions, assets, and render-loop ownership in game code.
 
 ## 🏅 High Scores
 

@@ -4,9 +4,15 @@ import {
   addAchievementProgress,
   applyGravity2D,
   applyGravity3D,
+  AchievementNotificationRenderer,
   createAchievementState,
   createHighScoreIntegrity,
   createHighScoreManager,
+  createUserOptionsStore,
+  defaultCustomDisplayFilterSettings,
+  displayFilterModeLabels,
+  displayFilterModes,
+  getDisplayFilterSettingsForMode,
   createRagdoll2D,
   createRagdoll3D,
   createLocalMultiplayerController,
@@ -31,6 +37,8 @@ import {
   type HighScoreEntry,
   type HighScoreRunReceipt,
   type HighScoreStorage,
+  type DisplayFilterMode,
+  type UserOptionsStorage,
   type Ragdoll2D as PhysicsRagdoll2D,
   type Ragdoll3D as PhysicsRagdoll3D,
   type RagdollConstraint,
@@ -58,15 +66,19 @@ type DemoAchievementId = "first-sortie" | "wave-breaker" | "precision-run";
 
 type SystemsStoryArgs = {
   baseScoreBudget?: number;
+  displayFilterMode?: DisplayFilterMode;
+  displayFilterBoost?: number;
   highScoreValue?: number;
   lowScoreValue?: number;
   maxAcceptedScore?: number;
   onAchievementProgress?: (id: DemoAchievementId) => void;
+  onAchievementNotification?: (name: string) => void;
   onAchievementReset?: () => void;
   onAchievementUnlock?: (id: DemoAchievementId) => void;
   onHighScoreSave?: (entry: HighScoreEntry) => void;
   onHighScoreTamper?: (accepted: boolean, label: string) => void;
   onHighScoreValidate?: (accepted: boolean, label: string) => void;
+  onUserOptionsChange?: (options: Record<string, unknown>) => void;
   precisionGoal?: number;
   waveGoal?: number;
 };
@@ -566,6 +578,80 @@ export const Achievements: Story = {
   },
 };
 
+export const AchievementNotifications: Story = {
+  args: {
+    onAchievementNotification: fn(),
+  },
+  render: (args) => {
+    const { canvas, metrics, shell } = createSystemsLayout("Achievement notifications");
+    const context = canvas.getContext("2d");
+    const queueValue = createValue("queue", 0);
+    const lastValue = createValue("last unlock", "none");
+    const usesValue = createValue("uses", "AchievementNotificationRenderer");
+    let animationFrame = 0;
+
+    metrics.append(queueValue, lastValue, usesValue);
+
+    if (!context) {
+      return shell;
+    }
+
+    const renderer = new AchievementNotificationRenderer({
+      context,
+      getViewport: () => ({ height: canvas.height, width: canvas.width }),
+      layout: {
+        bottomOffset: 54,
+      },
+      scale: 1,
+    });
+
+    const drawBackdrop = (): void => {
+      context.fillStyle = "#05070a";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.strokeStyle = "rgba(245, 247, 251, 0.12)";
+      context.strokeRect(48, 54, canvas.width - 96, canvas.height - 108);
+      context.fillStyle = "#cbd5e1";
+      context.font = "18px sans-serif";
+      context.fillText("Achievement popup queue", 64, 88);
+    };
+
+    const enqueue = (name: string, description: string): void => {
+      renderer.enqueue({ description, name });
+      args.onAchievementNotification?.(name);
+      setValue(lastValue, name);
+      setValue(queueValue, renderer.getQueueLength());
+    };
+
+    const controls = document.createElement("div");
+    controls.className = "ae-controls";
+    controls.append(
+      createButton("Unlock Wave", () =>
+        enqueue("Wave Breaker", "Clear a full wave without losing momentum.")
+      ),
+      createButton("Unlock Precision", () =>
+        enqueue("Precision Run", "Land five clean shots in a row.")
+      )
+    );
+    metrics.append(controls);
+
+    const render = (): void => {
+      drawBackdrop();
+      renderer.render();
+      setValue(queueValue, renderer.getQueueLength());
+      animationFrame = window.requestAnimationFrame(render);
+    };
+
+    enqueue("First Sortie", "Start a tracked run and survive the opening pass.");
+    animationFrame = window.requestAnimationFrame(render);
+    onRemove(shell, () => {
+      window.cancelAnimationFrame(animationFrame);
+      renderer.destroy();
+    });
+
+    return shell;
+  },
+};
+
 const createStoryStorage = (): HighScoreStorage => {
   const values = new Map<string, string>();
 
@@ -802,6 +888,230 @@ export const HighScores: Story = {
     );
     metrics.append(controls);
     refresh();
+
+    return shell;
+  },
+};
+
+type DemoUserOptions = {
+  fullscreen: boolean;
+  inputMode: "keyboard" | "touch";
+  volume: number;
+};
+
+const createDemoUserOptionsStorage = (): UserOptionsStorage => {
+  const values = new Map<string, string>();
+
+  return {
+    getItem: (key) => values.get(key) ?? null,
+    removeItem: (key) => {
+      values.delete(key);
+    },
+    setItem: (key, value) => {
+      values.set(key, value);
+    },
+  };
+};
+
+export const UserOptions: Story = {
+  args: {
+    onUserOptionsChange: fn(),
+  },
+  render: (args) => {
+    const { canvas, metrics, shell } = createSystemsLayout("User option store");
+    const context = canvas.getContext("2d");
+    const optionsValue = createValue("options");
+    const sourceValue = createValue("last source", "ready");
+    const changedValue = createValue("changed keys", "none");
+    const storageValue = createValue("stored", "defaults");
+    const storage = createDemoUserOptionsStorage();
+    const store = createUserOptionsStore<DemoUserOptions>({
+      defaults: {
+        fullscreen: false,
+        inputMode: "keyboard",
+        volume: 6,
+      },
+      normalize: (stored, defaults) => {
+        const value = stored && typeof stored === "object" ? stored : {};
+        const record = value as Partial<DemoUserOptions>;
+
+        return {
+          fullscreen:
+            typeof record.fullscreen === "boolean"
+              ? record.fullscreen
+              : defaults.fullscreen,
+          inputMode: record.inputMode === "touch" ? "touch" : defaults.inputMode,
+          volume:
+            typeof record.volume === "number" && Number.isFinite(record.volume)
+              ? Math.max(0, Math.min(10, Math.round(record.volume)))
+              : defaults.volume,
+        };
+      },
+      storage,
+      storageKey: "storybook.userOptions",
+      version: 1,
+    });
+
+    metrics.append(
+      optionsValue,
+      sourceValue,
+      changedValue,
+      storageValue,
+      createValue("uses", "createUserOptionsStore")
+    );
+
+    const drawOptions = (): void => {
+      if (!context) {
+        return;
+      }
+
+      const current = store.getOptions();
+
+      context.fillStyle = "#05070a";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.fillStyle = "#cbd5e1";
+      context.font = "18px sans-serif";
+      context.fillText("Persisted user options", 38, 48);
+      [
+        ["Volume", `${current.volume}/10`, current.volume / 10],
+        ["Input", current.inputMode, current.inputMode === "touch" ? 1 : 0.35],
+        ["Fullscreen", current.fullscreen ? "on" : "off", current.fullscreen ? 1 : 0.25],
+      ].forEach(([label, value, percent], index) => {
+        const y = 92 + index * 64;
+        const progress = typeof percent === "number" ? percent : 0;
+
+        context.fillStyle = "rgba(245, 247, 251, 0.06)";
+        context.fillRect(38, y, canvas.width - 76, 36);
+        context.fillStyle = "rgba(79, 209, 197, 0.26)";
+        context.fillRect(38, y, (canvas.width - 76) * progress, 36);
+        context.fillStyle = "#f5f7fb";
+        context.font = "15px sans-serif";
+        context.fillText(String(label), 54, y + 23);
+        context.textAlign = "right";
+        context.fillText(String(value), canvas.width - 54, y + 23);
+        context.textAlign = "start";
+      });
+    };
+
+    const updateValues = (source = "ready", changedKeys: string[] = []): void => {
+      const current = store.getOptions();
+
+      setValue(optionsValue, JSON.stringify(current));
+      setValue(sourceValue, source);
+      setValue(changedValue, changedKeys.join(", ") || "none");
+      setValue(storageValue, storage.getItem("storybook.userOptions") ?? "none");
+      args.onUserOptionsChange?.(current);
+      drawOptions();
+    };
+
+    store.subscribe((change) => {
+      updateValues(String(change.source), change.changedKeys.map(String));
+    });
+
+    const controls = document.createElement("div");
+    controls.className = "ae-controls";
+    controls.append(
+      createButton("Volume Up", () => {
+        const current = store.getOptions();
+
+        store.setOption("volume", Math.min(10, current.volume + 1));
+      }),
+      createButton("Toggle Input", () => {
+        const current = store.getOptions();
+
+        store.setOption(
+          "inputMode",
+          current.inputMode === "keyboard" ? "touch" : "keyboard"
+        );
+      }),
+      createButton("Fullscreen", () => {
+        const current = store.getOptions();
+
+        store.setOption("fullscreen", !current.fullscreen);
+      }),
+      createButton("Reset", () => {
+        store.reset();
+      })
+    );
+    metrics.append(controls);
+    updateValues();
+
+    return shell;
+  },
+};
+
+export const DisplayFilters: Story = {
+  args: {
+    displayFilterBoost: 18,
+    displayFilterMode: "arcade-crt",
+  },
+  argTypes: {
+    displayFilterBoost: {
+      control: { max: 60, min: 0, step: 1, type: "range" },
+    },
+    displayFilterMode: {
+      control: "select",
+      labels: displayFilterModeLabels,
+      options: displayFilterModes.filter((mode) => mode !== "custom"),
+    },
+  },
+  render: (args) => {
+    const { canvas, metrics, shell } = createSystemsLayout("Display filters");
+    const context = canvas.getContext("2d");
+    const mode = args.displayFilterMode ?? "arcade-crt";
+    const boost = args.displayFilterBoost ?? 18;
+    const settings = getDisplayFilterSettingsForMode(
+      mode,
+      defaultCustomDisplayFilterSettings,
+      {
+        bulletPersistenceBoost: boost,
+        explosionBloomBoost: boost,
+        lowHealthInstabilityBoost: Math.round(boost / 2),
+        timeWarpDistortionBoost: Math.round(boost / 3),
+      }
+    );
+    const modeValue = createValue("mode", displayFilterModeLabels[mode]);
+    const bloomValue = createValue("bloom", settings.bloom);
+    const scanlineValue = createValue("scanlines", settings.scanlines);
+    const interferenceValue = createValue("interference", settings.interference);
+    const usesValue = createValue("uses", "getDisplayFilterSettingsForMode");
+
+    metrics.append(modeValue, bloomValue, scanlineValue, interferenceValue, usesValue);
+
+    if (context) {
+      context.fillStyle = "#05070a";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+
+      const cellSize = 32;
+
+      for (let y = 0; y < canvas.height; y += cellSize) {
+        for (let x = 0; x < canvas.width; x += cellSize) {
+          const lit = (x / cellSize + y / cellSize) % 2 === 0;
+          const alpha = lit ? 0.78 : 0.34;
+
+          context.fillStyle = `rgba(79, 209, 197, ${alpha})`;
+          context.fillRect(x + 8, y + 8, cellSize - 12, cellSize - 12);
+        }
+      }
+
+      context.fillStyle = `rgba(246, 224, 94, ${settings.bloom / 160})`;
+      context.beginPath();
+      context.arc(canvas.width / 2, canvas.height / 2, 110, 0, Math.PI * 2);
+      context.fill();
+
+      context.fillStyle = `rgba(5, 7, 10, ${settings.scanlines / 120})`;
+      for (let y = 0; y < canvas.height; y += 8) {
+        context.fillRect(0, y, canvas.width, 3);
+      }
+
+      context.strokeStyle = `rgba(252, 129, 129, ${settings.colourBleed / 120})`;
+      context.lineWidth = 4;
+      context.strokeRect(42, 42, canvas.width - 84, canvas.height - 84);
+
+      context.fillStyle = "#f5f7fb";
+      context.font = "20px sans-serif";
+      context.fillText(displayFilterModeLabels[mode], 42, 46);
+    }
 
     return shell;
   },

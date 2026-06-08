@@ -49,10 +49,20 @@
   gamepad inputs to game actions.
 - Added multiplayer helpers for local player-scoped input, assigned gamepads,
   co-op/PvP session metadata, and serializable remote player input intents.
+- Added browser capability helpers for screen wake locks, immersive fullscreen
+  orientation requests, and installed-app exit fallback events.
+- Added generic user option store helpers for defaults, normalization,
+  localStorage persistence, reset, subscribers, and change events.
+- Added retro display filter helpers for CRT/VHS presets, custom settings,
+  normalization, and runtime boost composition.
 - Added generic achievement helpers for unlock state, progress counters, and
   status lists.
+- Added canvas achievement notification helpers for queued unlock popups.
 - Added high-score helpers for local leaderboards, optional remote sync,
-  receipt-backed integrity, and backend submission validation.
+  receipt-backed integrity, server receipt validation, and backend submission
+  validation.
+- Added runtime utility helpers for log levels, console logging, storage reset
+  actions, and manual viewport zoom scaling.
 - Added sprite animation helpers for frame timing and sprite-sheet frame data.
 - Added follow-camera helpers for 2D worlds.
 - Added grid helpers for board and tile games.
@@ -85,6 +95,9 @@
 - Added systems demos for input actions, local multiplayer, sprite animation,
   follow cameras, and spatial-audio math.
 - Added systems demos for gravity and 2D/3D ragdoll helpers.
+- Added a systems demo for persisted user option stores.
+- Added a systems demo for CRT/VHS display filter presets.
+- Added a systems demo for achievement notification popups.
 - Added systems demos for achievement progress/unlocks and high-score
   leaderboard validation helpers, including Storybook actions and interaction
   checks for their controls.
@@ -98,8 +111,9 @@
   and storage.
 - Added tests covering arena behavior, ticker timing, sound behavior,
   viewport math, debug vectors, grid helpers, box collision, 2.5D projection,
-  cube clusters, achievements, high scores, canvas rendering, and helper
-  utilities.
+  cube clusters, browser capabilities, display filters, user options,
+  achievements, achievement notifications, high scores, canvas rendering, and
+  helper utilities.
 
 ## 🧹 Legacy Cleanup
 

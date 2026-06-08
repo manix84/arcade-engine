@@ -1,7 +1,7 @@
 {
   "name": "arcade-engine",
   "description": "A small browser arcade-game engine for canvas games.",
-  "version": "2.34.1",
+  "version": "2.41.1",
   "license": "MIT",
   "readmeFilename": "README.md",
   "type": "module",
@@ -56,6 +56,7 @@
   "types": "./dist/index.d.ts",
   "files": [
     "dist",
+    "docs/screenshots",
     "API.md",
     "LICENSE.md",
     "PRIVACY.md",

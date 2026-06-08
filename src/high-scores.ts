@@ -16,6 +16,35 @@ export interface HighScoreRunReceipt {
   token: string;
 }
 
+export type HighScoreServerReceiptSecret = string | ArrayBuffer | Uint8Array;
+
+export interface HighScoreServerRunRecord {
+  expiresAt: number;
+  issuedAt: number;
+  runId: string;
+  tokenHash: string;
+  used?: boolean;
+}
+
+export interface HighScoreServerReceiptOptions {
+  issuedAt?: number;
+  now?: () => number;
+  randomUUID?: () => string;
+  runId?: string;
+  secret: HighScoreServerReceiptSecret;
+  ttlMs?: number;
+}
+
+export interface CreatedHighScoreServerRunReceipt {
+  receipt: HighScoreRunReceipt;
+  record: HighScoreServerRunRecord;
+}
+
+export interface HighScoreServerReceiptValidationOptions {
+  now?: () => number;
+  secret: HighScoreServerReceiptSecret;
+}
+
 export interface HighScoreIntegrity {
   checksum: string;
   multiplier: number;
@@ -299,6 +328,99 @@ export const validateHighScoreSubmission = <Settings = unknown>(
     score: entry,
     submittedAt,
   };
+};
+
+export const createHighScoreServerRunReceipt = async (
+  options: HighScoreServerReceiptOptions
+): Promise<CreatedHighScoreServerRunReceipt> => {
+  const issuedAt = normalizeTimestamp(options.issuedAt ?? options.now?.() ?? Date.now());
+  const ttlMs = Math.max(0, Math.floor(options.ttlMs ?? 5 * 60 * 1000));
+  const runId = options.runId ?? createHighScoreRunId(options.randomUUID);
+  const token = await createHighScoreRunToken(runId, issuedAt, options.secret);
+
+  return {
+    receipt: { issuedAt, runId, token },
+    record: {
+      expiresAt: issuedAt + ttlMs,
+      issuedAt,
+      runId,
+      tokenHash: await hashHighScoreRunToken(token, options.secret),
+      used: false,
+    },
+  };
+};
+
+export const createHighScoreRunToken = async (
+  runId: string,
+  issuedAt: number,
+  secret: HighScoreServerReceiptSecret
+): Promise<string> =>
+  signHighScoreServerText(`${runId}:${normalizeTimestamp(issuedAt)}`, secret);
+
+export const hashHighScoreRunToken = async (
+  token: string,
+  secret: HighScoreServerReceiptSecret
+): Promise<string> => signHighScoreServerText(token, secret);
+
+export const validateHighScoreServerRunReceipt = async (
+  receipt: unknown,
+  record: unknown,
+  options: HighScoreServerReceiptValidationOptions
+): Promise<boolean> => {
+  const normalizedReceipt = normalizeHighScoreRunReceipt(receipt);
+
+  if (
+    !normalizedReceipt ||
+    !isHighScoreServerRunRecord(record) ||
+    !isHighScoreServerRunRecordUsable(record, options.now?.() ?? Date.now()) ||
+    normalizedReceipt.runId !== record.runId ||
+    normalizedReceipt.issuedAt !== normalizeTimestamp(record.issuedAt)
+  ) {
+    return false;
+  }
+
+  const tokenHash = await hashHighScoreRunToken(
+    normalizedReceipt.token,
+    options.secret
+  );
+
+  return areHighScoreTokenHashesEqual(record.tokenHash, tokenHash);
+};
+
+export const isHighScoreServerRunRecordUsable = (
+  record: HighScoreServerRunRecord,
+  now = Date.now()
+): boolean => !record.used && normalizeTimestamp(record.expiresAt) >= normalizeTimestamp(now);
+
+export const isHighScoreServerRunRecord = (
+  value: unknown
+): value is HighScoreServerRunRecord => {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Partial<HighScoreServerRunRecord>;
+
+  return (
+    typeof record.expiresAt === "number" &&
+    Number.isFinite(record.expiresAt) &&
+    typeof record.issuedAt === "number" &&
+    Number.isFinite(record.issuedAt) &&
+    typeof record.runId === "string" &&
+    typeof record.tokenHash === "string" &&
+    (record.used === undefined || typeof record.used === "boolean")
+  );
+};
+
+export const areHighScoreTokenHashesEqual = (left: string, right: string): boolean => {
+  const maxLength = Math.max(left.length, right.length);
+  let difference = left.length ^ right.length;
+
+  for (let index = 0; index < maxLength; index += 1) {
+    difference |= (left.charCodeAt(index) || 0) ^ (right.charCodeAt(index) || 0);
+  }
+
+  return difference === 0;
 };
 
 export const isHighScorePlausible = <Settings = unknown>(
@@ -798,7 +920,9 @@ export const createHighScoreManager = <Settings = unknown>(
       saveStoredScoreRecords(
         trimStoredScoreRecords(upsertScoreRecords(loadStoredScoreRecords(), [entry]))
       );
-      void syncHighScores();
+      if (entry.syncState === "pending") {
+        void syncHighScores();
+      }
 
       return toHighScoreEntry(entry);
     },
@@ -920,6 +1044,9 @@ const normalizeHighScoreRunReceipt = (
 const normalizeGameVersion = (value: unknown, maxLength = 32): string =>
   typeof value === "string" && value.length <= maxLength ? value : "unknown";
 
+const normalizeTimestamp = (timestamp: number): number =>
+  Math.max(0, Math.floor(Number.isFinite(timestamp) ? timestamp : 0));
+
 const normalizeScore = (score: number): number =>
   Math.max(0, Math.floor(Number.isFinite(score) ? score : 0));
 
@@ -999,6 +1126,89 @@ const sortJsonValue = (value: unknown): unknown => {
   }
 
   return value;
+};
+
+const createHighScoreRunId = (randomUUID?: () => string): string => {
+  const uuid =
+    randomUUID ??
+    (typeof globalThis.crypto?.randomUUID === "function"
+      ? () => globalThis.crypto.randomUUID()
+      : undefined);
+
+  if (!uuid) {
+    throw new Error(
+      "High-score server receipt run IDs require randomUUID or globalThis.crypto.randomUUID."
+    );
+  }
+
+  return uuid();
+};
+
+const signHighScoreServerText = async (
+  text: string,
+  secret: HighScoreServerReceiptSecret
+): Promise<string> => {
+  if (!globalThis.crypto?.subtle) {
+    throw new Error(
+      "High-score server receipt signing requires globalThis.crypto.subtle."
+    );
+  }
+
+  const encoder = new TextEncoder();
+  const key = await globalThis.crypto.subtle.importKey(
+    "raw",
+    getHighScoreServerSecretBytes(secret),
+    { hash: "SHA-256", name: "HMAC" },
+    false,
+    ["sign"]
+  );
+  const signature = await globalThis.crypto.subtle.sign(
+    "HMAC",
+    key,
+    encoder.encode(text)
+  );
+
+  return toBase64Url(new Uint8Array(signature));
+};
+
+const getHighScoreServerSecretBytes = (
+  secret: HighScoreServerReceiptSecret
+): ArrayBuffer => {
+  if (typeof secret === "string") {
+    return new TextEncoder().encode(secret).slice().buffer;
+  }
+
+  return secret instanceof Uint8Array ? secret.slice().buffer : secret;
+};
+
+const toBase64Url = (bytes: Uint8Array): string => {
+  const bufferConstructor = (
+    globalThis as typeof globalThis & {
+      Buffer?: {
+        from: (bytes: Uint8Array) => {
+          toString: (encoding: "base64url") => string;
+        };
+      };
+    }
+  ).Buffer;
+
+  if (bufferConstructor) {
+    return bufferConstructor.from(bytes).toString("base64url");
+  }
+
+  if (typeof btoa !== "function") {
+    throw new Error(
+      "High-score server receipt signing requires btoa or Buffer for base64url encoding."
+    );
+  }
+
+  let binary = "";
+
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 };
 
 const readNumberStat = (text: string, label: string): number => {

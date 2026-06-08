@@ -6,20 +6,51 @@ export {
   unlockAchievement,
 } from "./achievements.js";
 export {
+  achievementNotificationEventName,
+  AchievementNotificationRenderer,
+  defaultAchievementNotificationLayout,
+  defaultAchievementNotificationTheme,
+  defaultAchievementNotificationTiming,
+} from "./achievement-notifications.js";
+export {
+  areHighScoreTokenHashesEqual,
+  createHighScoreRunToken,
   createHighScoreIntegrity,
   createHighScoreManager,
+  createHighScoreServerRunReceipt,
   getHighScorePlausibilityReasons,
   getHighScoreStatValues,
   hashHighScoreText,
+  hashHighScoreRunToken,
   isHighScoreEntry,
   isHighScoreIntegrity,
   isHighScorePlausible,
   isHighScoreRunReceipt,
+  isHighScoreServerRunRecord,
+  isHighScoreServerRunRecordUsable,
   normalizeHighScoreName,
   sortHighScores,
   validateHighScoreIntegrity,
+  validateHighScoreServerRunReceipt,
   validateHighScoreSubmission,
 } from "./high-scores.js";
+export {
+  createUserOptionsStore,
+  normalizeUserOptions,
+  userOptionsChangedEventName,
+} from "./user-options.js";
+export {
+  createRuntimeLogger,
+  getNextRuntimeLogLevel,
+  isRuntimeLogLevel,
+  runtimeLogLevels,
+} from "./runtime-logger.js";
+export {
+  getAvailableLocalStorage,
+  removeScoreStorageKeys,
+  removeStorageKeysMatching,
+  removeStorageNamespace,
+} from "./storage-reset.js";
 export {
   getLoopedDepth,
   getDepthProgress,
@@ -30,6 +61,15 @@ export {
   projectPerspectivePoint,
   wrapDepth,
 } from "./arcade-3d.js";
+export {
+  appExitBlockedEventName,
+  canLockOrientation,
+  canUseFullscreen,
+  canUseScreenWakeLock,
+  enterImmersiveMode,
+  exitInstalledApp,
+  ScreenWakeLockController,
+} from "./browser-capabilities.js";
 export {
   getAnimatedSpriteFrame,
   getSpriteFrameIndex,
@@ -73,6 +113,20 @@ export {
   parseHexColor,
   shadeHexColor,
 } from "./canvas-rendering.js";
+export {
+  defaultCustomDisplayFilterSettings,
+  defaultDisplayFilterMode,
+  defaultDisplayFilterRuntimeBoosts,
+  displayFilterModeLabels,
+  displayFilterModes,
+  displayFilterPresets,
+  displayFilterSettingDescriptions,
+  displayFilterSettingKeys,
+  displayFilterSettingLabels,
+  getDisplayFilterSettingsForMode,
+  normalizeDisplayFilterIntensity,
+  normalizeDisplayFilterSettings,
+} from "./display-filters.js";
 export { drawDebugVectors } from "./debug-vectors.js";
 export { default as GameArena } from "./arena.js";
 export {
@@ -117,6 +171,18 @@ export {
   getViewportPaddedRadius,
   getViewportRadius,
 } from "./viewport.js";
+export {
+  clampZoomPercent,
+  defaultZoomMaxPercent,
+  defaultZoomMinPercent,
+  defaultZoomPercent,
+  defaultZoomStepPercent,
+  formatZoomPercent,
+  getManualViewportScale,
+  getSteppedZoomPercent,
+  getViewportScale,
+  getZoomScale,
+} from "./viewport-scale.js";
 export type { Box, Velocity } from "./box-collision.js";
 export type {
   AchievementDefinition,
@@ -128,7 +194,17 @@ export type {
   AchievementUnlockResult,
 } from "./achievements.js";
 export type {
+  AchievementNotificationDetails,
+  AchievementNotificationIcon,
+  AchievementNotificationLayout,
+  AchievementNotificationRenderOptions,
+  AchievementNotificationTheme,
+  AchievementNotificationTiming,
+  AchievementNotificationViewport,
+} from "./achievement-notifications.js";
+export type {
   AcceptedHighScoreSubmission,
+  CreatedHighScoreServerRunReceipt,
   HighScoreEntry,
   HighScoreIntegrity,
   HighScoreIntegrityOptions,
@@ -136,6 +212,10 @@ export type {
   HighScoreManagerOptions,
   HighScorePlausibilityRules,
   HighScoreRunReceipt,
+  HighScoreServerReceiptOptions,
+  HighScoreServerReceiptSecret,
+  HighScoreServerReceiptValidationOptions,
+  HighScoreServerRunRecord,
   HighScoreStorage,
   HighScoreSubmissionPayload,
   HighScoreSubmissionValidationOptions,
@@ -145,6 +225,27 @@ export type {
   RejectedHighScoreSubmission,
   StoredHighScoreEntry,
 } from "./high-scores.js";
+export type {
+  UserOptionsChange,
+  UserOptionsChangeListener,
+  UserOptionsStorage,
+  UserOptionsStore,
+  UserOptionsStoreOptions,
+} from "./user-options.js";
+export type {
+  ActiveRuntimeLogLevel,
+  RuntimeLogger,
+  RuntimeLoggerOptions,
+  RuntimeLogLevel,
+} from "./runtime-logger.js";
+export type {
+  StorageResetOptions,
+  WebStorageLike,
+} from "./storage-reset.js";
+export type {
+  ManualViewportScaleOptions,
+  ViewportScaleOptions,
+} from "./viewport-scale.js";
 export type {
   CubeBlock,
   CubeCluster,
@@ -157,6 +258,12 @@ export type {
   Vector3,
 } from "./cube-cluster.js";
 export type { DebugVectorColors, DebugVectorOptions } from "./debug-vectors.js";
+export type {
+  DisplayFilterMode,
+  DisplayFilterRuntimeBoosts,
+  DisplayFilterSettingKey,
+  DisplayFilterSettings,
+} from "./display-filters.js";
 export type { GridCell, GridDefinition, GridPosition } from "./grid.js";
 export type {
   AssetProgress,
@@ -186,6 +293,17 @@ export type {
   LoopedDepthOptions,
   PerspectiveProjectionOptions,
 } from "./arcade-3d.js";
+export type {
+  ImmersiveModeOptions,
+  ImmersiveModeResult,
+  InstalledAppExitOptions,
+  LockableScreen,
+  LockableScreenOrientation,
+  ScreenWakeLockControllerOptions,
+  ScreenWakeLockNavigator,
+  ScreenWakeLockSentinel,
+  ScreenOrientationLock,
+} from "./browser-capabilities.js";
 export type {
   ArcadeLookInput,
   FirstPersonCamera,
