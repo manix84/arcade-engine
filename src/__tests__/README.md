@@ -16,8 +16,8 @@ They verify package behavior without requiring a real browser window.
 - [arcade-3d.test.ts](arcade-3d.test.ts) checks perspective, isometric, looped
   depth, and canvas rendering helper behavior.
 - [systems.test.ts](systems.test.ts) checks input action mapping, multiplayer
-  input contracts, sprite animation frame helpers, follow-camera behavior, and
-  spatial-audio math.
+  input contracts, achievement helpers, sprite animation frame helpers,
+  follow-camera behavior, and spatial-audio math.
 - [cube-cluster.test.ts](cube-cluster.test.ts) checks cluster creation, links,
   centering, bounds, vectors, explosions, and visibility filtering.
 - [coverage.test.ts](coverage.test.ts) protects package exports and broad test
@@ -43,6 +43,7 @@ Add tests when changing:
 - Canvas rendering helpers.
 - Timing behavior.
 - Input or multiplayer helpers.
+- Achievement helpers.
 - Sound lifecycle.
 - Helper math.
 - Grid or box collision.

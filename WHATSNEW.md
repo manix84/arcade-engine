@@ -49,6 +49,8 @@
   gamepad inputs to game actions.
 - Added multiplayer helpers for local player-scoped input, assigned gamepads,
   co-op/PvP session metadata, and serializable remote player input intents.
+- Added generic achievement helpers for unlock state, progress counters, and
+  status lists.
 - Added sprite animation helpers for frame timing and sprite-sheet frame data.
 - Added follow-camera helpers for 2D worlds.
 - Added grid helpers for board and tile games.

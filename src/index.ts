@@ -1,4 +1,11 @@
 export {
+  addAchievementProgress,
+  createAchievementState,
+  getAchievementStatuses,
+  setAchievementProgress,
+  unlockAchievement,
+} from "./achievements.js";
+export {
   getLoopedDepth,
   getDepthProgress,
   getIsometricTileCorners,
@@ -96,6 +103,15 @@ export {
   getViewportRadius,
 } from "./viewport.js";
 export type { Box, Velocity } from "./box-collision.js";
+export type {
+  AchievementDefinition,
+  AchievementId,
+  AchievementProgress,
+  AchievementProgressResult,
+  AchievementState,
+  AchievementStatus,
+  AchievementUnlockResult,
+} from "./achievements.js";
 export type {
   CubeBlock,
   CubeCluster,

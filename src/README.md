@@ -98,6 +98,17 @@ Use it when a game needs player one/player two controls, assigned gamepad
 indexes, or serializable `PlayerInputIntent` objects that can be sent through a
 game-owned backend, relay, WebSocket, or WebRTC connection.
 
+## 🏆 Achievements
+
+[achievements.ts](achievements.ts) contains generic achievement state helpers.
+
+Use it for:
+
+- Achievement definitions, unlock state, progress counters, and status lists.
+
+The module has no browser dependency and is exported from the package root.
+Backend score validation belongs in the high-score system, not achievements.
+
 ## 🎞️ Sprite Animation
 
 [animation.ts](animation.ts) calculates animation frame indices and sprite-sheet

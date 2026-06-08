@@ -117,6 +117,44 @@ Remote multiplayer is supported as data contracts rather than a bundled
 network stack. Games can send `PlayerInputIntent` objects through WebSocket,
 WebRTC, a hosted relay, or their own backend.
 
+## 🏆 Achievements
+
+| Export | Use It For |
+| --- | --- |
+| `createAchievementState` | Normalize persisted achievement state into unlocked, unlocked-at, and progress maps. |
+| `unlockAchievement` | Mark an achievement as unlocked without mutating previous state. |
+| `setAchievementProgress` | Set progress for one achievement and unlock it when its goal is reached. |
+| `addAchievementProgress` | Increment progress for one achievement and unlock it when its goal is reached. |
+| `getAchievementStatuses` | Combine definitions with current progress and unlock state for rendering. |
+
+```ts
+const definitions = [
+  {
+    description: "Start a run.",
+    id: "first-run",
+    name: "First Run",
+  },
+  {
+    description: "Collect 10 medals.",
+    id: "medal-collector",
+    name: "Medal Collector",
+    progressGoal: 10,
+  },
+] as const;
+
+let achievements = createAchievementState();
+achievements = unlockAchievement(achievements, "first-run").state;
+achievements = addAchievementProgress(
+  definitions,
+  achievements,
+  "medal-collector",
+  1
+).state;
+```
+
+Achievement helpers are local game-state utilities. Remote leaderboard
+validation is intentionally left to the high-score system.
+
 ## 🎞️ Sprite Animation
 
 | Export | Use It For |
@@ -310,7 +348,7 @@ The package exports TypeScript types for public data shapes, including:
 
 - Arena, sound, ticker, input, multiplayer, animation, camera, coordinate,
   heading, sprite, and render options.
-- Grid, box, physics, viewport, debug-vector, canvas color, projection,
-  arcade-motion, spatial-audio, cube-cluster, and explosion types.
+- Achievement, grid, box, physics, viewport, debug-vector, canvas color,
+  projection, arcade-motion, spatial-audio, cube-cluster, and explosion types.
 
 Use these types when building reusable game systems on top of Arcade Engine.
