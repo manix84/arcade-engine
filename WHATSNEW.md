@@ -61,6 +61,8 @@
 - Added high-score helpers for local leaderboards, optional remote sync,
   receipt-backed integrity, server receipt validation, and backend submission
   validation.
+- Added runtime utility helpers for log levels, console logging, storage reset
+  actions, and manual viewport zoom scaling.
 - Added sprite animation helpers for frame timing and sprite-sheet frame data.
 - Added follow-camera helpers for 2D worlds.
 - Added grid helpers for board and tile games.

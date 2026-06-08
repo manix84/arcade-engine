@@ -144,6 +144,20 @@ module is exported from the package root, and the
 `Engine/Systems/New Helpers/User Options` Storybook story shows a small
 settings store.
 
+## 🧰 Runtime Utilities
+
+[runtime-logger.ts](runtime-logger.ts) contains configurable log-level helpers
+and a small console logger factory.
+
+[storage-reset.ts](storage-reset.ts) contains best-effort localStorage access
+and cleanup helpers for namespaced or score-like keys.
+
+[viewport-scale.ts](viewport-scale.ts) contains manual zoom normalization,
+stepping, formatting, and responsive viewport scale helpers.
+
+Use these modules for debug menus, player-facing zoom settings, and maintenance
+actions without coupling games to one option schema or storage namespace.
+
 ## 🏆 Achievements
 
 [achievements.ts](achievements.ts) contains generic achievement state helpers.
@@ -213,6 +227,9 @@ viewport follows a player or focus object.
 
 [viewport.ts](viewport.ts) calculates radius, padded radius, area scale, and
 scaled viewport limits from dimensions.
+
+[viewport-scale.ts](viewport-scale.ts) covers reference-size scaling and manual
+zoom percentages for UI/game surfaces.
 
 [debug-vectors.ts](debug-vectors.ts) draws visual movement/debug overlays to a
 canvas context. Use it to make heading, velocity, and target relationships

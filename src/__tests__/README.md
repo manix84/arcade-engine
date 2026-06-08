@@ -21,6 +21,12 @@ They verify package behavior without requiring a real browser window.
   metadata, intensity normalization, setting normalization, and runtime boosts.
 - [user-options.test.ts](user-options.test.ts) checks option defaults,
   normalization, persistence, reset behavior, subscribers, and change events.
+- [runtime-logger.test.ts](runtime-logger.test.ts) checks log-level guards,
+  cycling, threshold filtering, and console routing.
+- [storage-reset.test.ts](storage-reset.test.ts) checks best-effort storage
+  cleanup for custom predicates, namespaces, and score-like keys.
+- [viewport-scale.test.ts](viewport-scale.test.ts) checks manual zoom clamping,
+  stepping, formatting, and responsive scale math.
 - [achievements.test.ts](achievements.test.ts) checks achievement state
   normalization, progress clamping, unlock timestamps, and unknown-id failures.
 - [achievement-notifications.test.ts](achievement-notifications.test.ts) checks

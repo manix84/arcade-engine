@@ -38,6 +38,9 @@ helper systems could support other arcade-style browser games too.
   immersive mode, and installed-app exit fallbacks.
 - User option stores with schema defaults, caller-provided normalization,
   localStorage persistence, reset behavior, subscribers, and change events.
+- Runtime logger helpers with configurable log levels and console routing.
+- Storage reset helpers for namespaced and score-like localStorage cleanup.
+- Viewport zoom helpers for responsive UI/game scaling and manual zoom values.
 - Retro display filter presets and normalization helpers for CRT, VHS, custom,
   and runtime-boosted presentation settings.
 - Achievement state helpers for local unlocks, progress counters, and status
@@ -86,6 +89,7 @@ import {
   createCubeClusterFromPattern,
   createHighScoreManager,
   createHighScoreServerRunReceipt,
+  createRuntimeLogger,
   createUserOptionsStore,
   getDisplayFilterSettingsForMode,
   detectBoxCollision,
@@ -97,9 +101,11 @@ import {
   getLoopedScrollerPosition,
   getPerspectiveScale,
   getScaledViewportLimit,
+  getViewportScale,
   helpers,
   projectIsometricPoint,
   projectPerspectivePoint,
+  removeStorageNamespace,
   validateHighScoreServerRunReceipt,
   validateHighScoreSubmission,
 } from "arcade-engine";
@@ -201,6 +207,9 @@ Viewport helpers calculate radius and scale limits from the current arena size.
 Debug vectors draw velocity, heading, and target overlays so movement logic is
 visible while developing.
 
+Viewport-scale helpers separately cover manual zoom percentages and responsive
+UI/game scaling from a reference viewport.
+
 ### Grid And Box Collision
 
 Grid helpers convert between pixel coordinates and cells, clamp cells to a
@@ -248,6 +257,13 @@ best-effort writes, reset, subscriptions, and optional DOM change events.
 
 See the `Engine/Systems/New Helpers/User Options` Storybook story for a live
 options-store example.
+
+### Runtime Utilities
+
+Runtime utility helpers cover common app-service behavior that games usually
+wire into debug menus: configurable log levels, prefixed console logging,
+best-effort localStorage access, namespaced storage cleanup, score-key cleanup,
+and manual zoom normalization.
 
 ### Browser Capabilities
 
@@ -445,6 +461,9 @@ Active package modules:
 - `src/multiplayer.ts`
 - `src/browser-capabilities.ts`
 - `src/user-options.ts`
+- `src/runtime-logger.ts`
+- `src/storage-reset.ts`
+- `src/viewport-scale.ts`
 - `src/display-filters.ts`
 - `src/achievements.ts`
 - `src/achievement-notifications.ts`

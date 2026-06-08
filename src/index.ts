@@ -40,6 +40,18 @@ export {
   userOptionsChangedEventName,
 } from "./user-options.js";
 export {
+  createRuntimeLogger,
+  getNextRuntimeLogLevel,
+  isRuntimeLogLevel,
+  runtimeLogLevels,
+} from "./runtime-logger.js";
+export {
+  getAvailableLocalStorage,
+  removeScoreStorageKeys,
+  removeStorageKeysMatching,
+  removeStorageNamespace,
+} from "./storage-reset.js";
+export {
   getLoopedDepth,
   getDepthProgress,
   getIsometricTileCorners,
@@ -159,6 +171,18 @@ export {
   getViewportPaddedRadius,
   getViewportRadius,
 } from "./viewport.js";
+export {
+  clampZoomPercent,
+  defaultZoomMaxPercent,
+  defaultZoomMinPercent,
+  defaultZoomPercent,
+  defaultZoomStepPercent,
+  formatZoomPercent,
+  getManualViewportScale,
+  getSteppedZoomPercent,
+  getViewportScale,
+  getZoomScale,
+} from "./viewport-scale.js";
 export type { Box, Velocity } from "./box-collision.js";
 export type {
   AchievementDefinition,
@@ -208,6 +232,20 @@ export type {
   UserOptionsStore,
   UserOptionsStoreOptions,
 } from "./user-options.js";
+export type {
+  ActiveRuntimeLogLevel,
+  RuntimeLogger,
+  RuntimeLoggerOptions,
+  RuntimeLogLevel,
+} from "./runtime-logger.js";
+export type {
+  StorageResetOptions,
+  WebStorageLike,
+} from "./storage-reset.js";
+export type {
+  ManualViewportScaleOptions,
+  ViewportScaleOptions,
+} from "./viewport-scale.js";
 export type {
   CubeBlock,
   CubeCluster,

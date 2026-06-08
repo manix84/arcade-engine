@@ -177,6 +177,35 @@ options.subscribe(({ changedKeys, options }) => {
 Games own their concrete schema and validation rules. The store owns the
 browser-safe mechanics of reading, writing, resetting, and notifying.
 
+## 🧰 Runtime Utilities
+
+| Export | Use It For |
+| --- | --- |
+| `runtimeLogLevels` | Ordered log-level values for settings menus. |
+| `isRuntimeLogLevel` | Type guard for unknown persisted log-level values. |
+| `getNextRuntimeLogLevel` | Cycle through supported log levels. |
+| `createRuntimeLogger` | Create a prefixed console logger controlled by a log-level getter. |
+| `getAvailableLocalStorage` | Safely access localStorage when available. |
+| `removeStorageKeysMatching` | Best-effort removal for keys matching a predicate. |
+| `removeStorageNamespace` | Remove all keys under a caller-owned storage prefix. |
+| `removeScoreStorageKeys` | Remove score-like keys under a caller-owned storage prefix. |
+| `clampZoomPercent` | Clamp manual zoom values. |
+| `getSteppedZoomPercent` | Snap manual zoom values to a configured step. |
+| `getZoomScale` | Convert a zoom percent to a scale multiplier. |
+| `formatZoomPercent` | Format zoom percentages for settings UI. |
+| `getViewportScale` | Calculate responsive scale from viewport and reference dimensions. |
+| `getManualViewportScale` | Combine responsive viewport scale with a manual scale multiplier. |
+
+```ts
+const logger = createRuntimeLogger({
+  getLevel: () => options.logLevel,
+  prefix: "[My Game]",
+});
+
+logger.warning("Resetting scores");
+removeScoreStorageKeys("myGame.");
+```
+
 ## 📺 Display Filters
 
 | Export | Use It For |
@@ -444,6 +473,12 @@ body = applyGravity2D(body, {
 | `getViewportPaddedRadius` | Radius with padding. |
 | `getViewportAreaScale` | Scale values against viewport area. |
 | `getScaledViewportLimit` | Responsive spawn/entity limits. |
+| `getViewportScale` | Responsive UI/game scale from a reference viewport. |
+| `getManualViewportScale` | Responsive viewport scale plus manual zoom scale. |
+| `clampZoomPercent` | Clamp manual zoom percentages. |
+| `getSteppedZoomPercent` | Snap zoom percentages to a menu/control step. |
+| `getZoomScale` | Convert zoom percentage to a scale multiplier. |
+| `formatZoomPercent` | Format zoom values for display. |
 | `drawDebugVectors` | Canvas overlays for heading, velocity, and target vectors. |
 
 ## 📷 Camera
