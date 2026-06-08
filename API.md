@@ -153,7 +153,9 @@ achievements = addAchievementProgress(
 ```
 
 Achievement helpers are local game-state utilities. Remote leaderboard
-validation is handled by the high-score helpers.
+validation is handled by the high-score helpers. See
+`Engine/Systems/New Helpers/Achievements` in Storybook for an interactive
+progress and unlock demo.
 
 ## 🏅 High Scores
 
@@ -210,7 +212,9 @@ if (!validation.accepted) {
 ```
 
 Use these helpers alongside your API routes, receipt signing, score storage,
-receipt expiry, and plausibility policy.
+receipt expiry, and plausibility policy. See
+`Engine/Systems/New Helpers/High Scores` in Storybook for a local leaderboard
+and validation demo.
 
 ## 🎞️ Sprite Animation
 

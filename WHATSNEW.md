@@ -85,6 +85,9 @@
 - Added systems demos for input actions, local multiplayer, sprite animation,
   follow cameras, and spatial-audio math.
 - Added systems demos for gravity and 2D/3D ragdoll helpers.
+- Added systems demos for achievement progress/unlocks and high-score
+  leaderboard validation helpers, including Storybook actions and interaction
+  checks for their controls.
 - Added a GitHub Pages workflow that deploys Storybook from `storybook-static`
   without adding Storybook output to the npm package build.
 
@@ -95,7 +98,8 @@
   and storage.
 - Added tests covering arena behavior, ticker timing, sound behavior,
   viewport math, debug vectors, grid helpers, box collision, 2.5D projection,
-  cube clusters, canvas rendering, and helper utilities.
+  cube clusters, achievements, high scores, canvas rendering, and helper
+  utilities.
 
 ## 🧹 Legacy Cleanup
 
