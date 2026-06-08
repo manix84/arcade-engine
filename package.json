@@ -1,7 +1,7 @@
 {
   "name": "arcade-engine",
   "description": "A small browser arcade-game engine for canvas games.",
-  "version": "2.31.0",
+  "version": "2.32.0",
   "license": "MIT",
   "readmeFilename": "README.md",
   "type": "module",
@@ -45,6 +45,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./high-scores": {
+      "types": "./dist/high-scores.d.ts",
+      "import": "./dist/high-scores.js",
+      "default": "./dist/high-scores.js"
     },
     "./package.json": "./package.json"
   },

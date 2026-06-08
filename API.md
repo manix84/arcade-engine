@@ -153,7 +153,64 @@ achievements = addAchievementProgress(
 ```
 
 Achievement helpers are local game-state utilities. Remote leaderboard
-validation is intentionally left to the high-score system.
+validation is handled by the high-score helpers.
+
+## 🏅 High Scores
+
+Backend code can import high-score validation helpers without importing the
+whole engine root:
+
+```ts
+import { validateHighScoreSubmission } from "arcade-engine/high-scores";
+```
+
+| Export | Use It For |
+| --- | --- |
+| `createHighScoreManager` | Create a configurable local leaderboard and optional remote-sync controller. |
+| `createHighScoreIntegrity` | Create receipt-backed integrity data for a score submission. |
+| `validateHighScoreIntegrity` | Verify score, stats, settings, receipt, and submitted-at values still match integrity data. |
+| `validateHighScoreSubmission` | Validate unknown backend payloads before accepting remote leaderboard rows. |
+| `isHighScorePlausible` | Check stat limits and weighted score budgets. |
+| `getHighScorePlausibilityReasons` | Return machine-readable plausibility failures. |
+| `getHighScoreStatValues` | Parse numeric stat lines such as `Enemies: 12`. |
+| `normalizeHighScoreName` | Normalize arcade-style score names. |
+| `sortHighScores` | Sort score entries by score, timestamp, and name. |
+| `isHighScoreEntry` | Type guard for public score rows. |
+| `isHighScoreIntegrity` | Type guard for score integrity payloads. |
+| `isHighScoreRunReceipt` | Type guard for run receipts. |
+| `hashHighScoreText` | Stable non-cryptographic text hash used by integrity helpers. |
+
+```ts
+const scores = createHighScoreManager({
+  apiBasePath: "/api/scores",
+  defaultScores: [],
+  gameVersion: "1.0.0",
+  storageKey: "myGame.highScores",
+});
+
+scores.saveHighScore("ACE", 12000, ["Enemies: 10"]);
+```
+
+```ts
+const validation = validateHighScoreSubmission(payload, {
+  isRunReceiptTrusted: (run) => trustedRunIds.has(run.runId),
+  rules: {
+    baseScoreBudget: 1000,
+    maxScore: 1000000,
+    scoreBudget: [
+      { stat: "Enemies", points: 500 },
+      { stat: "Bosses", points: 5000 },
+    ],
+  },
+});
+
+if (!validation.accepted) {
+  throw new Error(validation.error);
+}
+```
+
+Use these helpers alongside your API routes, receipt signing, score storage,
+receipt expiry, and plausibility policy.
 
 ## 🎞️ Sprite Animation
 
@@ -348,7 +405,8 @@ The package exports TypeScript types for public data shapes, including:
 
 - Arena, sound, ticker, input, multiplayer, animation, camera, coordinate,
   heading, sprite, and render options.
-- Achievement, grid, box, physics, viewport, debug-vector, canvas color,
-  projection, arcade-motion, spatial-audio, cube-cluster, and explosion types.
+- Achievement, high-score, grid, box, physics, viewport, debug-vector, canvas
+  color, projection, arcade-motion, spatial-audio, cube-cluster, and explosion
+  types.
 
 Use these types when building reusable game systems on top of Arcade Engine.

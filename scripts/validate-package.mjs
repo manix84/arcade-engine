@@ -2,6 +2,10 @@ import { existsSync, readFileSync } from "node:fs";
 
 const requiredFiles = [
   "README.md",
+  "dist/high-scores.js",
+  "dist/high-scores.js.map",
+  "dist/high-scores.d.ts",
+  "dist/high-scores.d.ts.map",
   "dist/index.js",
   "dist/index.js.map",
   "dist/index.d.ts",
@@ -38,6 +42,20 @@ if (packageJson.exports?.["."]?.types !== "./dist/index.d.ts") {
 
 if (packageJson.exports?.["."]?.import !== "./dist/index.js") {
   console.error("Package export import must point at ./dist/index.js.");
+  process.exit(1);
+}
+
+if (packageJson.exports?.["./high-scores"]?.types !== "./dist/high-scores.d.ts") {
+  console.error(
+    "Package high-scores export types must point at ./dist/high-scores.d.ts."
+  );
+  process.exit(1);
+}
+
+if (packageJson.exports?.["./high-scores"]?.import !== "./dist/high-scores.js") {
+  console.error(
+    "Package high-scores export import must point at ./dist/high-scores.js."
+  );
   process.exit(1);
 }
 

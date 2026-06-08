@@ -107,7 +107,23 @@ Use it for:
 - Achievement definitions, unlock state, progress counters, and status lists.
 
 The module has no browser dependency and is exported from the package root.
-Backend score validation belongs in the high-score system, not achievements.
+
+## 🏅 High Scores
+
+[high-scores.ts](high-scores.ts) contains local leaderboard, remote sync, and
+submission validation helpers.
+
+Use it for:
+
+- Local-first score storage with configurable storage keys.
+- Optional remote sync through configurable API routes.
+- Run receipt and integrity payload creation.
+- Backend validation of unknown score-submission payloads.
+- Game-specific score plausibility rules based on stat limits and score
+  budgets.
+
+Backends can import `arcade-engine/high-scores` for validation helpers and pair
+them with their token signing, score storage, receipt expiry, and rate limits.
 
 ## 🎞️ Sprite Animation
 
