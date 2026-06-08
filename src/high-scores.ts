@@ -247,7 +247,11 @@ export const validateHighScoreSubmission = <Settings = unknown>(
 
   const entry = normalizeSubmittedScoreEntry(payload.entry, options);
 
-  if (!entry || typeof payload.submittedAt !== "number") {
+  if (
+    !entry ||
+    typeof payload.submittedAt !== "number" ||
+    !Number.isFinite(payload.submittedAt)
+  ) {
     return rejectHighScoreSubmission("invalid_score");
   }
 
@@ -733,8 +737,10 @@ export const createHighScoreManager = <Settings = unknown>(
     getHighScores: () =>
       [
         ...loadStoredScoreRecords().sort(sortStoredHighScores).map(toHighScoreEntry),
-        ...defaultScores.slice(0, maxScores),
-      ].slice(0, maxScores),
+        ...defaultScores,
+      ]
+        .sort(sortHighScores)
+        .slice(0, maxScores),
     getHighScoreSyncStatus: () => {
       if (
         syncStatus === "success" &&
@@ -894,6 +900,7 @@ const normalizeHighScoreRunReceipt = (
 
   if (
     typeof receipt.issuedAt !== "number" ||
+    !Number.isFinite(receipt.issuedAt) ||
     typeof receipt.runId !== "string" ||
     typeof receipt.token !== "string"
   ) {
