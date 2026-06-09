@@ -118,6 +118,25 @@ The stories demonstrate:
 Use this pattern when the level or camera surface needs readable environmental
 feedback without hiding enemies, pickups, bullets, or HUD elements.
 
+## 🌦️ Atmospheric Effects
+
+The Atmospheric Effects stories show world-space weather layers such as rain and
+snow.
+
+The stories demonstrate:
+
+- `AtmosphericRainEffect`.
+- `AtmosphericSnowEffect`.
+- Pixel-snapped falling rain streaks.
+- Layered pixel snowflakes with soft drift and sway.
+- Density and wind controls.
+- Small bottom-edge splashes.
+- Optional bottom-edge snow accumulation.
+- Rendering above the world and below HUD-style overlays.
+
+Use this pattern when the player should feel inside a weather condition without
+attaching the effect to the camera surface.
+
 ## 🏆 Achievement Notifications
 
 `AchievementNotifications` shows a canvas unlock-popup queue.

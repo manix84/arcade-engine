@@ -62,6 +62,12 @@ export {
   wrapDepth,
 } from "./arcade-3d.js";
 export {
+  AtmosphericRainEffect,
+  AtmosphericSnowEffect,
+  createAtmosphericRainEffect,
+  createAtmosphericSnowEffect,
+} from "./atmospheric-effects.js";
+export {
   appExitBlockedEventName,
   canLockOrientation,
   canUseFullscreen,
@@ -284,6 +290,16 @@ export type {
   Vector3,
 } from "./cube-cluster.js";
 export type { DebugVectorColors, DebugVectorOptions } from "./debug-vectors.js";
+export type {
+  AtmosphericEffectViewport,
+  AtmosphericRainDensity,
+  AtmosphericRainDrop,
+  AtmosphericRainOptions,
+  AtmosphericRainSplash,
+  AtmosphericSnowDensity,
+  AtmosphericSnowFlake,
+  AtmosphericSnowOptions,
+} from "./atmospheric-effects.js";
 export type {
   DisplayFilterMode,
   DisplayFilterRuntimeBoosts,

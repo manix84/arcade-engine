@@ -135,6 +135,10 @@ manager, built-in pixel-art feedback effects for screen droplets, fire, frost,
 poison, low health, shock, and speed boost, plus environment effects for heat,
 frost, fire, and underwater conditions.
 
+[atmospheric-effects.ts](atmospheric-effects.ts) contains world-space weather
+feedback such as rain and snow that renders between the game world and HUD
+overlays.
+
 Use it for:
 
 - Registering screen overlay effects by id.
@@ -146,6 +150,8 @@ Use it for:
   speed-boost feedback.
 - Pixel-snapped environment heat shimmer, frost masks, fire glow, and
   underwater distortion.
+- Pixel-snapped atmospheric rain drops, wind slant, and small splashes.
+- Layered atmospheric snowflakes, wind drift, and optional accumulation.
 
 Games call `update(deltaTime, viewport)` and `render(context, viewport)` from
 their own render loop. Custom effects can register the same `update`, `render`,
