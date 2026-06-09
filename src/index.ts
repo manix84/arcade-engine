@@ -12,6 +12,8 @@ export {
   defaultAchievementNotificationTheme,
   defaultAchievementNotificationTiming,
 } from "./achievement-notifications.js";
+export { FpsOverlay } from "./debug/FpsOverlay.js";
+export { PerformanceSampler } from "./debug/PerformanceSampler.js";
 export {
   areHighScoreTokenHashesEqual,
   createHighScoreRunToken,
@@ -61,6 +63,14 @@ export {
   projectPerspectivePoint,
   wrapDepth,
 } from "./arcade-3d.js";
+export {
+  AtmosphericAshEmberEffect,
+  AtmosphericRainEffect,
+  AtmosphericSnowEffect,
+  createAtmosphericAshEmberEffect,
+  createAtmosphericRainEffect,
+  createAtmosphericSnowEffect,
+} from "./atmospheric-effects.js";
 export {
   appExitBlockedEventName,
   canLockOrientation,
@@ -127,6 +137,32 @@ export {
   normalizeDisplayFilterIntensity,
   normalizeDisplayFilterSettings,
 } from "./display-filters.js";
+export {
+  createEnvironmentFireEffectDefinition,
+  createEnvironmentFrostEffectDefinition,
+  createEnvironmentHeatEffectDefinition,
+  createEnvironmentUnderwaterEffectDefinition,
+  createScreenFireEffectDefinition,
+  createScreenFrostEffectDefinition,
+  createScreenLowHealthEffectDefinition,
+  createScreenPoisonEffectDefinition,
+  createScreenShockEffectDefinition,
+  createScreenSpeedBoostEffectDefinition,
+  createScreenDropletsEffectDefinition,
+  defaultScreenDropletsConfig,
+  environmentFireEffectId,
+  environmentFrostEffectId,
+  environmentHeatEffectId,
+  environmentUnderwaterEffectId,
+  screenDropletsEffectId,
+  screenFireEffectId,
+  screenFrostEffectId,
+  screenLowHealthEffectId,
+  screenPoisonEffectId,
+  screenShockEffectId,
+  screenSpeedBoostEffectId,
+  ScreenEffectManager,
+} from "./screen-effects.js";
 export { drawDebugVectors } from "./debug-vectors.js";
 export { default as GameArena } from "./arena.js";
 export {
@@ -259,11 +295,53 @@ export type {
 } from "./cube-cluster.js";
 export type { DebugVectorColors, DebugVectorOptions } from "./debug-vectors.js";
 export type {
+  DebugOptions,
+  DebugOverlayPosition,
+  FpsOverlayLevel,
+  FpsOverlayOptions,
+  FpsOverlayRenderOptions,
+  FpsOverlayViewport,
+  PerformanceFrameSample,
+  PerformanceHistoryPoint,
+  PerformanceMetrics,
+  PerformanceSamplerOptions,
+} from "./debug/types.js";
+export type {
+  AtmosphericAshEmberIntensity,
+  AtmosphericAshEmberOptions,
+  AtmosphericAshEmberParticle,
+  AtmosphericEffectViewport,
+  AtmosphericRainDensity,
+  AtmosphericRainDrop,
+  AtmosphericRainOptions,
+  AtmosphericRainSplash,
+  AtmosphericSnowDensity,
+  AtmosphericSnowFlake,
+  AtmosphericSnowOptions,
+} from "./atmospheric-effects.js";
+export type {
   DisplayFilterMode,
   DisplayFilterRuntimeBoosts,
   DisplayFilterSettingKey,
   DisplayFilterSettings,
 } from "./display-filters.js";
+export type {
+  EnvironmentScreenEffectConfig,
+  EnvironmentScreenEffectKind,
+  PixelScreenEffectConfig,
+  PixelScreenEffectKind,
+  PixelScreenEffectParticle,
+  ScreenDroplet,
+  ScreenDropletsConfig,
+  ScreenEffectDefinition,
+  ScreenEffectEnableOptions,
+  ScreenEffectInstance,
+  ScreenEffectManagerOptions,
+  ScreenEffectRegistration,
+  ScreenEffectRenderState,
+  ScreenEffectUpdateState,
+  ScreenEffectViewport,
+} from "./screen-effects.js";
 export type { GridCell, GridDefinition, GridPosition } from "./grid.js";
 export type {
   AssetProgress,

@@ -9,6 +9,8 @@ import {
   getLoopedDepth,
   helpers,
   projectPerspectivePoint,
+  type DebugOverlayPosition,
+  type FpsOverlayLevel,
 } from "../index.js";
 import {
   appendStyles,
@@ -29,6 +31,15 @@ const meta = {
 export default meta;
 
 type Story = StoryObj;
+
+type FpsDebugOverlayArgs = {
+  enabled: boolean;
+  level: FpsOverlayLevel;
+  opacity: number;
+  position: DebugOverlayPosition;
+  scale: number;
+  targetFps: number;
+};
 
 const drawArenaDemo = (arena: GameArena, frame = 0): void => {
   const playerX = arena.posX;
@@ -409,6 +420,126 @@ export const PerspectiveArena: Story = {
       canvas.removeEventListener("pointermove", handlePointerMove);
       canvas.removeEventListener("pointerup", handlePointerUp);
       canvas.removeEventListener("pointercancel", handlePointerUp);
+      arena.destroy();
+    });
+
+    return shell;
+  },
+};
+
+export const FpsDebugOverlay: StoryObj<FpsDebugOverlayArgs> = {
+  args: {
+    enabled: true,
+    level: "graph",
+    opacity: 0.85,
+    position: "top-left",
+    scale: 1,
+    targetFps: 60,
+  },
+  argTypes: {
+    enabled: {
+      control: "boolean",
+      name: "Enabled",
+    },
+    level: {
+      control: "select",
+      name: "Level",
+      options: ["minimal", "basic", "detailed", "graph"],
+    },
+    opacity: {
+      control: { max: 1, min: 0.2, step: 0.05, type: "range" },
+      name: "Opacity",
+    },
+    position: {
+      control: "select",
+      name: "Position",
+      options: ["top-left", "top-right", "bottom-left", "bottom-right"],
+    },
+    scale: {
+      control: { max: 2, min: 0.75, step: 0.25, type: "range" },
+      name: "Scale",
+    },
+    targetFps: {
+      control: { max: 240, min: 15, step: 1, type: "range" },
+      name: "Target FPS",
+    },
+  },
+  render: (args) => {
+    const shell = createDemoShell("FPS debug overlay");
+    const grid = document.createElement("div");
+    const stagePanel = createPanel("Canvas");
+    const statePanel = createPanel("Debug");
+    const stage = document.createElement("div");
+    const values = document.createElement("div");
+    const levelValue = createValue("level", args.level);
+    const positionValue = createValue("position", args.position);
+    const targetValue = createValue("target", `${args.targetFps}`);
+    const enabledValue = createValue("enabled", `${args.enabled}`);
+    const arena = new GameArena(stage, {
+      debug: {
+        enabled: true,
+        fps: {
+          enabled: args.enabled,
+          level: args.level,
+          opacity: args.opacity,
+          position: args.position,
+          scale: args.scale,
+          targetFps: args.targetFps,
+        },
+      },
+      debugGridColor: "rgba(245, 247, 251, 0.10)",
+      fontFamily: "monospace",
+    });
+    let animationFrame = 0;
+    let frame = 0;
+    let lastTime = performance.now();
+
+    appendStyles(shell);
+    grid.className = "ae-grid";
+    stage.className = "ae-stage";
+    values.className = "ae-values";
+    stagePanel.appendChild(stage);
+    statePanel.append(values);
+    grid.append(stagePanel, statePanel);
+    shell.appendChild(grid);
+    arena.resize(720, 420);
+
+    const setOverlayState = (): void => {
+      arena.debug.fps.setOptions({
+        enabled: args.enabled,
+        level: args.level,
+        opacity: args.opacity,
+        position: args.position,
+        scale: args.scale,
+        targetFps: args.targetFps,
+      });
+      setValue(levelValue, arena.debug.fps.getLevel());
+      setValue(positionValue, args.position);
+      setValue(targetValue, `${args.targetFps}`);
+      setValue(enabledValue, `${arena.debug.fps.isEnabled()}`);
+    };
+
+    values.append(levelValue, positionValue, targetValue, enabledValue);
+    setOverlayState();
+
+    const animate = (): void => {
+      const now = performance.now();
+      const deltaMs = Math.min(50, now - lastTime);
+
+      lastTime = now;
+      frame += 1;
+      arena.updatePosition(
+        helpers.float(Math.sin(frame / 40) * 80),
+        helpers.float(Math.cos(frame / 50) * 40)
+      );
+      drawArenaDemo(arena, frame);
+      arena.renderDebugOverlay(deltaMs, now);
+      animationFrame = window.requestAnimationFrame(animate);
+    };
+
+    animationFrame = window.requestAnimationFrame(animate);
+    onRemove(shell, () => {
+      window.cancelAnimationFrame(animationFrame);
       arena.destroy();
     });
 

@@ -32,6 +32,7 @@ Use it when a game needs:
 - Fullscreen requests.
 - Asset preloading.
 - Text, sprite-frame, circle, and debug-grid drawing.
+- Optional canvas-rendered FPS debug overlay.
 - A single cleanup point through `destroy()`.
 
 `GameArena` is intentionally focused on canvas setup and common drawing helpers.
@@ -127,6 +128,37 @@ Use it for:
 
 The module returns settings data only; games decide how to apply the visual
 effect in CSS, canvas, WebGL, or another renderer.
+
+## 🌧️ Screen Effects
+
+[screen-effects.ts](screen-effects.ts) contains a generic camera-surface effect
+manager, built-in pixel-art feedback effects for screen droplets, fire, frost,
+poison, low health, shock, and speed boost, plus environment effects for heat,
+frost, fire, and underwater conditions.
+
+[atmospheric-effects.ts](atmospheric-effects.ts) contains world-space weather
+and air feedback such as rain, snow, ash, and embers that renders between the
+game world and HUD overlays.
+
+Use it for:
+
+- Registering screen overlay effects by id.
+- Enabling, disabling, clearing, updating, and rendering active effects.
+- Multiple simultaneous effects with priority ordering.
+- Intensity fade in/out.
+- Pooled rain-on-camera droplets rendered with Canvas 2D.
+- Pixel-snapped screen-edge fire, frost, poison, low-health, shock, and
+  speed-boost feedback.
+- Pixel-snapped environment heat shimmer, frost masks, fire glow, and
+  underwater distortion.
+- Pixel-snapped atmospheric rain drops, wind slant, and small splashes.
+- Layered atmospheric snowflakes, wind drift, and optional accumulation.
+- Drifting ash and rising flickering embers for fire, volcano, industrial, and
+  destroyed-city scenes.
+
+Games call `update(deltaTime, viewport)` and `render(context, viewport)` from
+their own render loop. Custom effects can register the same `update`, `render`,
+and optional `destroy` lifecycle used by the built-in droplet effect.
 
 ## ⚙️ User Options
 
@@ -234,6 +266,13 @@ zoom percentages for UI/game surfaces.
 [debug-vectors.ts](debug-vectors.ts) draws visual movement/debug overlays to a
 canvas context. Use it to make heading, velocity, and target relationships
 visible during development.
+
+[debug/PerformanceSampler.ts](debug/PerformanceSampler.ts) and
+[debug/FpsOverlay.ts](debug/FpsOverlay.ts) provide a reusable Canvas 2D FPS and
+performance overlay. Use the sampler independently or call
+`GameArena.renderDebugOverlay()` after drawing a scene. The overlay supports
+minimal, basic, detailed, and graph display levels, corner positioning, scale,
+opacity, and runtime controls.
 
 ## 🧩 Grid And Box Collision
 

@@ -84,6 +84,61 @@ The story demonstrates:
 Use this pattern when a game needs local achievements, progress counters, or a
 status screen without coupling unlock logic to rendering code.
 
+## 🌧️ Player Effects
+
+The Player Effects stories show the reusable screen-effect manager with separate
+demos for screen droplets and player-state fire, frost, poison, low-health,
+shock, and speed-boost feedback effects.
+
+The story demonstrates:
+
+- `ScreenEffectManager`.
+- Built-in effect registration.
+- Intensity controls.
+- Canvas 2D pixel-snapped particles, bands, droplets, highlights, pulses,
+  glitch slices, and speed streaks.
+- Storybook actions and play-function checks for effect controls.
+
+Use this pattern when a game needs temporary overlay effects such as rain on a
+camera lens, status damage, poison, electric hits, boost speed, or other
+visor-style feedback.
+
+## 🌡️ Screen Effects
+
+The Screen Effects stories show separate heat, frost, fire, and underwater
+overlays for world conditions around the player.
+
+The stories demonstrate:
+
+- Pixel-snapped horizontal slice distortion.
+- Edge-first frost, fire, and vignette masks.
+- Rising heat ripples, embers, bubbles, smoke, mist, and debris particles.
+- Separate Storybook entries for each environment effect.
+
+Use this pattern when the level or camera surface needs readable environmental
+feedback without hiding enemies, pickups, bullets, or HUD elements.
+
+## 🌦️ Atmospheric Effects
+
+The Atmospheric Effects stories show world-space weather and air layers such as
+rain, snow, ash, and embers.
+
+The stories demonstrate:
+
+- `AtmosphericAshEmberEffect`.
+- `AtmosphericRainEffect`.
+- `AtmosphericSnowEffect`.
+- Pixel-snapped falling rain streaks.
+- Layered pixel snowflakes with soft drift and sway.
+- Slow drifting ash and rising flickering embers.
+- Density and wind controls.
+- Small bottom-edge splashes.
+- Optional bottom-edge snow accumulation.
+- Rendering above the world and below HUD-style overlays.
+
+Use this pattern when the player should feel inside a weather condition without
+attaching the effect to the camera surface.
+
 ## 🏆 Achievement Notifications
 
 `AchievementNotifications` shows a canvas unlock-popup queue.

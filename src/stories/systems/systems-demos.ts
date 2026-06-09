@@ -5,6 +5,9 @@ import {
   applyGravity2D,
   applyGravity3D,
   AchievementNotificationRenderer,
+  createAtmosphericAshEmberEffect,
+  createAtmosphericRainEffect,
+  createAtmosphericSnowEffect,
   createAchievementState,
   createHighScoreIntegrity,
   createHighScoreManager,
@@ -12,12 +15,24 @@ import {
   defaultCustomDisplayFilterSettings,
   displayFilterModeLabels,
   displayFilterModes,
+  environmentFireEffectId,
+  environmentFrostEffectId,
+  environmentHeatEffectId,
+  environmentUnderwaterEffectId,
   getDisplayFilterSettingsForMode,
   createRagdoll2D,
   createRagdoll3D,
   createLocalMultiplayerController,
   createMultiplayerSession,
   createPlayerInputIntent,
+  ScreenEffectManager,
+  screenDropletsEffectId,
+  screenFireEffectId,
+  screenFrostEffectId,
+  screenLowHealthEffectId,
+  screenPoisonEffectId,
+  screenShockEffectId,
+  screenSpeedBoostEffectId,
   drawCanvasLine,
   drawCanvasPolygon,
   fillCanvasWithTrail,
@@ -34,6 +49,9 @@ import {
   validateHighScoreSubmission,
   type AchievementDefinition,
   type AchievementState,
+  type AtmosphericAshEmberIntensity,
+  type AtmosphericRainDensity,
+  type AtmosphericSnowDensity,
   type HighScoreEntry,
   type HighScoreRunReceipt,
   type HighScoreStorage,
@@ -55,6 +73,7 @@ import {
   onRemove,
   setValue,
 } from "../story-utils.js";
+import { drawFpsDemoScene } from "../fps-demo-scene.js";
 
 type DemoAchievementId = "first-sortie" | "wave-breaker" | "precision-run";
 
@@ -69,9 +88,30 @@ type SystemsStoryArgs = {
   onAchievementNotification?: (name: string) => void;
   onAchievementReset?: () => void;
   onAchievementUnlock?: (id: DemoAchievementId) => void;
+  onAshEmberChange?: (
+    intensity: AtmosphericAshEmberIntensity,
+    wind: number,
+    emberRatio: number
+  ) => void;
+  ashEmberIntensity?: AtmosphericAshEmberIntensity;
+  ashEmberRatio?: number;
+  ashEmberWind?: number;
   onHighScoreSave?: (entry: HighScoreEntry) => void;
   onHighScoreTamper?: (accepted: boolean, label: string) => void;
   onHighScoreValidate?: (accepted: boolean, label: string) => void;
+  onRainChange?: (density: AtmosphericRainDensity, wind: number) => void;
+  onScreenEffectChange?: (intensity: number) => void;
+  onSnowChange?: (
+    density: AtmosphericSnowDensity,
+    wind: number,
+    accumulationEnabled: boolean
+  ) => void;
+  rainDensity?: AtmosphericRainDensity;
+  rainWind?: number;
+  screenEffectIntensity?: number;
+  snowAccumulationEnabled?: boolean;
+  snowDensity?: AtmosphericSnowDensity;
+  snowWind?: number;
   onUserOptionsChange?: (options: Record<string, unknown>) => void;
   precisionGoal?: number;
   waveGoal?: number;
@@ -1110,6 +1150,536 @@ export const DisplayFilters: Story = {
     return shell;
   },
 };
+
+type ScreenEffectStoryOptions = {
+  effectId: string;
+  heavyLabel: string;
+  heavyValue: number;
+  lightLabel: string;
+  lightValue: number;
+  settings?: Record<string, unknown>;
+  title: string;
+};
+
+const screenDropletStorySettings = {
+  focusMode: "arcade",
+  gravity: 96,
+  maxDroplets: 58,
+  maxSize: 8,
+  mergeEnabled: true,
+  minSize: 3,
+  slideSpeed: 145,
+  spawnRate: 50,
+  trailFadeSpeed: 3.4,
+  trailLength: 12,
+};
+
+const createScreenEffectStory = ({
+  effectId,
+  heavyLabel,
+  heavyValue,
+  lightLabel,
+  lightValue,
+  settings,
+  title,
+}: ScreenEffectStoryOptions): Story => ({
+  args: {
+    onScreenEffectChange: fn(),
+    screenEffectIntensity: lightValue,
+  },
+  argTypes: {
+    screenEffectIntensity: {
+      control: { max: 1, min: 0, step: 0.05, type: "range" },
+      name: "Intensity",
+    },
+  },
+  render: (args) => {
+    const { canvas, metrics, shell } = createSystemsLayout(title);
+    const context = canvas.getContext("2d");
+    const intensityValue = createValue("intensity");
+    const effectValue = createValue("effect");
+    const usesValue = createValue("uses", "ScreenEffectManager");
+    const manager = new ScreenEffectManager();
+    let intensity = args.screenEffectIntensity ?? lightValue;
+    let animationFrame = 0;
+    let lastTime = performance.now();
+
+    manager.enable(effectId, {
+      fadeMs: 0,
+      intensity,
+      settings,
+    });
+
+    const setIntensity = (nextIntensity: number): void => {
+      intensity = Math.min(1, Math.max(0, nextIntensity));
+      manager.setIntensity(effectId, intensity, 260);
+      setValue(intensityValue, intensity.toFixed(2));
+      args.onScreenEffectChange?.(intensity);
+    };
+
+    const controls = document.createElement("div");
+    controls.className = "ae-controls";
+    controls.append(
+      createButton(lightLabel, () => setIntensity(lightValue)),
+      createButton(heavyLabel, () => setIntensity(heavyValue)),
+      createButton("Clear Lens", () => setIntensity(0))
+    );
+    metrics.append(intensityValue, effectValue, usesValue, controls);
+
+    const render = (): void => {
+      if (!context) {
+        return;
+      }
+
+      const now = performance.now();
+      const delta = Math.min(0.05, (now - lastTime) / 1000);
+
+      lastTime = now;
+      drawFpsDemoScene(context, {
+        height: canvas.height,
+        pixelScale: 3,
+        routeSpeed: 1.45,
+        theme: "sciFi",
+        timeMs: now,
+        width: canvas.width,
+      });
+
+      manager.update(delta, { height: canvas.height, width: canvas.width });
+      manager.render(context, { height: canvas.height, width: canvas.width });
+
+      setValue(intensityValue, intensity.toFixed(2));
+      setValue(effectValue, effectId);
+      animationFrame = window.requestAnimationFrame(render);
+    };
+
+    animationFrame = window.requestAnimationFrame(render);
+    onRemove(shell, () => {
+      window.cancelAnimationFrame(animationFrame);
+      manager.clear();
+    });
+
+    return shell;
+  },
+});
+
+export const ScreenDroplets: Story = {
+  ...createScreenEffectStory({
+    effectId: screenDropletsEffectId,
+    heavyLabel: "Heavy Rain",
+    heavyValue: 1,
+    lightLabel: "Light Rain",
+    lightValue: 0.04,
+    settings: screenDropletStorySettings,
+    title: "Screen droplets",
+  }),
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    await userEvent.click(canvas.getByRole("button", { name: "Heavy Rain" }));
+    await waitFor(() => expect(args.onScreenEffectChange).toHaveBeenCalledWith(1));
+  },
+};
+
+export const ScreenFire: Story = createScreenEffectStory({
+  effectId: screenFireEffectId,
+  heavyLabel: "Near Flames",
+  heavyValue: 0.9,
+  lightLabel: "Heat Flicker",
+  lightValue: 0.35,
+  title: "Screen fire",
+});
+
+export const ScreenFrost: Story = createScreenEffectStory({
+  effectId: screenFrostEffectId,
+  heavyLabel: "Frozen",
+  heavyValue: 0.86,
+  lightLabel: "Cold Air",
+  lightValue: 0.32,
+  title: "Screen frost",
+});
+
+export const ScreenPoison: Story = createScreenEffectStory({
+  effectId: screenPoisonEffectId,
+  heavyLabel: "Toxic Cloud",
+  heavyValue: 0.85,
+  lightLabel: "Gas Trace",
+  lightValue: 0.28,
+  title: "Screen poison",
+});
+
+export const ScreenLowHealth: Story = createScreenEffectStory({
+  effectId: screenLowHealthEffectId,
+  heavyLabel: "Critical",
+  heavyValue: 0.94,
+  lightLabel: "Injured",
+  lightValue: 0.34,
+  title: "Low health",
+});
+
+export const ScreenShock: Story = createScreenEffectStory({
+  effectId: screenShockEffectId,
+  heavyLabel: "Electric Hit",
+  heavyValue: 0.95,
+  lightLabel: "Static",
+  lightValue: 0.38,
+  title: "Shock",
+});
+
+export const ScreenSpeedBoost: Story = createScreenEffectStory({
+  effectId: screenSpeedBoostEffectId,
+  heavyLabel: "Full Boost",
+  heavyValue: 0.92,
+  lightLabel: "Sprint",
+  lightValue: 0.36,
+  title: "Speed boost",
+});
+
+export const AtmosphericRain: Story = {
+  args: {
+    onRainChange: fn(),
+    rainDensity: "medium",
+    rainWind: 42,
+  },
+  argTypes: {
+    rainDensity: {
+      control: "select",
+      name: "Density",
+      options: ["light", "medium", "heavy", "storm"],
+    },
+    rainWind: {
+      control: { max: 260, min: -260, step: 10, type: "range" },
+      name: "Wind",
+    },
+  },
+  render: (args) => {
+    const { canvas, metrics, shell } = createSystemsLayout("Atmospheric rain");
+    const context = canvas.getContext("2d");
+    const densityValue = createValue("density");
+    const windValue = createValue("wind");
+    const dropsValue = createValue("drops");
+    const splashesValue = createValue("splashes");
+    const usesValue = createValue("uses", "AtmosphericRainEffect");
+    const rain = createAtmosphericRainEffect({
+      density: args.rainDensity ?? "medium",
+      pixelSize: 2,
+      wind: args.rainWind ?? 42,
+    });
+    let density = args.rainDensity ?? "medium";
+    let wind = args.rainWind ?? 42;
+    let animationFrame = 0;
+    let lastTime = performance.now();
+
+    const updateRainOptions = (
+      nextDensity: AtmosphericRainDensity,
+      nextWind: number
+    ): void => {
+      density = nextDensity;
+      wind = nextWind;
+      rain.setOptions({ density, wind });
+      setValue(densityValue, density);
+      setValue(windValue, `${wind}`);
+      args.onRainChange?.(density, wind);
+    };
+
+    const controls = document.createElement("div");
+    controls.className = "ae-controls";
+    controls.append(
+      createButton("Light", () => updateRainOptions("light", wind)),
+      createButton("Medium", () => updateRainOptions("medium", wind)),
+      createButton("Heavy", () => updateRainOptions("heavy", wind)),
+      createButton("Storm", () => updateRainOptions("storm", wind)),
+      createButton("Wind Left", () => updateRainOptions(density, -180)),
+      createButton("Calm", () => updateRainOptions(density, 0)),
+      createButton("Wind Right", () => updateRainOptions(density, 180))
+    );
+    metrics.append(densityValue, windValue, dropsValue, splashesValue, usesValue, controls);
+    updateRainOptions(density, wind);
+
+    const render = (): void => {
+      if (!context) {
+        return;
+      }
+
+      const now = performance.now();
+      const delta = Math.min(0.05, (now - lastTime) / 1000);
+
+      lastTime = now;
+      drawFpsDemoScene(context, {
+        height: canvas.height,
+        pixelScale: 3,
+        routeSpeed: 1.2,
+        theme: "sciFi",
+        timeMs: now,
+        width: canvas.width,
+      });
+
+      rain.update(delta, { height: canvas.height, width: canvas.width });
+      rain.render(context, { height: canvas.height, width: canvas.width });
+
+      setValue(dropsValue, rain.getActiveDropCount());
+      setValue(splashesValue, rain.getActiveSplashCount());
+      animationFrame = window.requestAnimationFrame(render);
+    };
+
+    animationFrame = window.requestAnimationFrame(render);
+    onRemove(shell, () => {
+      window.cancelAnimationFrame(animationFrame);
+      rain.clear();
+    });
+
+    return shell;
+  },
+};
+
+export const AtmosphericSnow: Story = {
+  args: {
+    onSnowChange: fn(),
+    snowAccumulationEnabled: true,
+    snowDensity: "snow",
+    snowWind: 18,
+  },
+  argTypes: {
+    snowAccumulationEnabled: {
+      control: "boolean",
+      name: "Accumulation",
+    },
+    snowDensity: {
+      control: "select",
+      name: "Density",
+      options: ["light-flurry", "snow", "heavy-snow", "blizzard"],
+    },
+    snowWind: {
+      control: { max: 220, min: -220, step: 10, type: "range" },
+      name: "Wind",
+    },
+  },
+  render: (args) => {
+    const { canvas, metrics, shell } = createSystemsLayout("Atmospheric snow");
+    const context = canvas.getContext("2d");
+    const densityValue = createValue("density");
+    const windValue = createValue("wind");
+    const flakesValue = createValue("flakes");
+    const accumulationValue = createValue("accumulation");
+    const usesValue = createValue("uses", "AtmosphericSnowEffect");
+    const snow = createAtmosphericSnowEffect({
+      accumulationEnabled: args.snowAccumulationEnabled ?? true,
+      density: args.snowDensity ?? "snow",
+      pixelSize: 2,
+      wind: args.snowWind ?? 18,
+    });
+    let accumulationEnabled = args.snowAccumulationEnabled ?? true;
+    let density = args.snowDensity ?? "snow";
+    let wind = args.snowWind ?? 18;
+    let animationFrame = 0;
+    let lastTime = performance.now();
+
+    const updateSnowOptions = (
+      nextDensity: AtmosphericSnowDensity,
+      nextWind: number,
+      nextAccumulationEnabled: boolean
+    ): void => {
+      accumulationEnabled = nextAccumulationEnabled;
+      density = nextDensity;
+      wind = nextWind;
+      snow.setOptions({ accumulationEnabled, density, wind });
+      setValue(densityValue, density);
+      setValue(windValue, `${wind}`);
+      args.onSnowChange?.(density, wind, accumulationEnabled);
+    };
+
+    const controls = document.createElement("div");
+    controls.className = "ae-controls";
+    controls.append(
+      createButton("Flurry", () => updateSnowOptions("light-flurry", wind, accumulationEnabled)),
+      createButton("Snow", () => updateSnowOptions("snow", wind, accumulationEnabled)),
+      createButton("Heavy", () => updateSnowOptions("heavy-snow", wind, accumulationEnabled)),
+      createButton("Blizzard", () => updateSnowOptions("blizzard", 150, accumulationEnabled)),
+      createButton("Wind Left", () => updateSnowOptions(density, -130, accumulationEnabled)),
+      createButton("Calm", () => updateSnowOptions(density, 0, accumulationEnabled)),
+      createButton("Build Up", () => updateSnowOptions(density, wind, true)),
+      createButton("No Build Up", () => updateSnowOptions(density, wind, false))
+    );
+    metrics.append(densityValue, windValue, flakesValue, accumulationValue, usesValue, controls);
+    updateSnowOptions(density, wind, accumulationEnabled);
+
+    const render = (): void => {
+      if (!context) {
+        return;
+      }
+
+      const now = performance.now();
+      const delta = Math.min(0.05, (now - lastTime) / 1000);
+
+      lastTime = now;
+      drawFpsDemoScene(context, {
+        height: canvas.height,
+        pixelScale: 3,
+        routeSpeed: 1.05,
+        theme: "sciFi",
+        timeMs: now,
+        width: canvas.width,
+      });
+
+      snow.update(delta, { height: canvas.height, width: canvas.width });
+      snow.render(context, { height: canvas.height, width: canvas.width });
+
+      setValue(flakesValue, snow.getActiveFlakeCount());
+      setValue(accumulationValue, snow.getAccumulationHeight().toFixed(1));
+      animationFrame = window.requestAnimationFrame(render);
+    };
+
+    animationFrame = window.requestAnimationFrame(render);
+    onRemove(shell, () => {
+      window.cancelAnimationFrame(animationFrame);
+      snow.clear();
+    });
+
+    return shell;
+  },
+};
+
+export const AtmosphericAshAndEmbers: Story = {
+  args: {
+    ashEmberIntensity: "burning",
+    ashEmberRatio: 0.24,
+    ashEmberWind: 24,
+    onAshEmberChange: fn(),
+  },
+  argTypes: {
+    ashEmberIntensity: {
+      control: "select",
+      name: "Intensity",
+      options: ["smolder", "burning", "wildfire", "inferno"],
+    },
+    ashEmberRatio: {
+      control: { max: 0.65, min: 0, step: 0.05, type: "range" },
+      name: "Ember ratio",
+    },
+    ashEmberWind: {
+      control: { max: 180, min: -180, step: 10, type: "range" },
+      name: "Wind",
+    },
+  },
+  render: (args) => {
+    const { canvas, metrics, shell } = createSystemsLayout("Atmospheric ash and embers");
+    const context = canvas.getContext("2d");
+    const intensityValue = createValue("intensity");
+    const windValue = createValue("wind");
+    const ashValue = createValue("ash");
+    const emberValue = createValue("embers");
+    const usesValue = createValue("uses", "AtmosphericAshEmberEffect");
+    const ashAndEmbers = createAtmosphericAshEmberEffect({
+      emberRatio: args.ashEmberRatio ?? 0.24,
+      intensity: args.ashEmberIntensity ?? "burning",
+      pixelSize: 2,
+      wind: args.ashEmberWind ?? 24,
+    });
+    let emberRatio = args.ashEmberRatio ?? 0.24;
+    let intensity = args.ashEmberIntensity ?? "burning";
+    let wind = args.ashEmberWind ?? 24;
+    let animationFrame = 0;
+    let lastTime = performance.now();
+
+    const updateAshEmberOptions = (
+      nextIntensity: AtmosphericAshEmberIntensity,
+      nextWind: number,
+      nextEmberRatio: number
+    ): void => {
+      emberRatio = nextEmberRatio;
+      intensity = nextIntensity;
+      wind = nextWind;
+      ashAndEmbers.setOptions({ emberRatio, intensity, wind });
+      setValue(intensityValue, intensity);
+      setValue(windValue, `${wind}`);
+      args.onAshEmberChange?.(intensity, wind, emberRatio);
+    };
+
+    const controls = document.createElement("div");
+    controls.className = "ae-controls";
+    controls.append(
+      createButton("Smolder", () => updateAshEmberOptions("smolder", wind, 0.1)),
+      createButton("Burning", () => updateAshEmberOptions("burning", wind, 0.24)),
+      createButton("Wildfire", () => updateAshEmberOptions("wildfire", wind, 0.3)),
+      createButton("Inferno", () => updateAshEmberOptions("inferno", 70, 0.36)),
+      createButton("Ash Only", () => updateAshEmberOptions(intensity, wind, 0)),
+      createButton("More Embers", () => updateAshEmberOptions(intensity, wind, 0.52)),
+      createButton("Wind Left", () => updateAshEmberOptions(intensity, -80, emberRatio)),
+      createButton("Wind Right", () => updateAshEmberOptions(intensity, 80, emberRatio))
+    );
+    metrics.append(intensityValue, windValue, ashValue, emberValue, usesValue, controls);
+    updateAshEmberOptions(intensity, wind, emberRatio);
+
+    const render = (): void => {
+      if (!context) {
+        return;
+      }
+
+      const now = performance.now();
+      const delta = Math.min(0.05, (now - lastTime) / 1000);
+
+      lastTime = now;
+      drawFpsDemoScene(context, {
+        height: canvas.height,
+        pixelScale: 3,
+        routeSpeed: 1.18,
+        theme: "industrial",
+        timeMs: now,
+        width: canvas.width,
+      });
+
+      ashAndEmbers.update(delta, { height: canvas.height, width: canvas.width });
+      ashAndEmbers.render(context, { height: canvas.height, width: canvas.width });
+
+      setValue(ashValue, ashAndEmbers.getActiveAshCount());
+      setValue(emberValue, ashAndEmbers.getActiveEmberCount());
+      animationFrame = window.requestAnimationFrame(render);
+    };
+
+    animationFrame = window.requestAnimationFrame(render);
+    onRemove(shell, () => {
+      window.cancelAnimationFrame(animationFrame);
+      ashAndEmbers.clear();
+    });
+
+    return shell;
+  },
+};
+
+export const EnvironmentHeat: Story = createScreenEffectStory({
+  effectId: environmentHeatEffectId,
+  heavyLabel: "Heat Haze",
+  heavyValue: 0.82,
+  lightLabel: "Warm Air",
+  lightValue: 0.3,
+  title: "Environment heat",
+});
+
+export const EnvironmentFrost: Story = createScreenEffectStory({
+  effectId: environmentFrostEffectId,
+  heavyLabel: "Deep Freeze",
+  heavyValue: 0.88,
+  lightLabel: "Cold Glass",
+  lightValue: 0.34,
+  title: "Environment frost",
+});
+
+export const EnvironmentFire: Story = createScreenEffectStory({
+  effectId: environmentFireEffectId,
+  heavyLabel: "Burning",
+  heavyValue: 0.9,
+  lightLabel: "Near Fire",
+  lightValue: 0.38,
+  title: "Environment fire",
+});
+
+export const EnvironmentUnderwater: Story = createScreenEffectStory({
+  effectId: environmentUnderwaterEffectId,
+  heavyLabel: "Submerged",
+  heavyValue: 0.82,
+  lightLabel: "Shallow Water",
+  lightValue: 0.32,
+  title: "Environment underwater",
+});
 
 export const SpriteAnimationAndCamera: Story = {
   render: () => {

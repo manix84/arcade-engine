@@ -358,6 +358,30 @@ filter settings.
 See the `Engine/Systems/Presentation/Display Filters` Storybook story for a
 visual preset demo.
 
+### Screen Effects
+
+Screen-effect helpers provide a reusable camera-surface layer for temporary
+overlay effects such as rain droplets, frost, mud, embers, low-health pulses,
+and future visor-style effects. `ScreenEffectManager` registers effect
+definitions, enables or disables them by id, fades intensity values, updates
+active effects, and renders them in priority order.
+
+```ts
+const effects = new ScreenEffectManager();
+
+effects.enable("screen-droplets", {
+  intensity: 0.75,
+});
+
+effects.update(deltaTime, { width: canvas.width, height: canvas.height });
+effects.render(context, { width: canvas.width, height: canvas.height });
+```
+
+The built-in `screen-droplets` effect uses pooled pixel-snapped rectangles for
+rain on a camera lens or visor. See the
+`Engine/Systems/Player Effects/ScreenDroplets` Storybook story for the live
+demo.
+
 ### Canvas Rendering
 
 Canvas rendering helpers are small drawing utilities used by the demos and
