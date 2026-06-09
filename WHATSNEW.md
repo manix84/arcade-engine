@@ -78,6 +78,14 @@
   mixes.
 - Added 3D cube-cluster helpers for voxel-style models, plasma links, bounds,
   centers, and deterministic block explosions.
+- Added `ScreenEffectManager` with pixel-art Canvas 2D screen effects for
+  droplets, fire, frost, poison, low health, shock, speed boost, environmental
+  heat, environmental frost, environmental fire, and underwater feedback.
+- Added atmospheric Canvas 2D effects for rain, snow, ash, and embers, including
+  density presets, wind, splashes, layered flakes, optional snow accumulation,
+  and ash/ember balancing.
+- Added `PerformanceSampler` and `FpsOverlay` for Canvas 2D frame telemetry,
+  including target-FPS relative graph coloring and `GameArena` integration.
 - Added shared `types.ts` contracts for public engine options and data shapes.
 
 ## 📚 Storybook Demos
@@ -101,6 +109,18 @@
 - Added systems demos for achievement progress/unlocks and high-score
   leaderboard validation helpers, including Storybook actions and interaction
   checks for their controls.
+- Added Player Effects stories under `Engine/Systems/Player Effects` for screen
+  droplets and player-state fire, frost, poison, low-health, shock, and
+  speed-boost overlays.
+- Added Screen Effects stories under `Engine/Systems/Screen Effects` for heat,
+  frost, fire, and underwater environmental overlays.
+- Added Atmospheric Effects stories under `Engine/Systems/Atmospheric Effects`
+  for rain, snow, ash, and embers.
+- Replaced flat screen-effect backgrounds with a reusable pixel-art FPS corridor
+  demo scene and fixed HUD weapon asset so effects can be evaluated over a
+  coherent game-like view.
+- Added Storybook controls for the FPS debug overlay, including display level,
+  position, scale, opacity, and target FPS.
 - Added a GitHub Pages workflow that deploys Storybook from `storybook-static`
   without adding Storybook output to the npm package build.
 
@@ -112,7 +132,8 @@
 - Added tests covering arena behavior, ticker timing, sound behavior,
   viewport math, debug vectors, grid helpers, box collision, 2.5D projection,
   cube clusters, browser capabilities, display filters, user options,
-  achievements, achievement notifications, high scores, canvas rendering, and
+  achievements, achievement notifications, high scores, screen effects,
+  atmospheric effects, FPS overlay sampling/rendering, canvas rendering, and
   helper utilities.
 
 ## 🧹 Legacy Cleanup

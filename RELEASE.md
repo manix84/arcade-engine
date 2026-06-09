@@ -24,8 +24,9 @@ Trusted publishing uses GitHub OIDC instead of a long-lived npm token, so npmjs
 publishing does not need an `NPM_TOKEN` secret or a one-time password in CI.
 
 GitHub Packages publishing uses the workflow `GITHUB_TOKEN`. The workflow grants
-`packages: write` so it can publish `@manix84/arcade-engine` to
-`https://npm.pkg.github.com`.
+`packages: write`, writes a temporary GitHub Packages npm config during the
+publish step, and passes that config directly to npm so it can publish
+`@manix84/arcade-engine` to `https://npm.pkg.github.com`.
 
 ## 🏷️ Version And Tag Rules
 
@@ -122,7 +123,8 @@ public GitHub Actions workflow.
 
 The GitHub Packages publish step rewrites the built package name to
 `@manix84/arcade-engine` in a temporary unpacked tarball, configures
-`https://npm.pkg.github.com`, and publishes with the workflow `GITHUB_TOKEN`.
+`https://npm.pkg.github.com` through a temporary npmrc, and publishes with the
+workflow `GITHUB_TOKEN`.
 
 Install the GitHub Packages build with:
 
