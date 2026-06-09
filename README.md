@@ -377,9 +377,10 @@ effects.update(deltaTime, { width: canvas.width, height: canvas.height });
 effects.render(context, { width: canvas.width, height: canvas.height });
 ```
 
-The built-in `screen-droplets` effect uses pooled canvas ellipses for rain on a
-camera lens or visor. See the `Engine/Systems/Presentation/Screen Droplets`
-Storybook story for the live demo.
+The built-in `screen-droplets` effect uses pooled pixel-snapped rectangles for
+rain on a camera lens or visor. See the
+`Engine/Systems/Player Effects/ScreenDroplets` Storybook story for the live
+demo.
 
 ### Canvas Rendering
 

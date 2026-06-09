@@ -10,6 +10,7 @@ const createContext = (): CanvasRenderingContext2D =>
   createCanvasContextMock() as unknown as CanvasRenderingContext2D;
 
 const viewport = { height: 180, width: 320 };
+const tallViewport = { height: 10000, width: 320 };
 
 describe("atmospheric rain effect", () => {
   it("spawns pixel rain drops by density and renders snapped rectangles", () => {
@@ -85,6 +86,20 @@ describe("atmospheric rain effect", () => {
     effect.update(0.1, viewport);
 
     expect(effect.getActiveDropCount()).toBe(5);
+  });
+
+  it("uses new density defaults when changing only the rain density preset", () => {
+    const effect = createAtmosphericRainEffect({
+      density: "medium",
+      random: () => 0.5,
+    });
+
+    effect.setOptions({ density: "storm" });
+    for (let index = 0; index < 8; index += 1) {
+      effect.update(0.1, tallViewport);
+    }
+
+    expect(effect.getActiveDropCount()).toBe(170);
   });
 });
 
@@ -163,6 +178,20 @@ describe("atmospheric snow effect", () => {
 
     expect(effect.getActiveFlakeCount()).toBe(6);
   });
+
+  it("uses new density defaults when changing only the snow density preset", () => {
+    const effect = createAtmosphericSnowEffect({
+      density: "snow",
+      random: () => 0.5,
+    });
+
+    effect.setOptions({ density: "blizzard" });
+    for (let index = 0; index < 11; index += 1) {
+      effect.update(0.1, tallViewport);
+    }
+
+    expect(effect.getActiveFlakeCount()).toBe(160);
+  });
 });
 
 describe("atmospheric ash and ember effect", () => {
@@ -235,5 +264,19 @@ describe("atmospheric ash and ember effect", () => {
 
     effect.clear();
     expect(effect.getActiveParticleCount()).toBe(0);
+  });
+
+  it("uses new intensity defaults when changing only the ash and ember preset", () => {
+    const effect = createAtmosphericAshEmberEffect({
+      intensity: "smolder",
+      random: () => 0.5,
+    });
+
+    effect.setOptions({ intensity: "inferno" });
+    for (let index = 0; index < 15; index += 1) {
+      effect.update(0.1, tallViewport);
+    }
+
+    expect(effect.getActiveParticleCount()).toBe(140);
   });
 });

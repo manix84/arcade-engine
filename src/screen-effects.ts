@@ -865,7 +865,9 @@ class PixelScreenEffect implements ScreenEffectInstance {
     }
 
     if (this.config.kind === "poison") {
-      particle.x += (particle.seed < 0.5 ? -1 : 1) * particle.speed * deltaTime * 0.26 + wobble;
+      particle.x +=
+        ((particle.seed < 0.5 ? -1 : 1) * particle.speed * 0.26 + wobble * 7) *
+        deltaTime;
       particle.y -= particle.speed * deltaTime * 0.12;
       return;
     }
@@ -1797,7 +1799,7 @@ export class ScreenEffectManager {
     if (existingEffect) {
       existingEffect.fadeMs = getFiniteNumber(options.fadeMs, existingEffect.fadeMs);
       existingEffect.isDisabling = false;
-      existingEffect.priority = options.priority ?? definition.priority ?? existingEffect.priority;
+      existingEffect.priority = options.priority ?? existingEffect.priority;
       existingEffect.targetIntensity = targetIntensity;
       return;
     }

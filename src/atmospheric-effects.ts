@@ -141,10 +141,8 @@ export class AtmosphericRainEffect {
   setOptions(options: AtmosphericRainOptions): void {
     this.options = normalizeRainOptions({
       density: this.options.density,
-      maxDrops: this.options.maxDrops,
       pixelSize: this.options.pixelSize,
       random: this.options.random,
-      spawnRate: this.options.spawnRate,
       wind: this.options.wind,
       ...options,
     });
@@ -450,10 +448,8 @@ export class AtmosphericSnowEffect {
       accumulationLimit: this.options.accumulationLimit,
       accumulationRate: this.options.accumulationRate,
       density: this.options.density,
-      maxFlakes: this.options.maxFlakes,
       pixelSize: this.options.pixelSize,
       random: this.options.random,
-      spawnRate: this.options.spawnRate,
       wind: this.options.wind,
       ...options,
     });
@@ -747,12 +743,9 @@ export class AtmosphericAshEmberEffect {
 
   setOptions(options: AtmosphericAshEmberOptions): void {
     this.options = normalizeAshEmberOptions({
-      emberRatio: this.options.emberRatio,
       intensity: this.options.intensity,
-      maxParticles: this.options.maxParticles,
       pixelSize: this.options.pixelSize,
       random: this.options.random,
-      spawnRate: this.options.spawnRate,
       wind: this.options.wind,
       ...options,
     });

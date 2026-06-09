@@ -96,6 +96,25 @@ describe("screen effect manager", () => {
     ]);
   });
 
+  it("preserves custom runtime priority when re-enabling an active effect", () => {
+    const manager = new ScreenEffectManager({ registerBuiltIns: false });
+
+    manager.register("custom", {
+      create: () => ({
+        render: vi.fn(),
+        update: vi.fn(),
+      }),
+      priority: 4,
+    });
+
+    manager.enable("custom", { priority: 32 });
+    manager.enable("custom", { intensity: 0.5 });
+
+    expect(manager.getActiveEffects()).toEqual([
+      { effectId: "custom", isActive: false, priority: 32 },
+    ]);
+  });
+
   it("fades effects in and out before destroying them", () => {
     const destroy = vi.fn();
     const update = vi.fn();
