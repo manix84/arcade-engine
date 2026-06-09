@@ -193,6 +193,10 @@ loop, keyboard/mouse/touch/gamepad input, simple movement, and drawing.
 | --- | --- |
 | ![Destructible cube pickup Storybook demo](docs/screenshots/destructible-pickup.png) | ![Display filter Storybook demo](docs/screenshots/display-filters.png) |
 
+| Screen effects | Atmospheric effects |
+| --- | --- |
+| ![Environment heat screen effect Storybook demo](docs/screenshots/screen-effects-heat.png) | ![Atmospheric rain Storybook demo](docs/screenshots/atmospheric-rain.png) |
+
 ## 🧱 Core Modules
 
 ### 🎬 `GameArena`
