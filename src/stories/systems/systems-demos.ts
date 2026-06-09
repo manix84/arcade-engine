@@ -12,6 +12,10 @@ import {
   defaultCustomDisplayFilterSettings,
   displayFilterModeLabels,
   displayFilterModes,
+  environmentFireEffectId,
+  environmentFrostEffectId,
+  environmentHeatEffectId,
+  environmentUnderwaterEffectId,
   getDisplayFilterSettingsForMode,
   createRagdoll2D,
   createRagdoll3D,
@@ -61,6 +65,7 @@ import {
   onRemove,
   setValue,
 } from "../story-utils.js";
+import { drawFpsDemoScene } from "../fps-demo-scene.js";
 
 type DemoAchievementId = "first-sortie" | "wave-breaker" | "precision-run";
 
@@ -1201,34 +1206,15 @@ const createScreenEffectStory = ({
 
       const now = performance.now();
       const delta = Math.min(0.05, (now - lastTime) / 1000);
-      const shipX = canvas.width / 2 + Math.sin(now / 650) * 180;
 
       lastTime = now;
-      fillCanvasWithTrail(context, canvas, "#07101a", 0.2);
-
-      for (let y = 52; y < canvas.height; y += 56) {
-        drawCanvasLine(
-          context,
-          { x: 0, y },
-          { x: canvas.width, y: y + Math.sin(now / 700 + y) * 10 },
-          "rgba(79, 209, 197, 0.12)",
-          2
-        );
-      }
-
-      drawCanvasLine(
-        context,
-        { x: 70, y: 285 },
-        { x: canvas.width - 70, y: 285 },
-        "rgba(203, 213, 225, 0.28)",
-        3
-      );
-      drawTopDownShip(context, shipX, 220, {
-        accent: "#f6e05e",
-        heading: Math.sin(now / 480) * 18,
-        label: "visor",
-        scale: 1.08,
-        thrust: 0.72,
+      drawFpsDemoScene(context, {
+        height: canvas.height,
+        pixelScale: 3,
+        routeSpeed: 1.45,
+        theme: "sciFi",
+        timeMs: now,
+        width: canvas.width,
       });
 
       manager.update(delta, { height: canvas.height, width: canvas.width });
@@ -1301,6 +1287,42 @@ export const ScreenLowHealth: Story = createScreenEffectStory({
   lightLabel: "Injured",
   lightValue: 0.34,
   title: "Low health",
+});
+
+export const EnvironmentHeat: Story = createScreenEffectStory({
+  effectId: environmentHeatEffectId,
+  heavyLabel: "Heat Haze",
+  heavyValue: 0.82,
+  lightLabel: "Warm Air",
+  lightValue: 0.3,
+  title: "Environment heat",
+});
+
+export const EnvironmentFrost: Story = createScreenEffectStory({
+  effectId: environmentFrostEffectId,
+  heavyLabel: "Deep Freeze",
+  heavyValue: 0.88,
+  lightLabel: "Cold Glass",
+  lightValue: 0.34,
+  title: "Environment frost",
+});
+
+export const EnvironmentFire: Story = createScreenEffectStory({
+  effectId: environmentFireEffectId,
+  heavyLabel: "Burning",
+  heavyValue: 0.9,
+  lightLabel: "Near Fire",
+  lightValue: 0.38,
+  title: "Environment fire",
+});
+
+export const EnvironmentUnderwater: Story = createScreenEffectStory({
+  effectId: environmentUnderwaterEffectId,
+  heavyLabel: "Submerged",
+  heavyValue: 0.82,
+  lightLabel: "Shallow Water",
+  lightValue: 0.32,
+  title: "Environment underwater",
 });
 
 export const SpriteAnimationAndCamera: Story = {

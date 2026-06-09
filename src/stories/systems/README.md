@@ -101,6 +101,21 @@ The story demonstrates:
 Use this pattern when a game needs temporary overlay effects such as rain on a
 camera lens, frost, embers, mud, or other visor-style feedback.
 
+## 🌡️ Environment Screen Effects
+
+The Environment Screen Effects stories show separate heat, frost, fire, and
+underwater overlays for world conditions around the player.
+
+The stories demonstrate:
+
+- Pixel-snapped horizontal slice distortion.
+- Edge-first frost, fire, and vignette masks.
+- Rising heat ripples, embers, bubbles, smoke, mist, and debris particles.
+- Separate Storybook entries for each environment effect.
+
+Use this pattern when the level or camera surface needs readable environmental
+feedback without hiding enemies, pickups, bullets, or HUD elements.
+
 ## 🏆 Achievement Notifications
 
 `AchievementNotifications` shows a canvas unlock-popup queue.

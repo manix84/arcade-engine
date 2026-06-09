@@ -85,6 +85,8 @@ export type ScreenDropletTrailPoint = {
 
 export type PixelScreenEffectKind = "fire" | "frost" | "poison" | "low-health";
 
+export type EnvironmentScreenEffectKind = "heat" | "frost" | "fire" | "underwater";
+
 export type PixelScreenEffectParticle = {
   age: number;
   alpha: number;
@@ -119,6 +121,10 @@ export const screenFireEffectId = "screen-fire";
 export const screenFrostEffectId = "screen-frost";
 export const screenPoisonEffectId = "screen-poison";
 export const screenLowHealthEffectId = "screen-low-health";
+export const environmentHeatEffectId = "environment-heat";
+export const environmentFrostEffectId = "environment-frost";
+export const environmentFireEffectId = "environment-fire";
+export const environmentUnderwaterEffectId = "environment-underwater";
 
 export const defaultScreenDropletsConfig: ScreenDropletsConfig = {
   fadeSpeed: 0.95,
@@ -1020,6 +1026,456 @@ class PixelScreenEffect implements ScreenEffectInstance {
   }
 }
 
+export interface EnvironmentScreenEffectConfig {
+  kind: EnvironmentScreenEffectKind;
+  maxParticles: number;
+  pixelSize: number;
+  random: () => number;
+  spawnRate: number;
+}
+
+const defaultEnvironmentScreenEffectConfigs: Record<
+  EnvironmentScreenEffectKind,
+  EnvironmentScreenEffectConfig
+> = {
+  fire: {
+    kind: "fire",
+    maxParticles: 46,
+    pixelSize: 6,
+    random: Math.random,
+    spawnRate: 24,
+  },
+  frost: {
+    kind: "frost",
+    maxParticles: 42,
+    pixelSize: 5,
+    random: Math.random,
+    spawnRate: 13,
+  },
+  heat: {
+    kind: "heat",
+    maxParticles: 24,
+    pixelSize: 6,
+    random: Math.random,
+    spawnRate: 10,
+  },
+  underwater: {
+    kind: "underwater",
+    maxParticles: 44,
+    pixelSize: 5,
+    random: Math.random,
+    spawnRate: 16,
+  },
+};
+
+const normalizeEnvironmentScreenEffectConfig = (
+  kind: EnvironmentScreenEffectKind,
+  options: Record<string, unknown> | undefined
+): EnvironmentScreenEffectConfig => {
+  const defaults = defaultEnvironmentScreenEffectConfigs[kind];
+  const config = {
+    ...defaults,
+    ...options,
+  };
+
+  return {
+    kind,
+    maxParticles: Math.max(
+      1,
+      Math.floor(getFiniteNumber(config.maxParticles, defaults.maxParticles, 1))
+    ),
+    pixelSize: Math.max(2, Math.round(getFiniteNumber(config.pixelSize, defaults.pixelSize, 2))),
+    random: getOptionalRandom(config.random) ?? defaults.random,
+    spawnRate: getFiniteNumber(config.spawnRate, defaults.spawnRate),
+  };
+};
+
+class EnvironmentScreenEffect implements ScreenEffectInstance {
+  private readonly config: EnvironmentScreenEffectConfig;
+  private readonly particles: PixelScreenEffectParticle[] = [];
+  private readonly pool: PixelScreenEffectParticle[] = [];
+  private spawnAccumulator = 0;
+  private time = 0;
+
+  constructor(kind: EnvironmentScreenEffectKind, options?: Record<string, unknown>) {
+    this.config = normalizeEnvironmentScreenEffectConfig(kind, options);
+  }
+
+  destroy = (): void => {
+    this.pool.push(...this.particles);
+    this.particles.length = 0;
+    this.spawnAccumulator = 0;
+    this.time = 0;
+  };
+
+  update = ({ deltaTime, intensity, viewport }: ScreenEffectUpdateState): void => {
+    const normalizedDelta = Math.min(0.1, Math.max(0, deltaTime));
+    const normalizedIntensity = clampScreenEffectIntensity(intensity);
+
+    this.time += normalizedDelta;
+
+    if (normalizedIntensity > 0 && viewport.width > 0 && viewport.height > 0) {
+      this.spawnAccumulator += normalizedDelta * this.config.spawnRate * (0.3 + normalizedIntensity);
+      const maxParticles = Math.max(
+        2,
+        Math.round(this.config.maxParticles * (0.18 + normalizedIntensity * 0.82))
+      );
+
+      while (this.spawnAccumulator >= 1 && this.particles.length < maxParticles) {
+        this.spawnParticle(viewport, normalizedIntensity);
+        this.spawnAccumulator -= 1;
+      }
+    }
+
+    for (let index = this.particles.length - 1; index >= 0; index -= 1) {
+      const particle = this.particles[index];
+
+      particle.age += normalizedDelta;
+      this.moveParticle(particle, normalizedDelta);
+      particle.alpha = Math.max(0, 1 - particle.age / particle.life);
+
+      if (particle.alpha <= 0 || this.isParticleOutside(particle, viewport)) {
+        this.recycleParticle(index);
+      }
+    }
+  };
+
+  render = (
+    context: CanvasRenderingContext2D,
+    viewport: ScreenEffectViewport,
+    state: ScreenEffectRenderState
+  ): void => {
+    const intensity = clampScreenEffectIntensity(state.intensity);
+
+    if (intensity <= 0) {
+      return;
+    }
+
+    context.save();
+    context.imageSmoothingEnabled = false;
+
+    if (this.config.kind === "heat") {
+      this.renderHeat(context, viewport, intensity);
+    } else if (this.config.kind === "frost") {
+      this.renderFrost(context, viewport, intensity);
+    } else if (this.config.kind === "fire") {
+      this.renderFire(context, viewport, intensity);
+    } else {
+      this.renderUnderwater(context, viewport, intensity);
+    }
+
+    context.restore();
+  };
+
+  private spawnParticle(viewport: ScreenEffectViewport, intensity: number): void {
+    const particle = this.pool.pop() ?? {
+      age: 0,
+      alpha: 1,
+      life: 1,
+      seed: 0,
+      size: this.config.pixelSize,
+      speed: 0,
+      x: 0,
+      y: 0,
+    };
+    const pixel = this.config.pixelSize;
+    const edge = this.config.random();
+
+    particle.age = 0;
+    particle.alpha = 1;
+    particle.life = this.getRandomRange(1.1, 2.8 + intensity * 1.4);
+    particle.seed = this.config.random();
+    particle.size = pixel * Math.max(1, Math.round(this.getRandomRange(1, 4)));
+    particle.speed = this.getRandomRange(12, 48 + intensity * 58);
+
+    if (this.config.kind === "underwater") {
+      particle.x = this.snap(this.getRandomRange(0, viewport.width));
+      particle.y = this.snap(viewport.height + this.getRandomRange(0, viewport.height * 0.16));
+    } else if (this.config.kind === "heat" || this.config.kind === "fire") {
+      particle.x = this.snap(this.getRandomRange(0, viewport.width));
+      particle.y = this.snap(viewport.height - this.getRandomRange(0, viewport.height * 0.25));
+    } else if (edge < 0.25) {
+      particle.x = this.snap(this.getRandomRange(0, viewport.width));
+      particle.y = this.snap(this.getRandomRange(0, viewport.height * 0.16));
+    } else if (edge < 0.5) {
+      particle.x = this.snap(this.getRandomRange(0, viewport.width));
+      particle.y = this.snap(viewport.height - this.getRandomRange(0, viewport.height * 0.16));
+    } else if (edge < 0.75) {
+      particle.x = this.snap(this.getRandomRange(0, viewport.width * 0.16));
+      particle.y = this.snap(this.getRandomRange(0, viewport.height));
+    } else {
+      particle.x = this.snap(viewport.width - this.getRandomRange(0, viewport.width * 0.16));
+      particle.y = this.snap(this.getRandomRange(0, viewport.height));
+    }
+
+    this.particles.push(particle);
+  }
+
+  private moveParticle(particle: PixelScreenEffectParticle, deltaTime: number): void {
+    const pixel = this.config.pixelSize;
+    const wobble = this.snap(Math.sin(this.time * 2 + particle.seed * 9) * pixel);
+
+    if (this.config.kind === "underwater") {
+      particle.y -= particle.speed * deltaTime * 0.46;
+      particle.x += wobble * deltaTime * 3;
+      return;
+    }
+
+    if (this.config.kind === "frost") {
+      particle.x += Math.sign(0.5 - particle.seed) * pixel * deltaTime * 2;
+      particle.y += Math.sin(this.time + particle.seed * 6) * pixel * deltaTime;
+      return;
+    }
+
+    particle.y -= particle.speed * deltaTime;
+    particle.x += wobble * deltaTime * (this.config.kind === "heat" ? 2 : 4);
+  }
+
+  private isParticleOutside(
+    particle: PixelScreenEffectParticle,
+    viewport: ScreenEffectViewport
+  ): boolean {
+    const margin = this.config.pixelSize * 10;
+
+    return (
+      particle.x < -margin ||
+      particle.x > viewport.width + margin ||
+      particle.y < -margin ||
+      particle.y > viewport.height + margin
+    );
+  }
+
+  private recycleParticle(index: number): void {
+    const [particle] = this.particles.splice(index, 1);
+
+    if (particle) {
+      this.pool.push(particle);
+    }
+  }
+
+  private renderHeat(
+    context: CanvasRenderingContext2D,
+    viewport: ScreenEffectViewport,
+    intensity: number
+  ): void {
+    const pixel = this.config.pixelSize;
+
+    this.renderHorizontalSliceDistortion(context, viewport, intensity, 0.38, 5);
+    context.fillStyle = `rgba(255, 177, 83, ${0.045 * intensity})`;
+    context.fillRect(0, 0, viewport.width, viewport.height);
+
+    for (let y = pixel * 3; y < viewport.height - pixel * 3; y += pixel * 7) {
+      const offset = this.snap(Math.sin(this.time * 3 + y * 0.04) * pixel);
+
+      context.fillStyle = `rgba(255, 221, 145, ${0.055 * intensity})`;
+      context.fillRect(Math.max(0, offset), y, viewport.width - Math.abs(offset), pixel);
+    }
+
+    for (const particle of this.particles) {
+      const alpha = particle.alpha * intensity;
+
+      context.fillStyle = `rgba(255, 216, 130, ${0.12 * alpha})`;
+      context.fillRect(this.snap(particle.x), this.snap(particle.y), particle.size * 2, pixel);
+      context.fillRect(this.snap(particle.x + pixel), this.snap(particle.y - pixel), particle.size, pixel);
+    }
+
+    this.renderEdgeGlow(context, viewport, `rgba(255, 212, 135, ${0.08 * intensity + this.getPulse(4, 0.045) * intensity})`);
+  }
+
+  private renderFrost(
+    context: CanvasRenderingContext2D,
+    viewport: ScreenEffectViewport,
+    intensity: number
+  ): void {
+    const pixel = this.config.pixelSize;
+    const growth = this.snap(viewport.height * (0.05 + intensity * 0.16));
+
+    context.fillStyle = `rgba(158, 221, 255, ${0.055 * intensity})`;
+    context.fillRect(0, 0, viewport.width, viewport.height);
+    context.fillStyle = `rgba(190, 237, 255, ${0.16 * intensity})`;
+    this.fillIrregularEdges(context, viewport, growth);
+
+    for (let index = 0; index < 10 + intensity * 14; index += 1) {
+      const cornerX = index % 2 === 0 ? pixel * (1 + index) : viewport.width - pixel * (3 + index);
+      const cornerY = index % 3 === 0 ? pixel * (1 + index) : viewport.height - pixel * (3 + index);
+      const branch = pixel * (2 + (index % 4));
+
+      context.fillStyle = `rgba(235, 252, 255, ${0.18 * intensity})`;
+      context.fillRect(this.snap(cornerX), this.snap(cornerY), branch, pixel);
+      context.fillRect(this.snap(cornerX), this.snap(cornerY), pixel, branch);
+    }
+
+    for (const particle of this.particles) {
+      const alpha = particle.alpha * intensity;
+
+      context.fillStyle = `rgba(220, 247, 255, ${0.13 * alpha})`;
+      context.fillRect(this.snap(particle.x), this.snap(particle.y), particle.size * 2, pixel * 2);
+    }
+  }
+
+  private renderFire(
+    context: CanvasRenderingContext2D,
+    viewport: ScreenEffectViewport,
+    intensity: number
+  ): void {
+    const pixel = this.config.pixelSize;
+    const flameHeight = this.snap(viewport.height * (0.04 + intensity * 0.1));
+
+    this.renderHorizontalSliceDistortion(context, viewport, intensity, 0.2, 7);
+    context.fillStyle = `rgba(120, 28, 9, ${0.075 * intensity + this.getPulse(6, 0.04) * intensity})`;
+    this.fillEdgeBands(context, viewport, flameHeight);
+
+    for (let x = 0; x < viewport.width; x += pixel * 4) {
+      const height = pixel * (2 + ((x / pixel + Math.round(this.time * 8)) % 4));
+
+      context.fillStyle = `rgba(242, 78, 28, ${0.2 * intensity})`;
+      context.fillRect(x, viewport.height - height, pixel * 2, height);
+      context.fillStyle = `rgba(255, 188, 61, ${0.14 * intensity})`;
+      context.fillRect(x + pixel, viewport.height - Math.max(pixel, height - pixel * 2), pixel, pixel * 2);
+    }
+
+    for (const particle of this.particles) {
+      const alpha = particle.alpha * intensity;
+      const isSmoke = particle.seed < 0.22;
+
+      context.fillStyle = isSmoke
+        ? `rgba(66, 63, 58, ${0.11 * alpha})`
+        : `rgba(255, 156, 58, ${0.24 * alpha})`;
+      context.fillRect(this.snap(particle.x), this.snap(particle.y), particle.size, isSmoke ? pixel * 2 : pixel);
+    }
+  }
+
+  private renderUnderwater(
+    context: CanvasRenderingContext2D,
+    viewport: ScreenEffectViewport,
+    intensity: number
+  ): void {
+    const pixel = this.config.pixelSize;
+
+    this.renderHorizontalSliceDistortion(context, viewport, intensity, 0.32, 12);
+    context.fillStyle = `rgba(45, 151, 157, ${0.085 * intensity})`;
+    context.fillRect(0, 0, viewport.width, viewport.height);
+
+    for (let y = pixel * 4; y < viewport.height; y += pixel * 9) {
+      const offset = this.snap(Math.sin(this.time * 1.4 + y * 0.025) * pixel * 1.5);
+
+      context.fillStyle = `rgba(121, 224, 214, ${0.055 * intensity})`;
+      context.fillRect(Math.max(0, offset), y, viewport.width - Math.abs(offset), pixel);
+    }
+
+    for (const particle of this.particles) {
+      const alpha = particle.alpha * intensity;
+      const isBubble = particle.seed > 0.34;
+
+      context.fillStyle = isBubble
+        ? `rgba(187, 246, 255, ${0.18 * alpha})`
+        : `rgba(25, 73, 68, ${0.14 * alpha})`;
+      context.fillRect(this.snap(particle.x), this.snap(particle.y), particle.size, pixel);
+      if (isBubble) {
+        context.fillRect(this.snap(particle.x + pixel), this.snap(particle.y - pixel), pixel, pixel);
+      }
+    }
+
+    context.fillStyle = `rgba(2, 18, 24, ${0.12 * intensity})`;
+    this.fillEdgeBands(context, viewport, this.snap(viewport.height * (0.07 + intensity * 0.09)));
+  }
+
+  private renderHorizontalSliceDistortion(
+    context: CanvasRenderingContext2D,
+    viewport: ScreenEffectViewport,
+    intensity: number,
+    scale: number,
+    spacing: number
+  ): void {
+    const source = context.canvas;
+    const pixel = this.config.pixelSize;
+
+    if (!source || viewport.width <= 0 || viewport.height <= 0) {
+      return;
+    }
+
+    for (let y = pixel * 2; y < viewport.height - pixel * 2; y += pixel * spacing) {
+      const rawOffset = Math.sin(this.time * spacing + y * 0.03) * pixel * scale * intensity;
+
+      if (Math.abs(rawOffset) < 0.4) {
+        continue;
+      }
+
+      const offset =
+        Math.sign(rawOffset) * Math.max(pixel, Math.abs(this.snap(rawOffset)));
+
+      if (offset === 0) {
+        continue;
+      }
+
+      context.drawImage(source, 0, y, viewport.width, pixel * 2, offset, y, viewport.width, pixel * 2);
+    }
+  }
+
+  private fillEdgeBands(
+    context: CanvasRenderingContext2D,
+    viewport: ScreenEffectViewport,
+    bandHeight: number
+  ): void {
+    const bandWidth = this.snap(viewport.width * 0.09);
+
+    context.fillRect(0, 0, viewport.width, bandHeight);
+    context.fillRect(0, viewport.height - bandHeight, viewport.width, bandHeight);
+    context.fillRect(0, bandHeight, bandWidth, Math.max(this.config.pixelSize, viewport.height - bandHeight * 2));
+    context.fillRect(
+      viewport.width - bandWidth,
+      bandHeight,
+      bandWidth,
+      Math.max(this.config.pixelSize, viewport.height - bandHeight * 2)
+    );
+  }
+
+  private fillIrregularEdges(
+    context: CanvasRenderingContext2D,
+    viewport: ScreenEffectViewport,
+    growth: number
+  ): void {
+    const pixel = this.config.pixelSize;
+
+    for (let x = 0; x < viewport.width; x += pixel * 2) {
+      const topGrowth = this.snap(growth * (0.45 + ((x / pixel) % 5) * 0.12));
+      const bottomGrowth = this.snap(growth * (0.4 + ((x / pixel + 2) % 6) * 0.1));
+
+      context.fillRect(x, 0, pixel * 2, topGrowth);
+      context.fillRect(x, viewport.height - bottomGrowth, pixel * 2, bottomGrowth);
+    }
+
+    for (let y = 0; y < viewport.height; y += pixel * 2) {
+      const leftGrowth = this.snap(growth * (0.38 + ((y / pixel + 1) % 5) * 0.11));
+      const rightGrowth = this.snap(growth * (0.42 + ((y / pixel + 3) % 6) * 0.09));
+
+      context.fillRect(0, y, leftGrowth, pixel * 2);
+      context.fillRect(viewport.width - rightGrowth, y, rightGrowth, pixel * 2);
+    }
+  }
+
+  private renderEdgeGlow(
+    context: CanvasRenderingContext2D,
+    viewport: ScreenEffectViewport,
+    color: string
+  ): void {
+    context.fillStyle = color;
+    this.fillEdgeBands(context, viewport, this.snap(viewport.height * 0.055));
+  }
+
+  private getPulse(speed: number, amount: number): number {
+    return (0.5 + Math.sin(this.time * speed) * 0.5) * amount;
+  }
+
+  private getRandomRange(minimum: number, maximum: number): number {
+    return minimum + (maximum - minimum) * this.config.random();
+  }
+
+  private snap(value: number): number {
+    return Math.round(value / this.config.pixelSize) * this.config.pixelSize;
+  }
+}
+
 export const createScreenDropletsEffectDefinition = (
   options?: Partial<ScreenDropletsConfig>
 ): ScreenEffectDefinition => ({
@@ -1060,6 +1516,35 @@ export const createScreenLowHealthEffectDefinition = (
   options?: Partial<PixelScreenEffectConfig>
 ): ScreenEffectDefinition => createPixelScreenEffectDefinition("low-health", options, 58);
 
+const createEnvironmentScreenEffectDefinition = (
+  kind: EnvironmentScreenEffectKind,
+  options?: Partial<EnvironmentScreenEffectConfig>,
+  priority = 44
+): ScreenEffectDefinition => ({
+  create: (runtimeOptions) =>
+    new EnvironmentScreenEffect(kind, {
+      ...options,
+      ...runtimeOptions,
+    }),
+  priority,
+});
+
+export const createEnvironmentHeatEffectDefinition = (
+  options?: Partial<EnvironmentScreenEffectConfig>
+): ScreenEffectDefinition => createEnvironmentScreenEffectDefinition("heat", options, 42);
+
+export const createEnvironmentFrostEffectDefinition = (
+  options?: Partial<EnvironmentScreenEffectConfig>
+): ScreenEffectDefinition => createEnvironmentScreenEffectDefinition("frost", options, 44);
+
+export const createEnvironmentFireEffectDefinition = (
+  options?: Partial<EnvironmentScreenEffectConfig>
+): ScreenEffectDefinition => createEnvironmentScreenEffectDefinition("fire", options, 46);
+
+export const createEnvironmentUnderwaterEffectDefinition = (
+  options?: Partial<EnvironmentScreenEffectConfig>
+): ScreenEffectDefinition => createEnvironmentScreenEffectDefinition("underwater", options, 40);
+
 export class ScreenEffectManager {
   private readonly activeEffects = new Map<string, ActiveScreenEffect>();
   private readonly definitions = new Map<string, ScreenEffectDefinition>();
@@ -1071,6 +1556,10 @@ export class ScreenEffectManager {
       this.register(screenFrostEffectId, createScreenFrostEffectDefinition());
       this.register(screenPoisonEffectId, createScreenPoisonEffectDefinition());
       this.register(screenLowHealthEffectId, createScreenLowHealthEffectDefinition());
+      this.register(environmentHeatEffectId, createEnvironmentHeatEffectDefinition());
+      this.register(environmentFrostEffectId, createEnvironmentFrostEffectDefinition());
+      this.register(environmentFireEffectId, createEnvironmentFireEffectDefinition());
+      this.register(environmentUnderwaterEffectId, createEnvironmentUnderwaterEffectDefinition());
     }
   }
 

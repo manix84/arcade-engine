@@ -1,11 +1,19 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  createEnvironmentFireEffectDefinition,
+  createEnvironmentFrostEffectDefinition,
+  createEnvironmentHeatEffectDefinition,
+  createEnvironmentUnderwaterEffectDefinition,
   createScreenFireEffectDefinition,
   createScreenFrostEffectDefinition,
   createScreenLowHealthEffectDefinition,
   createScreenPoisonEffectDefinition,
   createScreenDropletsEffectDefinition,
   defaultScreenDropletsConfig,
+  environmentFireEffectId,
+  environmentFrostEffectId,
+  environmentHeatEffectId,
+  environmentUnderwaterEffectId,
   screenDropletsEffectId,
   screenFireEffectId,
   screenFrostEffectId,
@@ -27,6 +35,10 @@ describe("screen effect manager", () => {
     const manager = new ScreenEffectManager();
 
     expect(manager.getRegisteredEffects()).toEqual([
+      environmentFireEffectId,
+      environmentFrostEffectId,
+      environmentHeatEffectId,
+      environmentUnderwaterEffectId,
       screenDropletsEffectId,
       screenFireEffectId,
       screenFrostEffectId,
@@ -173,6 +185,44 @@ describe("pixel screen feedback effects", () => {
     expect(context.lineTo).not.toHaveBeenCalled();
     expect(context.imageSmoothingEnabled).toBe(false);
   });
+});
+
+describe("environment screen effects", () => {
+  it.each([
+    ["fire", createEnvironmentFireEffectDefinition, true],
+    ["frost", createEnvironmentFrostEffectDefinition, false],
+    ["heat", createEnvironmentHeatEffectDefinition, true],
+    ["underwater", createEnvironmentUnderwaterEffectDefinition, true],
+  ] as const)(
+    "draws pixel-art %s environment feedback",
+    (_label, createDefinition, distorts) => {
+      const definition = createDefinition({
+        maxParticles: 4,
+        pixelSize: 6,
+        random: () => 0.5,
+        spawnRate: 80,
+      });
+      const effect = definition.create();
+      const context = createContext();
+
+      (context as unknown as { canvas: HTMLCanvasElement }).canvas =
+        document.createElement("canvas");
+      effect.update({
+        deltaTime: 0.1,
+        intensity: 1,
+        viewport,
+      });
+      effect.render(context, viewport, { intensity: 1 });
+
+      expect(context.fillRect).toHaveBeenCalled();
+      if (distorts) {
+        expect(context.drawImage).toHaveBeenCalled();
+      }
+      expect(context.arc).not.toHaveBeenCalled();
+      expect(context.lineTo).not.toHaveBeenCalled();
+      expect(context.imageSmoothingEnabled).toBe(false);
+    }
+  );
 });
 
 describe("screen droplets effect", () => {
