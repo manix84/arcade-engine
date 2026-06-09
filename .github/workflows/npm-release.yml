@@ -155,12 +155,21 @@ jobs:
       - name: Publish to GitHub Packages
         run: |
           set -euo pipefail
-          echo "@manix84:registry=https://npm.pkg.github.com" >> ~/.npmrc
-          echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
+          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "NODE_AUTH_TOKEN is empty; cannot authenticate with GitHub Packages." >&2
+            exit 1
+          fi
+
+          github_packages_npmrc="${RUNNER_TEMP}/github-packages.npmrc"
+          {
+            echo "@manix84:registry=https://npm.pkg.github.com"
+            echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}"
+          } > "$github_packages_npmrc"
+
           if [ ! -f ./github-package/package/package.json ]; then
             echo "Expected GitHub package manifest at ./github-package/package/package.json, but it was not found."
             exit 1
           fi
-          npm publish ./github-package/package --registry=https://npm.pkg.github.com --access public --ignore-scripts
+          npm publish ./github-package/package --registry=https://npm.pkg.github.com --access public --ignore-scripts --userconfig "$github_packages_npmrc"
         env:
-          NODE_AUTH_TOKEN: ${{ github.token }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
