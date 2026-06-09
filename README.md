@@ -197,6 +197,10 @@ loop, keyboard/mouse/touch/gamepad input, simple movement, and drawing.
 | --- | --- |
 | ![Environment heat screen effect Storybook demo](docs/screenshots/screen-effects-heat.png) | ![Atmospheric rain Storybook demo](docs/screenshots/atmospheric-rain.png) |
 
+| FPS debug graph |
+| --- |
+| ![FPS debug overlay graph Storybook demo](docs/screenshots/fps-debug-overlay.png) |
+
 ## 🧱 Core Modules
 
 ### 🎬 `GameArena`
