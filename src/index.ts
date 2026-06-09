@@ -62,8 +62,10 @@ export {
   wrapDepth,
 } from "./arcade-3d.js";
 export {
+  AtmosphericAshEmberEffect,
   AtmosphericRainEffect,
   AtmosphericSnowEffect,
+  createAtmosphericAshEmberEffect,
   createAtmosphericRainEffect,
   createAtmosphericSnowEffect,
 } from "./atmospheric-effects.js";
@@ -291,6 +293,9 @@ export type {
 } from "./cube-cluster.js";
 export type { DebugVectorColors, DebugVectorOptions } from "./debug-vectors.js";
 export type {
+  AtmosphericAshEmberIntensity,
+  AtmosphericAshEmberOptions,
+  AtmosphericAshEmberParticle,
   AtmosphericEffectViewport,
   AtmosphericRainDensity,
   AtmosphericRainDrop,

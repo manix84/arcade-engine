@@ -136,8 +136,8 @@ poison, low health, shock, and speed boost, plus environment effects for heat,
 frost, fire, and underwater conditions.
 
 [atmospheric-effects.ts](atmospheric-effects.ts) contains world-space weather
-feedback such as rain and snow that renders between the game world and HUD
-overlays.
+and air feedback such as rain, snow, ash, and embers that renders between the
+game world and HUD overlays.
 
 Use it for:
 
@@ -152,6 +152,8 @@ Use it for:
   underwater distortion.
 - Pixel-snapped atmospheric rain drops, wind slant, and small splashes.
 - Layered atmospheric snowflakes, wind drift, and optional accumulation.
+- Drifting ash and rising flickering embers for fire, volcano, industrial, and
+  destroyed-city scenes.
 
 Games call `update(deltaTime, viewport)` and `render(context, viewport)` from
 their own render loop. Custom effects can register the same `update`, `render`,

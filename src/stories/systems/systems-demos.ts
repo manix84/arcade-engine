@@ -5,6 +5,7 @@ import {
   applyGravity2D,
   applyGravity3D,
   AchievementNotificationRenderer,
+  createAtmosphericAshEmberEffect,
   createAtmosphericRainEffect,
   createAtmosphericSnowEffect,
   createAchievementState,
@@ -48,6 +49,7 @@ import {
   validateHighScoreSubmission,
   type AchievementDefinition,
   type AchievementState,
+  type AtmosphericAshEmberIntensity,
   type AtmosphericRainDensity,
   type AtmosphericSnowDensity,
   type HighScoreEntry,
@@ -86,6 +88,14 @@ type SystemsStoryArgs = {
   onAchievementNotification?: (name: string) => void;
   onAchievementReset?: () => void;
   onAchievementUnlock?: (id: DemoAchievementId) => void;
+  onAshEmberChange?: (
+    intensity: AtmosphericAshEmberIntensity,
+    wind: number,
+    emberRatio: number
+  ) => void;
+  ashEmberIntensity?: AtmosphericAshEmberIntensity;
+  ashEmberRatio?: number;
+  ashEmberWind?: number;
   onHighScoreSave?: (entry: HighScoreEntry) => void;
   onHighScoreTamper?: (accepted: boolean, label: string) => void;
   onHighScoreValidate?: (accepted: boolean, label: string) => void;
@@ -1522,6 +1532,113 @@ export const AtmosphericSnow: Story = {
     onRemove(shell, () => {
       window.cancelAnimationFrame(animationFrame);
       snow.clear();
+    });
+
+    return shell;
+  },
+};
+
+export const AtmosphericAshAndEmbers: Story = {
+  args: {
+    ashEmberIntensity: "burning",
+    ashEmberRatio: 0.24,
+    ashEmberWind: 24,
+    onAshEmberChange: fn(),
+  },
+  argTypes: {
+    ashEmberIntensity: {
+      control: "select",
+      name: "Intensity",
+      options: ["smolder", "burning", "wildfire", "inferno"],
+    },
+    ashEmberRatio: {
+      control: { max: 0.65, min: 0, step: 0.05, type: "range" },
+      name: "Ember ratio",
+    },
+    ashEmberWind: {
+      control: { max: 180, min: -180, step: 10, type: "range" },
+      name: "Wind",
+    },
+  },
+  render: (args) => {
+    const { canvas, metrics, shell } = createSystemsLayout("Atmospheric ash and embers");
+    const context = canvas.getContext("2d");
+    const intensityValue = createValue("intensity");
+    const windValue = createValue("wind");
+    const ashValue = createValue("ash");
+    const emberValue = createValue("embers");
+    const usesValue = createValue("uses", "AtmosphericAshEmberEffect");
+    const ashAndEmbers = createAtmosphericAshEmberEffect({
+      emberRatio: args.ashEmberRatio ?? 0.24,
+      intensity: args.ashEmberIntensity ?? "burning",
+      pixelSize: 2,
+      wind: args.ashEmberWind ?? 24,
+    });
+    let emberRatio = args.ashEmberRatio ?? 0.24;
+    let intensity = args.ashEmberIntensity ?? "burning";
+    let wind = args.ashEmberWind ?? 24;
+    let animationFrame = 0;
+    let lastTime = performance.now();
+
+    const updateAshEmberOptions = (
+      nextIntensity: AtmosphericAshEmberIntensity,
+      nextWind: number,
+      nextEmberRatio: number
+    ): void => {
+      emberRatio = nextEmberRatio;
+      intensity = nextIntensity;
+      wind = nextWind;
+      ashAndEmbers.setOptions({ emberRatio, intensity, wind });
+      setValue(intensityValue, intensity);
+      setValue(windValue, `${wind}`);
+      args.onAshEmberChange?.(intensity, wind, emberRatio);
+    };
+
+    const controls = document.createElement("div");
+    controls.className = "ae-controls";
+    controls.append(
+      createButton("Smolder", () => updateAshEmberOptions("smolder", wind, 0.1)),
+      createButton("Burning", () => updateAshEmberOptions("burning", wind, 0.24)),
+      createButton("Wildfire", () => updateAshEmberOptions("wildfire", wind, 0.3)),
+      createButton("Inferno", () => updateAshEmberOptions("inferno", 70, 0.36)),
+      createButton("Ash Only", () => updateAshEmberOptions(intensity, wind, 0)),
+      createButton("More Embers", () => updateAshEmberOptions(intensity, wind, 0.52)),
+      createButton("Wind Left", () => updateAshEmberOptions(intensity, -80, emberRatio)),
+      createButton("Wind Right", () => updateAshEmberOptions(intensity, 80, emberRatio))
+    );
+    metrics.append(intensityValue, windValue, ashValue, emberValue, usesValue, controls);
+    updateAshEmberOptions(intensity, wind, emberRatio);
+
+    const render = (): void => {
+      if (!context) {
+        return;
+      }
+
+      const now = performance.now();
+      const delta = Math.min(0.05, (now - lastTime) / 1000);
+
+      lastTime = now;
+      drawFpsDemoScene(context, {
+        height: canvas.height,
+        pixelScale: 3,
+        routeSpeed: 1.18,
+        theme: "industrial",
+        timeMs: now,
+        width: canvas.width,
+      });
+
+      ashAndEmbers.update(delta, { height: canvas.height, width: canvas.width });
+      ashAndEmbers.render(context, { height: canvas.height, width: canvas.width });
+
+      setValue(ashValue, ashAndEmbers.getActiveAshCount());
+      setValue(emberValue, ashAndEmbers.getActiveEmberCount());
+      animationFrame = window.requestAnimationFrame(render);
+    };
+
+    animationFrame = window.requestAnimationFrame(render);
+    onRemove(shell, () => {
+      window.cancelAnimationFrame(animationFrame);
+      ashAndEmbers.clear();
     });
 
     return shell;

@@ -611,3 +611,315 @@ export class AtmosphericSnowEffect {
 export const createAtmosphericSnowEffect = (
   options?: AtmosphericSnowOptions
 ): AtmosphericSnowEffect => new AtmosphericSnowEffect(options);
+
+export type AtmosphericAshEmberIntensity = "smolder" | "burning" | "wildfire" | "inferno";
+
+export interface AtmosphericAshEmberOptions {
+  emberRatio?: number;
+  intensity?: AtmosphericAshEmberIntensity;
+  maxParticles?: number;
+  pixelSize?: number;
+  random?: () => number;
+  spawnRate?: number;
+  wind?: number;
+}
+
+export type AtmosphericAshEmberParticle = {
+  age: number;
+  depth: number;
+  kind: "ash" | "ember";
+  life: number;
+  seed: number;
+  size: number;
+  speed: number;
+  x: number;
+  y: number;
+};
+
+type NormalizedAtmosphericAshEmberOptions = {
+  emberRatio: number;
+  intensity: AtmosphericAshEmberIntensity;
+  maxParticles: number;
+  pixelSize: number;
+  random: () => number;
+  spawnRate: number;
+  wind: number;
+};
+
+const ashEmberIntensitySettings: Record<
+  AtmosphericAshEmberIntensity,
+  {
+    emberRatio: number;
+    maxParticles: number;
+    spawnRate: number;
+    wind: number;
+  }
+> = {
+  burning: {
+    emberRatio: 0.24,
+    maxParticles: 78,
+    spawnRate: 46,
+    wind: 18,
+  },
+  inferno: {
+    emberRatio: 0.36,
+    maxParticles: 140,
+    spawnRate: 94,
+    wind: 50,
+  },
+  smolder: {
+    emberRatio: 0.1,
+    maxParticles: 42,
+    spawnRate: 20,
+    wind: 10,
+  },
+  wildfire: {
+    emberRatio: 0.3,
+    maxParticles: 108,
+    spawnRate: 68,
+    wind: 34,
+  },
+};
+
+const normalizeAshEmberIntensity = (
+  value: AtmosphericAshEmberIntensity | undefined
+): AtmosphericAshEmberIntensity => {
+  if (
+    value === "smolder" ||
+    value === "burning" ||
+    value === "wildfire" ||
+    value === "inferno"
+  ) {
+    return value;
+  }
+
+  return "burning";
+};
+
+const normalizeAshEmberOptions = (
+  options: AtmosphericAshEmberOptions | undefined
+): NormalizedAtmosphericAshEmberOptions => {
+  const intensity = normalizeAshEmberIntensity(options?.intensity);
+  const intensitySettings = ashEmberIntensitySettings[intensity];
+  const emberRatio = getFiniteNumber(options?.emberRatio, intensitySettings.emberRatio);
+
+  return {
+    emberRatio: Math.max(0, Math.min(1, emberRatio)),
+    intensity,
+    maxParticles: Math.max(
+      1,
+      Math.floor(getFiniteNumber(options?.maxParticles, intensitySettings.maxParticles, 1))
+    ),
+    pixelSize: Math.max(1, Math.round(getFiniteNumber(options?.pixelSize, 2, 1))),
+    random: typeof options?.random === "function" ? options.random : Math.random,
+    spawnRate: getFiniteNumber(options?.spawnRate, intensitySettings.spawnRate),
+    wind: getFiniteNumber(options?.wind, intensitySettings.wind, -Infinity),
+  };
+};
+
+export class AtmosphericAshEmberEffect {
+  private options: NormalizedAtmosphericAshEmberOptions;
+  private readonly particles: AtmosphericAshEmberParticle[] = [];
+  private spawnAccumulator = 0;
+  private time = 0;
+
+  constructor(options?: AtmosphericAshEmberOptions) {
+    this.options = normalizeAshEmberOptions(options);
+  }
+
+  clear(): void {
+    this.particles.length = 0;
+    this.spawnAccumulator = 0;
+    this.time = 0;
+  }
+
+  getActiveAshCount(): number {
+    return this.particles.filter((particle) => particle.kind === "ash").length;
+  }
+
+  getActiveEmberCount(): number {
+    return this.particles.filter((particle) => particle.kind === "ember").length;
+  }
+
+  getActiveParticleCount(): number {
+    return this.particles.length;
+  }
+
+  setOptions(options: AtmosphericAshEmberOptions): void {
+    this.options = normalizeAshEmberOptions({
+      emberRatio: this.options.emberRatio,
+      intensity: this.options.intensity,
+      maxParticles: this.options.maxParticles,
+      pixelSize: this.options.pixelSize,
+      random: this.options.random,
+      spawnRate: this.options.spawnRate,
+      wind: this.options.wind,
+      ...options,
+    });
+
+    if (this.particles.length > this.options.maxParticles) {
+      this.particles.splice(0, this.particles.length - this.options.maxParticles);
+    }
+  }
+
+  update(deltaTime: number, viewport: AtmosphericEffectViewport): void {
+    const delta = Math.min(0.1, Math.max(0, deltaTime));
+
+    if (viewport.width <= 0 || viewport.height <= 0 || delta <= 0) {
+      return;
+    }
+
+    this.time += delta;
+    this.spawnAccumulator += delta * this.options.spawnRate;
+
+    while (this.spawnAccumulator >= 1 && this.particles.length < this.options.maxParticles) {
+      this.spawnParticle(viewport);
+      this.spawnAccumulator -= 1;
+    }
+
+    for (let index = this.particles.length - 1; index >= 0; index -= 1) {
+      const particle = this.particles[index];
+      const wobble =
+        Math.sin(this.time * (1.4 + particle.depth) + particle.seed * 18) *
+        this.options.pixelSize;
+
+      particle.age += delta;
+
+      if (particle.kind === "ember") {
+        particle.y -= particle.speed * (0.72 + particle.depth * 0.5) * delta;
+        particle.x += (this.options.wind * (0.35 + particle.depth * 0.6) + wobble * 11) * delta;
+      } else {
+        particle.y += Math.sin(this.time * 0.9 + particle.seed * 9) * particle.speed * 0.08 * delta;
+        particle.x += (this.options.wind * (0.18 + particle.depth * 0.34) + wobble * 7) * delta;
+      }
+
+      if (particle.age >= particle.life || this.isOutside(particle, viewport)) {
+        this.particles.splice(index, 1);
+      }
+    }
+  }
+
+  render(
+    context: CanvasRenderingContext2D,
+    _viewport: AtmosphericEffectViewport
+  ): void {
+    const pixel = this.options.pixelSize;
+
+    context.save();
+    context.imageSmoothingEnabled = false;
+
+    for (const particle of this.particles) {
+      if (particle.kind === "ash") {
+        this.renderAsh(context, particle, pixel);
+      }
+    }
+
+    for (const particle of this.particles) {
+      if (particle.kind === "ember") {
+        this.renderEmber(context, particle, pixel);
+      }
+    }
+
+    context.restore();
+  }
+
+  private isOutside(
+    particle: AtmosphericAshEmberParticle,
+    viewport: AtmosphericEffectViewport
+  ): boolean {
+    const margin = this.options.pixelSize * 8;
+
+    return (
+      particle.x < -margin ||
+      particle.x > viewport.width + margin ||
+      particle.y < -margin ||
+      particle.y > viewport.height + margin
+    );
+  }
+
+  private renderAsh(
+    context: CanvasRenderingContext2D,
+    particle: AtmosphericAshEmberParticle,
+    pixel: number
+  ): void {
+    const progress = Math.min(1, particle.age / particle.life);
+    const alpha = (1 - progress) * (0.18 + particle.depth * 0.22);
+    const x = this.snap(particle.x);
+    const y = this.snap(particle.y);
+
+    context.fillStyle = `rgba(74, 76, 76, ${alpha})`;
+    context.fillRect(x, y, pixel, pixel);
+
+    if (particle.seed > 0.34) {
+      context.fillRect(x + pixel, y, pixel, pixel);
+    }
+
+    if (particle.seed > 0.68) {
+      context.fillRect(x, y + pixel, pixel, pixel);
+    }
+  }
+
+  private renderEmber(
+    context: CanvasRenderingContext2D,
+    particle: AtmosphericAshEmberParticle,
+    pixel: number
+  ): void {
+    const progress = Math.min(1, particle.age / particle.life);
+    const flicker = 0.58 + Math.sin(this.time * 18 + particle.seed * 20) * 0.28;
+    const alpha = Math.max(0, 1 - progress) * (0.35 + particle.depth * 0.35) * flicker;
+    const x = this.snap(particle.x);
+    const y = this.snap(particle.y);
+    const size = Math.max(pixel, this.snap(particle.size));
+
+    context.fillStyle = `rgba(236, 76, 28, ${alpha})`;
+    context.fillRect(x, y, size, pixel);
+    context.fillStyle = `rgba(255, 166, 52, ${alpha * 0.78})`;
+    context.fillRect(x, y, pixel, pixel);
+
+    if (particle.depth > 0.62) {
+      context.fillStyle = `rgba(255, 218, 92, ${alpha * 0.58})`;
+      context.fillRect(x + pixel, y - pixel, pixel, pixel);
+    }
+  }
+
+  private spawnParticle(viewport: AtmosphericEffectViewport): void {
+    const isEmber = this.options.random() < this.options.emberRatio;
+    const depth = isEmber
+      ? this.getRandomRange(0.45, 1)
+      : this.getRandomRange(0.05, 0.72);
+    const pixel = this.options.pixelSize;
+    const windLead = Math.max(0, Math.abs(this.options.wind) * 0.3);
+    const x = this.getRandomRange(-windLead, viewport.width + windLead);
+    const y = isEmber
+      ? this.getRandomRange(viewport.height * 0.65, viewport.height + pixel * 6)
+      : this.getRandomRange(0, viewport.height);
+
+    this.particles.push({
+      age: 0,
+      depth,
+      kind: isEmber ? "ember" : "ash",
+      life: isEmber
+        ? this.getRandomRange(0.75, 1.8)
+        : this.getRandomRange(2.4, 5.2),
+      seed: this.options.random(),
+      size: pixel * (isEmber && depth > 0.72 ? 2 : 1),
+      speed: isEmber
+        ? this.getRandomRange(42, 110)
+        : this.getRandomRange(8, 28),
+      x: this.snap(x),
+      y: this.snap(y),
+    });
+  }
+
+  private getRandomRange(minimum: number, maximum: number): number {
+    return minimum + (maximum - minimum) * this.options.random();
+  }
+
+  private snap(value: number): number {
+    return Math.round(value / this.options.pixelSize) * this.options.pixelSize;
+  }
+}
+
+export const createAtmosphericAshEmberEffect = (
+  options?: AtmosphericAshEmberOptions
+): AtmosphericAshEmberEffect => new AtmosphericAshEmberEffect(options);

@@ -687,6 +687,7 @@ describe("coverage-focused engine branches", () => {
 
     expect(Object.keys(engine).sort()).toEqual([
       "AchievementNotificationRenderer",
+      "AtmosphericAshEmberEffect",
       "AtmosphericRainEffect",
       "AtmosphericSnowEffect",
       "GameArena",
@@ -711,6 +712,7 @@ describe("coverage-focused engine branches", () => {
       "colorWithAlpha",
       "containsBox",
       "createAchievementState",
+      "createAtmosphericAshEmberEffect",
       "createAtmosphericRainEffect",
       "createAtmosphericSnowEffect",
       "createCubeClusterFromPattern",

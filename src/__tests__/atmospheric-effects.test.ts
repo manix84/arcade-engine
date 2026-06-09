@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  createAtmosphericAshEmberEffect,
   createAtmosphericRainEffect,
   createAtmosphericSnowEffect,
 } from "../index.js";
@@ -161,5 +162,78 @@ describe("atmospheric snow effect", () => {
     effect.update(0.1, viewport);
 
     expect(effect.getActiveFlakeCount()).toBe(6);
+  });
+});
+
+describe("atmospheric ash and ember effect", () => {
+  it("spawns ash and embers together and renders pixel rectangles", () => {
+    const effect = createAtmosphericAshEmberEffect({
+      emberRatio: 0.5,
+      intensity: "wildfire",
+      pixelSize: 2,
+      random: () => 0.4,
+      spawnRate: 60,
+    });
+    const context = createContext();
+
+    effect.update(0.1, viewport);
+    effect.render(context, viewport);
+
+    expect(effect.getActiveParticleCount()).toBeGreaterThan(0);
+    expect(effect.getActiveEmberCount()).toBeGreaterThan(0);
+    expect(context.fillRect).toHaveBeenCalled();
+    expect(context.lineTo).not.toHaveBeenCalled();
+    expect(context.arc).not.toHaveBeenCalled();
+    expect(context.imageSmoothingEnabled).toBe(false);
+  });
+
+  it("supports ash-only atmospheric drift", () => {
+    const effect = createAtmosphericAshEmberEffect({
+      emberRatio: 0,
+      maxParticles: 5,
+      random: () => 0.8,
+      spawnRate: 80,
+    });
+
+    effect.update(0.1, viewport);
+
+    expect(effect.getActiveAshCount()).toBe(5);
+    expect(effect.getActiveEmberCount()).toBe(0);
+  });
+
+  it("supports ember-heavy foreground energy", () => {
+    const effect = createAtmosphericAshEmberEffect({
+      emberRatio: 1,
+      maxParticles: 4,
+      random: () => 0.2,
+      spawnRate: 80,
+    });
+
+    effect.update(0.1, viewport);
+
+    expect(effect.getActiveAshCount()).toBe(0);
+    expect(effect.getActiveEmberCount()).toBe(4);
+  });
+
+  it("accepts runtime intensity and wind changes", () => {
+    const effect = createAtmosphericAshEmberEffect({
+      intensity: "smolder",
+      random: () => 0.5,
+      spawnRate: 5,
+      wind: 0,
+    });
+
+    effect.setOptions({
+      intensity: "inferno",
+      maxParticles: 6,
+      spawnRate: 80,
+      wind: 90,
+    });
+    effect.update(0.1, viewport);
+
+    expect(effect.getActiveParticleCount()).toBe(6);
+
+    effect.clear();
+    expect(effect.getActiveParticleCount()).toBe(0);
   });
 });

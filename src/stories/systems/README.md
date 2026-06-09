@@ -120,15 +120,17 @@ feedback without hiding enemies, pickups, bullets, or HUD elements.
 
 ## 🌦️ Atmospheric Effects
 
-The Atmospheric Effects stories show world-space weather layers such as rain and
-snow.
+The Atmospheric Effects stories show world-space weather and air layers such as
+rain, snow, ash, and embers.
 
 The stories demonstrate:
 
+- `AtmosphericAshEmberEffect`.
 - `AtmosphericRainEffect`.
 - `AtmosphericSnowEffect`.
 - Pixel-snapped falling rain streaks.
 - Layered pixel snowflakes with soft drift and sway.
+- Slow drifting ash and rising flickering embers.
 - Density and wind controls.
 - Small bottom-edge splashes.
 - Optional bottom-edge snow accumulation.
