@@ -84,27 +84,29 @@ The story demonstrates:
 Use this pattern when a game needs local achievements, progress counters, or a
 status screen without coupling unlock logic to rendering code.
 
-## 🌧️ Screen Effects
+## 🌧️ Player Effects
 
-The Screen Effects stories show the reusable screen-effect manager with separate
-demos for the built-in screen droplets, fire, frost, poison, and low-health
-feedback effects.
+The Player Effects stories show the reusable screen-effect manager with separate
+demos for screen droplets and player-state fire, frost, poison, low-health,
+shock, and speed-boost feedback effects.
 
 The story demonstrates:
 
 - `ScreenEffectManager`.
 - Built-in effect registration.
 - Intensity controls.
-- Canvas 2D pixel-snapped particles, bands, droplets, highlights, and trails.
+- Canvas 2D pixel-snapped particles, bands, droplets, highlights, pulses,
+  glitch slices, and speed streaks.
 - Storybook actions and play-function checks for effect controls.
 
 Use this pattern when a game needs temporary overlay effects such as rain on a
-camera lens, frost, embers, mud, or other visor-style feedback.
+camera lens, status damage, poison, electric hits, boost speed, or other
+visor-style feedback.
 
-## 🌡️ Environment Screen Effects
+## 🌡️ Screen Effects
 
-The Environment Screen Effects stories show separate heat, frost, fire, and
-underwater overlays for world conditions around the player.
+The Screen Effects stories show separate heat, frost, fire, and underwater
+overlays for world conditions around the player.
 
 The stories demonstrate:
 

@@ -132,8 +132,8 @@ effect in CSS, canvas, WebGL, or another renderer.
 
 [screen-effects.ts](screen-effects.ts) contains a generic camera-surface effect
 manager, built-in pixel-art feedback effects for screen droplets, fire, frost,
-poison, and low health, plus environment effects for heat, frost, fire, and
-underwater conditions.
+poison, low health, shock, and speed boost, plus environment effects for heat,
+frost, fire, and underwater conditions.
 
 Use it for:
 
@@ -142,7 +142,8 @@ Use it for:
 - Multiple simultaneous effects with priority ordering.
 - Intensity fade in/out.
 - Pooled rain-on-camera droplets rendered with Canvas 2D.
-- Pixel-snapped screen-edge fire, frost, poison, and low-health feedback.
+- Pixel-snapped screen-edge fire, frost, poison, low-health, shock, and
+  speed-boost feedback.
 - Pixel-snapped environment heat shimmer, frost masks, fire glow, and
   underwater distortion.
 

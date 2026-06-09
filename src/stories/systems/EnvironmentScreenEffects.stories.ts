@@ -8,7 +8,7 @@ import {
 } from "./systems-demos.js";
 
 const meta = {
-  title: "Engine/Systems/Environment Screen Effects",
+  title: "Engine/Systems/Screen Effects",
 } satisfies Meta;
 
 export default meta;

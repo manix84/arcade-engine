@@ -6,10 +6,12 @@ import {
   ScreenFrost as ScreenFrostStory,
   ScreenLowHealth as ScreenLowHealthStory,
   ScreenPoison as ScreenPoisonStory,
+  ScreenShock as ScreenShockStory,
+  ScreenSpeedBoost as ScreenSpeedBoostStory,
 } from "./systems-demos.js";
 
 const meta = {
-  title: "Engine/Systems/Screen Effects",
+  title: "Engine/Systems/Player Effects",
 } satisfies Meta;
 
 export default meta;
@@ -19,3 +21,5 @@ export const ScreenFire = ScreenFireStory;
 export const ScreenFrost = ScreenFrostStory;
 export const ScreenPoison = ScreenPoisonStory;
 export const ScreenLowHealth = ScreenLowHealthStory;
+export const ScreenShock = ScreenShockStory;
+export const ScreenSpeedBoost = ScreenSpeedBoostStory;

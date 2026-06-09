@@ -83,7 +83,13 @@ export type ScreenDropletTrailPoint = {
   y: number;
 };
 
-export type PixelScreenEffectKind = "fire" | "frost" | "poison" | "low-health";
+export type PixelScreenEffectKind =
+  | "fire"
+  | "frost"
+  | "low-health"
+  | "poison"
+  | "shock"
+  | "speed-boost";
 
 export type EnvironmentScreenEffectKind = "heat" | "frost" | "fire" | "underwater";
 
@@ -121,6 +127,8 @@ export const screenFireEffectId = "screen-fire";
 export const screenFrostEffectId = "screen-frost";
 export const screenPoisonEffectId = "screen-poison";
 export const screenLowHealthEffectId = "screen-low-health";
+export const screenShockEffectId = "screen-shock";
+export const screenSpeedBoostEffectId = "screen-speed-boost";
 export const environmentHeatEffectId = "environment-heat";
 export const environmentFrostEffectId = "environment-frost";
 export const environmentFireEffectId = "environment-fire";
@@ -669,6 +677,20 @@ const defaultPixelScreenEffectConfigs: Record<PixelScreenEffectKind, PixelScreen
     random: Math.random,
     spawnRate: 18,
   },
+  shock: {
+    kind: "shock",
+    maxParticles: 22,
+    pixelSize: 5,
+    random: Math.random,
+    spawnRate: 34,
+  },
+  "speed-boost": {
+    kind: "speed-boost",
+    maxParticles: 44,
+    pixelSize: 5,
+    random: Math.random,
+    spawnRate: 38,
+  },
 };
 
 const normalizePixelScreenEffectConfig = (
@@ -761,10 +783,14 @@ class PixelScreenEffect implements ScreenEffectInstance {
       this.renderFire(context, viewport, intensity);
     } else if (this.config.kind === "frost") {
       this.renderFrost(context, viewport, intensity);
+    } else if (this.config.kind === "low-health") {
+      this.renderLowHealth(context, viewport, intensity);
     } else if (this.config.kind === "poison") {
       this.renderPoison(context, viewport, intensity);
+    } else if (this.config.kind === "shock") {
+      this.renderShock(context, viewport, intensity);
     } else {
-      this.renderLowHealth(context, viewport, intensity);
+      this.renderSpeedBoost(context, viewport, intensity);
     }
 
     context.restore();
@@ -797,6 +823,9 @@ class PixelScreenEffect implements ScreenEffectInstance {
     if (this.config.kind === "fire") {
       particle.x = this.snap(this.getRandomRange(0, viewport.width));
       particle.y = this.snap(viewport.height - this.getRandomRange(0, viewport.height * 0.2));
+    } else if (this.config.kind === "speed-boost") {
+      particle.x = this.snap(viewport.width * this.getRandomRange(0.34, 0.66));
+      particle.y = this.snap(viewport.height * this.getRandomRange(0.32, 0.68));
     } else if (edge < 0.25) {
       particle.x = this.snap(edgePosition * viewport.width);
       particle.y = this.snap(this.getRandomRange(0, viewport.height * edgeInset));
@@ -838,6 +867,25 @@ class PixelScreenEffect implements ScreenEffectInstance {
     if (this.config.kind === "poison") {
       particle.x += (particle.seed < 0.5 ? -1 : 1) * particle.speed * deltaTime * 0.26 + wobble;
       particle.y -= particle.speed * deltaTime * 0.12;
+      return;
+    }
+
+    if (this.config.kind === "shock") {
+      particle.x += wobble * deltaTime * 7;
+      particle.y += Math.sin((this.time + particle.seed) * 24) * this.config.pixelSize * deltaTime * 4;
+      return;
+    }
+
+    if (this.config.kind === "speed-boost") {
+      const centreX = viewport.width / 2;
+      const centreY = viewport.height / 2;
+      const dx = particle.x - centreX || (particle.seed < 0.5 ? -1 : 1);
+      const dy = particle.y - centreY || (particle.seed < 0.25 ? -1 : 1);
+      const distance = Math.max(1, Math.hypot(dx, dy));
+      const speed = particle.speed * (1.1 + particle.seed * 0.9);
+
+      particle.x += (dx / distance) * speed * deltaTime;
+      particle.y += (dy / distance) * speed * deltaTime;
       return;
     }
 
@@ -938,27 +986,52 @@ class PixelScreenEffect implements ScreenEffectInstance {
     intensity: number
   ): void {
     const pixel = this.config.pixelSize;
-    const bandHeight = this.snap(viewport.height * (0.04 + intensity * 0.09));
+    const pulse = 0.68 + this.getPulse(2.1, 0.32);
+    const bandHeight = this.snap(viewport.height * (0.05 + intensity * 0.1));
     const drift = this.snap(Math.sin(this.time * 2.4) * pixel * 2);
 
-    context.fillStyle = `rgba(72, 138, 43, ${0.1 * intensity})`;
+    context.fillStyle = `rgba(72, 138, 43, ${0.08 * intensity * pulse})`;
     this.fillEdgeBands(context, viewport, pixel, bandHeight);
+    context.fillStyle = `rgba(86, 39, 126, ${0.055 * intensity * pulse})`;
+    this.fillEdgeBands(context, viewport, pixel, Math.max(pixel, bandHeight - pixel * 2));
 
     for (let y = bandHeight; y < viewport.height - bandHeight; y += pixel * 6) {
-      context.fillStyle = `rgba(132, 220, 76, ${0.08 * intensity})`;
+      context.fillStyle = `rgba(132, 220, 76, ${0.07 * intensity * pulse})`;
       context.fillRect(0, y + drift, pixel * 2, pixel * 2);
       context.fillRect(viewport.width - pixel * 2, y - drift, pixel * 2, pixel * 2);
+      context.fillStyle = `rgba(142, 78, 190, ${0.06 * intensity * pulse})`;
+      context.fillRect(pixel, y - drift, pixel, pixel);
+      context.fillRect(viewport.width - pixel * 2, y + drift, pixel, pixel);
     }
 
     for (const particle of this.particles) {
       const alpha = particle.alpha * intensity;
       const size = Math.max(pixel, particle.size - pixel);
 
-      context.fillStyle = `rgba(151, 234, 86, ${0.2 * alpha})`;
+      context.fillStyle = `rgba(151, 234, 86, ${0.2 * alpha * pulse})`;
       context.fillRect(this.snap(particle.x), this.snap(particle.y), size, pixel);
       context.fillRect(this.snap(particle.x + pixel), this.snap(particle.y + pixel), pixel, size);
-      context.fillStyle = `rgba(48, 88, 35, ${0.11 * alpha})`;
+      context.fillStyle = particle.seed > 0.55
+        ? `rgba(151, 76, 190, ${0.12 * alpha * pulse})`
+        : `rgba(48, 88, 35, ${0.11 * alpha * pulse})`;
       context.fillRect(this.snap(particle.x + pixel), this.snap(particle.y), pixel, pixel);
+    }
+
+    for (let index = 0; index < 18 * intensity; index += 1) {
+      const x = this.snap((index * 47 + Math.round(this.time * 18) * 13) % viewport.width);
+      const y = this.snap((index * 31 + Math.round(this.time * 11) * 17) % viewport.height);
+      const nearEdge =
+        x < bandHeight ||
+        x > viewport.width - bandHeight ||
+        y < bandHeight ||
+        y > viewport.height - bandHeight;
+
+      if (nearEdge) {
+        context.fillStyle = index % 3 === 0
+          ? `rgba(168, 94, 206, ${0.12 * intensity})`
+          : `rgba(150, 235, 96, ${0.1 * intensity})`;
+        context.fillRect(x, y, pixel, pixel);
+      }
     }
   }
 
@@ -968,17 +1041,20 @@ class PixelScreenEffect implements ScreenEffectInstance {
     intensity: number
   ): void {
     const pixel = this.config.pixelSize;
-    const pulse = this.getPulse(4.6, 0.18);
-    const bandHeight = this.snap(viewport.height * (0.05 + intensity * 0.12));
-    const alpha = (0.14 + pulse) * intensity;
+    const heartbeat = Math.max(0, Math.sin(this.time * 4.2));
+    const pulse = heartbeat * heartbeat * (0.16 + intensity * 0.2);
+    const bandHeight = this.snap(viewport.height * (0.04 + intensity * 0.13 + pulse * 0.04));
+    const alpha = (0.08 + pulse) * intensity;
 
     context.fillStyle = `rgba(136, 16, 24, ${alpha})`;
     this.fillEdgeBands(context, viewport, pixel, bandHeight);
+    context.fillStyle = `rgba(16, 4, 7, ${pulse * 0.28 * intensity})`;
+    this.fillEdgeBands(context, viewport, pixel, Math.max(pixel, bandHeight - pixel));
 
     for (let x = pixel; x < viewport.width; x += pixel * 5) {
       const height = pixel * (1 + ((x / pixel + Math.round(this.time * 4)) % 3));
 
-      context.fillStyle = `rgba(255, 72, 80, ${0.15 * intensity})`;
+      context.fillStyle = `rgba(255, 72, 80, ${(0.08 + pulse * 0.4) * intensity})`;
       context.fillRect(x, bandHeight - pixel, pixel * 2, height);
       context.fillRect(viewport.width - x - pixel * 2, viewport.height - bandHeight, pixel * 2, height);
     }
@@ -991,6 +1067,121 @@ class PixelScreenEffect implements ScreenEffectInstance {
         : `rgba(190, 30, 42, ${0.24 * particleAlpha})`;
       context.fillRect(this.snap(particle.x), this.snap(particle.y), particle.size, pixel);
       context.fillRect(this.snap(particle.x), this.snap(particle.y + pixel), pixel, particle.size);
+    }
+  }
+
+  private renderShock(
+    context: CanvasRenderingContext2D,
+    viewport: ScreenEffectViewport,
+    intensity: number
+  ): void {
+    const pixel = this.config.pixelSize;
+    const burstProgress = (this.time * (3.8 + intensity * 2.4)) % 1;
+    const burst = burstProgress < 0.18 ? (1 - burstProgress / 0.18) * intensity : 0;
+    const bandHeight = this.snap(viewport.height * (0.035 + burst * 0.06));
+
+    if (burst > 0) {
+      this.renderGlitchSlices(context, viewport, burst);
+      context.fillStyle = `rgba(172, 225, 255, ${0.12 * burst})`;
+      this.fillEdgeBands(context, viewport, pixel, Math.max(pixel, bandHeight));
+      context.fillStyle = `rgba(255, 255, 255, ${0.05 * burst})`;
+      context.fillRect(0, 0, viewport.width, viewport.height);
+    }
+
+    const arcCount = 4 + Math.round(intensity * 6);
+
+    for (let index = 0; index < arcCount; index += 1) {
+      const side = index % 4;
+      const offset = this.snap((index * 37 + Math.round(this.time * 32) * 9) % 120);
+      const length = pixel * (2 + ((index + Math.round(this.time * 20)) % 5));
+      const alpha = (0.16 + burst * 0.42) * intensity;
+      let x = side === 1 ? viewport.width - pixel * 2 : pixel * 2;
+      let y = side === 2 ? viewport.height - pixel * 2 : pixel * 2;
+
+      if (side < 2) {
+        y = this.snap(offset + viewport.height * 0.12);
+      } else {
+        x = this.snap(offset + viewport.width * 0.15);
+      }
+
+      context.fillStyle = `rgba(94, 202, 255, ${alpha})`;
+      context.fillRect(x, y, length, pixel);
+      context.fillRect(x + length - pixel, y + pixel, pixel, length);
+      context.fillStyle = `rgba(245, 252, 255, ${alpha * 0.78})`;
+      context.fillRect(x + pixel, y, Math.max(pixel, length - pixel * 2), pixel);
+    }
+
+    for (const particle of this.particles) {
+      const alpha = particle.alpha * intensity * (0.45 + burst);
+
+      context.fillStyle = particle.seed > 0.45
+        ? `rgba(255, 255, 255, ${0.28 * alpha})`
+        : `rgba(80, 190, 255, ${0.24 * alpha})`;
+      context.fillRect(this.snap(particle.x), this.snap(particle.y), pixel, pixel);
+      context.fillRect(this.snap(particle.x + pixel), this.snap(particle.y), pixel, pixel);
+    }
+  }
+
+  private renderSpeedBoost(
+    context: CanvasRenderingContext2D,
+    viewport: ScreenEffectViewport,
+    intensity: number
+  ): void {
+    const pixel = this.config.pixelSize;
+    const centreX = viewport.width / 2;
+    const centreY = viewport.height / 2;
+    const pulse = 0.55 + this.getPulse(7 + intensity * 5, 0.45);
+    const band = this.snap(Math.min(viewport.width, viewport.height) * (0.03 + intensity * 0.04));
+
+    context.fillStyle = `rgba(64, 196, 220, ${0.035 * intensity * pulse})`;
+    this.fillEdgeBands(context, viewport, pixel, band);
+
+    for (const particle of this.particles) {
+      const dx = particle.x - centreX;
+      const dy = particle.y - centreY;
+      const horizontal = Math.abs(dx) >= Math.abs(dy);
+      const alpha = particle.alpha * intensity * pulse;
+      const length = Math.max(pixel * 2, this.snap(particle.size * (2 + intensity * 3)));
+      const x = this.snap(particle.x);
+      const y = this.snap(particle.y);
+
+      context.fillStyle = particle.seed > 0.58
+        ? `rgba(238, 254, 255, ${0.2 * alpha})`
+        : `rgba(64, 213, 238, ${0.18 * alpha})`;
+
+      if (horizontal) {
+        const startX = dx < 0 ? x - length : x;
+
+        context.fillRect(startX, y, length, pixel);
+        context.fillRect(startX + (dx < 0 ? 0 : length - pixel), y - pixel, pixel, pixel);
+      } else {
+        const startY = dy < 0 ? y - length : y;
+
+        context.fillRect(x, startY, pixel, length);
+        context.fillRect(x - pixel, startY + (dy < 0 ? 0 : length - pixel), pixel, pixel);
+      }
+    }
+  }
+
+  private renderGlitchSlices(
+    context: CanvasRenderingContext2D,
+    viewport: ScreenEffectViewport,
+    intensity: number
+  ): void {
+    const canvas = context.canvas;
+
+    if (!canvas || canvas.width <= 0 || canvas.height <= 0) {
+      return;
+    }
+
+    const pixel = this.config.pixelSize;
+
+    for (let index = 0; index < 4; index += 1) {
+      const y = this.snap((index * 53 + Math.round(this.time * 60) * 7) % viewport.height);
+      const height = pixel * (1 + (index % 2));
+      const offset = (index % 2 === 0 ? 1 : -1) * pixel * (1 + Math.round(intensity * 2));
+
+      context.drawImage(canvas, 0, y, viewport.width, height, offset, y, viewport.width, height);
     }
   }
 
@@ -1516,6 +1707,14 @@ export const createScreenLowHealthEffectDefinition = (
   options?: Partial<PixelScreenEffectConfig>
 ): ScreenEffectDefinition => createPixelScreenEffectDefinition("low-health", options, 58);
 
+export const createScreenShockEffectDefinition = (
+  options?: Partial<PixelScreenEffectConfig>
+): ScreenEffectDefinition => createPixelScreenEffectDefinition("shock", options, 60);
+
+export const createScreenSpeedBoostEffectDefinition = (
+  options?: Partial<PixelScreenEffectConfig>
+): ScreenEffectDefinition => createPixelScreenEffectDefinition("speed-boost", options, 54);
+
 const createEnvironmentScreenEffectDefinition = (
   kind: EnvironmentScreenEffectKind,
   options?: Partial<EnvironmentScreenEffectConfig>,
@@ -1556,6 +1755,8 @@ export class ScreenEffectManager {
       this.register(screenFrostEffectId, createScreenFrostEffectDefinition());
       this.register(screenPoisonEffectId, createScreenPoisonEffectDefinition());
       this.register(screenLowHealthEffectId, createScreenLowHealthEffectDefinition());
+      this.register(screenShockEffectId, createScreenShockEffectDefinition());
+      this.register(screenSpeedBoostEffectId, createScreenSpeedBoostEffectDefinition());
       this.register(environmentHeatEffectId, createEnvironmentHeatEffectDefinition());
       this.register(environmentFrostEffectId, createEnvironmentFrostEffectDefinition());
       this.register(environmentFireEffectId, createEnvironmentFireEffectDefinition());

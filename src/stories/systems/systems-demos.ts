@@ -28,6 +28,8 @@ import {
   screenFrostEffectId,
   screenLowHealthEffectId,
   screenPoisonEffectId,
+  screenShockEffectId,
+  screenSpeedBoostEffectId,
   drawCanvasLine,
   drawCanvasPolygon,
   fillCanvasWithTrail,
@@ -1287,6 +1289,24 @@ export const ScreenLowHealth: Story = createScreenEffectStory({
   lightLabel: "Injured",
   lightValue: 0.34,
   title: "Low health",
+});
+
+export const ScreenShock: Story = createScreenEffectStory({
+  effectId: screenShockEffectId,
+  heavyLabel: "Electric Hit",
+  heavyValue: 0.95,
+  lightLabel: "Static",
+  lightValue: 0.38,
+  title: "Shock",
+});
+
+export const ScreenSpeedBoost: Story = createScreenEffectStory({
+  effectId: screenSpeedBoostEffectId,
+  heavyLabel: "Full Boost",
+  heavyValue: 0.92,
+  lightLabel: "Sprint",
+  lightValue: 0.36,
+  title: "Speed boost",
 });
 
 export const EnvironmentHeat: Story = createScreenEffectStory({

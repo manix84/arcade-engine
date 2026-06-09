@@ -8,6 +8,8 @@ import {
   createScreenFrostEffectDefinition,
   createScreenLowHealthEffectDefinition,
   createScreenPoisonEffectDefinition,
+  createScreenShockEffectDefinition,
+  createScreenSpeedBoostEffectDefinition,
   createScreenDropletsEffectDefinition,
   defaultScreenDropletsConfig,
   environmentFireEffectId,
@@ -19,6 +21,8 @@ import {
   screenFrostEffectId,
   screenLowHealthEffectId,
   screenPoisonEffectId,
+  screenShockEffectId,
+  screenSpeedBoostEffectId,
   ScreenEffectManager,
   type ScreenEffectDefinition,
   type ScreenEffectInstance,
@@ -44,6 +48,8 @@ describe("screen effect manager", () => {
       screenFrostEffectId,
       screenLowHealthEffectId,
       screenPoisonEffectId,
+      screenShockEffectId,
+      screenSpeedBoostEffectId,
     ]);
 
     manager.enable(screenDropletsEffectId, {
@@ -163,6 +169,8 @@ describe("pixel screen feedback effects", () => {
     ["frost", createScreenFrostEffectDefinition],
     ["low-health", createScreenLowHealthEffectDefinition],
     ["poison", createScreenPoisonEffectDefinition],
+    ["shock", createScreenShockEffectDefinition],
+    ["speed-boost", createScreenSpeedBoostEffectDefinition],
   ] as const)("draws pixel-art %s feedback with rectangles", (_label, createDefinition) => {
     const definition = createDefinition({
       maxParticles: 4,

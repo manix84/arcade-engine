@@ -136,6 +136,8 @@ export {
   createScreenFrostEffectDefinition,
   createScreenLowHealthEffectDefinition,
   createScreenPoisonEffectDefinition,
+  createScreenShockEffectDefinition,
+  createScreenSpeedBoostEffectDefinition,
   createScreenDropletsEffectDefinition,
   defaultScreenDropletsConfig,
   environmentFireEffectId,
@@ -147,6 +149,8 @@ export {
   screenFrostEffectId,
   screenLowHealthEffectId,
   screenPoisonEffectId,
+  screenShockEffectId,
+  screenSpeedBoostEffectId,
   ScreenEffectManager,
 } from "./screen-effects.js";
 export { drawDebugVectors } from "./debug-vectors.js";
