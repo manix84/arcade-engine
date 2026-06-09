@@ -42,7 +42,8 @@ sound-ready controls, and visual debug information. The depth variant shows how
 
 [GameArena.stories.ts](GameArena.stories.ts) shows the canvas arena API:
 backgrounds, text, sprites, circles, assets, fullscreen behavior, and a
-perspective arena variant.
+perspective arena variant. It also includes the canvas-rendered FPS debug
+overlay with runtime level, position, and scale controls.
 
 [Ticker.stories.ts](Ticker.stories.ts) compares render-capped and fixed-step
 tickers in one view.

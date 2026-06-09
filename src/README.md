@@ -32,6 +32,7 @@ Use it when a game needs:
 - Fullscreen requests.
 - Asset preloading.
 - Text, sprite-frame, circle, and debug-grid drawing.
+- Optional canvas-rendered FPS debug overlay.
 - A single cleanup point through `destroy()`.
 
 `GameArena` is intentionally focused on canvas setup and common drawing helpers.
@@ -265,6 +266,13 @@ zoom percentages for UI/game surfaces.
 [debug-vectors.ts](debug-vectors.ts) draws visual movement/debug overlays to a
 canvas context. Use it to make heading, velocity, and target relationships
 visible during development.
+
+[debug/PerformanceSampler.ts](debug/PerformanceSampler.ts) and
+[debug/FpsOverlay.ts](debug/FpsOverlay.ts) provide a reusable Canvas 2D FPS and
+performance overlay. Use the sampler independently or call
+`GameArena.renderDebugOverlay()` after drawing a scene. The overlay supports
+minimal, basic, detailed, and graph display levels, corner positioning, scale,
+opacity, and runtime controls.
 
 ## 🧩 Grid And Box Collision
 

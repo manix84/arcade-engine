@@ -12,6 +12,8 @@ export {
   defaultAchievementNotificationTheme,
   defaultAchievementNotificationTiming,
 } from "./achievement-notifications.js";
+export { FpsOverlay } from "./debug/FpsOverlay.js";
+export { PerformanceSampler } from "./debug/PerformanceSampler.js";
 export {
   areHighScoreTokenHashesEqual,
   createHighScoreRunToken,
@@ -292,6 +294,18 @@ export type {
   Vector3,
 } from "./cube-cluster.js";
 export type { DebugVectorColors, DebugVectorOptions } from "./debug-vectors.js";
+export type {
+  DebugOptions,
+  DebugOverlayPosition,
+  FpsOverlayLevel,
+  FpsOverlayOptions,
+  FpsOverlayRenderOptions,
+  FpsOverlayViewport,
+  PerformanceFrameSample,
+  PerformanceHistoryPoint,
+  PerformanceMetrics,
+  PerformanceSamplerOptions,
+} from "./debug/types.js";
 export type {
   AtmosphericAshEmberIntensity,
   AtmosphericAshEmberOptions,

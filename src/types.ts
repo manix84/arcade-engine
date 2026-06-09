@@ -62,6 +62,7 @@ export interface AssetProgress {
 }
 
 export interface GameArenaOptions {
+  debug?: DebugOptions;
   debugGridColor?: string;
   defaultTextColor?: string;
   fontFamily?: string;
@@ -69,6 +70,9 @@ export interface GameArenaOptions {
 }
 
 export interface GameArenaInstance extends Coordinates {
+  debug: {
+    fps: FpsOverlay;
+  };
   width: number;
   height: number;
   updatePosition: (posX: number, posY: number) => void;
@@ -100,6 +104,7 @@ export interface GameArenaInstance extends Coordinates {
     options?: CircleOptions
   ) => void;
   drawDebugGrid: (widthSpace?: number, heightSpace?: number) => void;
+  renderDebugOverlay: (deltaMs?: number, timestampMs?: number) => void;
   getElement: () => HTMLCanvasElement;
   destroy?: () => void;
 }
@@ -130,3 +135,5 @@ export interface SoundEngineConfiguration {
   volumeChangeEventName?: string;
   volumeChangeEventTarget?: EventTarget;
 }
+import type { DebugOptions } from "./debug/types.js";
+import type { FpsOverlay } from "./debug/FpsOverlay.js";

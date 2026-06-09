@@ -1,4 +1,5 @@
 /* Converted from engine/GameArena.js (AMD) to ESM TypeScript. */
+import { FpsOverlay } from "./debug/FpsOverlay.js";
 import type {
   AssetProgress,
   CircleOptions,
@@ -35,6 +36,17 @@ type TextAlign = CanvasRenderingContext2D["textAlign"];
 
 const spaceAdvanceMultiplier = 2;
 const defaultArenaOptions: Required<GameArenaOptions> = {
+  debug: {
+    enabled: false,
+    fps: {
+      enabled: false,
+      level: "minimal",
+      opacity: 0.85,
+      position: "top-left",
+      scale: 1,
+      targetFps: 60,
+    },
+  },
   debugGridColor: "#777777",
   defaultTextColor: "#ffffff",
   fontFamily: "sans-serif",
@@ -53,6 +65,7 @@ class GameArena implements GameArenaInstance {
   private _oldHeight: number;
   private _oldWidth: number;
   private readonly _options: Required<GameArenaOptions>;
+  private _debugLastTime = 0;
   private _styles?: HTMLStyleElement;
   private readonly _handleFullscreenChange = (): void => {
     this._isInFullScreen = this.isFullScreen();
@@ -78,12 +91,27 @@ class GameArena implements GameArenaInstance {
   posX = 0;
   posY = 0;
   width = 0;
+  debug: GameArenaInstance["debug"];
 
   constructor(containerElement: HTMLElement, options: GameArenaOptions = {}) {
     this._containerElement = containerElement;
     this._options = {
       ...defaultArenaOptions,
       ...options,
+      debug: {
+        ...defaultArenaOptions.debug,
+        ...options.debug,
+        fps: {
+          ...defaultArenaOptions.debug.fps,
+          ...options.debug?.fps,
+        },
+      },
+    };
+    this.debug = {
+      fps: new FpsOverlay({
+        ...this._options.debug.fps,
+        enabled: Boolean(this._options.debug.enabled && this._options.debug.fps?.enabled),
+      }),
     };
     this._canvas = document.createElement("canvas");
     this.resize();
@@ -483,6 +511,22 @@ class GameArena implements GameArenaInstance {
 
     context.strokeStyle = this._options.debugGridColor;
     context.stroke();
+  };
+
+  renderDebugOverlay = (deltaMs?: number, timestampMs = performance.now()): void => {
+    const context = this.getContext() as CanvasRenderingContext2D;
+    const nextDeltaMs =
+      deltaMs ??
+      (this._debugLastTime > 0 ? timestampMs - this._debugLastTime : 1000 / 60);
+
+    this._debugLastTime = timestampMs;
+    this.debug.fps.update(nextDeltaMs, timestampMs);
+    this.debug.fps.render(context, {
+      viewport: {
+        height: this.height,
+        width: this.width,
+      },
+    });
   };
 
   getElement = (): HTMLCanvasElement => {
