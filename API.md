@@ -53,6 +53,8 @@ from backend routes when you only need score validation and receipt helpers.
 | `Ticker` | Runs animation callbacks on `requestAnimationFrame`, with optional render FPS caps and fixed-step simulation. | `Engine/Core/Ticker` Storybook section |
 | `Sound` | Wraps browser audio with channels, global controls, fades, playback-blocked reporting, and optional spatial audio. | `Engine/Audio/Sound` Storybook section |
 | `helpers` | Default object containing classic geometry, collision, spawn, rotation, clone, random-color, and event helpers. | `Engine/Helpers/*` Storybook sections |
+| `FpsOverlay` | Draws a Canvas 2D FPS and frame-time overlay with optional target-relative graph coloring. | `Engine/Core/GameArena/FpsDebugOverlay` Storybook story |
+| `PerformanceSampler` | Records frame timings and rolling FPS metrics for custom debug panels. | `Engine/Core/GameArena/FpsDebugOverlay` Storybook story |
 
 ```ts
 const arena = new GameArena(document.querySelector("#game") as HTMLElement);
@@ -64,6 +66,27 @@ ticker.addSchedule(() => {
 });
 
 ticker.start();
+```
+
+## 🧭 Debug Overlay
+
+| Export | Use It For |
+| --- | --- |
+| `FpsOverlay` | Rendering minimal, basic, detailed, or graph FPS overlays to a canvas context. |
+| `PerformanceSampler` | Sampling frame deltas and producing current, average, low, high, and history metrics. |
+
+```ts
+const arena = new GameArena(host, {
+  debug: {
+    fps: {
+      enabled: true,
+      level: "graph",
+      targetFps: 60,
+    },
+  },
+});
+
+arena.renderDebugOverlay(deltaMs);
 ```
 
 ## 🧮 Geometry And Events
@@ -601,6 +624,50 @@ const mix = getSpatialAudioMix({
 sound.setPan(mix.pan);
 ```
 
+## 🌧️ Screen And Atmospheric Effects
+
+Screen effects render above the world and below HUD/UI by default. Atmospheric
+effects render as world-space weather or air particles before HUD and screen
+overlays.
+
+| Export | Use It For |
+| --- | --- |
+| `ScreenEffectManager` | Register, enable, disable, update, and render stackable screen effects by id. |
+| `createScreenDropletsEffectDefinition` | Camera, visor, or screen rain droplets. |
+| `createScreenFireEffectDefinition` | Player fire or burn feedback. |
+| `createScreenFrostEffectDefinition` | Player cold or frost feedback. |
+| `createScreenPoisonEffectDefinition` | Toxic, sickly player-state feedback. |
+| `createScreenLowHealthEffectDefinition` | Red pulsing low-health danger feedback. |
+| `createScreenShockEffectDefinition` | Short electric damage flashes, arcs, and glitch slices. |
+| `createScreenSpeedBoostEffectDefinition` | Pixel speed lines and fast-motion streaks. |
+| `createEnvironmentHeatEffectDefinition` | Warm tint, shimmer bands, and heat ripples. |
+| `createEnvironmentFrostEffectDefinition` | Edge frost, crystal clusters, and breath mist. |
+| `createEnvironmentFireEffectDefinition` | Edge flames, embers, smoke, and warm flicker. |
+| `createEnvironmentUnderwaterEffectDefinition` | Blue-green tint, slow wave distortion, bubbles, and debris. |
+| `AtmosphericRainEffect` / `createAtmosphericRainEffect` | Pixel rain streaks, wind slant, and small splashes. |
+| `AtmosphericSnowEffect` / `createAtmosphericSnowEffect` | Layered snow drift with optional accumulation. |
+| `AtmosphericAshEmberEffect` / `createAtmosphericAshEmberEffect` | Drifting ash plus rising flickering embers. |
+
+```ts
+const screenEffects = new ScreenEffectManager();
+screenEffects.register(createScreenLowHealthEffectDefinition());
+screenEffects.register(createEnvironmentUnderwaterEffectDefinition());
+
+screenEffects.enable("screen-low-health", { intensity: 0.6 });
+screenEffects.enable("environment-underwater", { intensity: 0.4 });
+
+const rain = createAtmosphericRainEffect({
+  density: "heavy",
+  wind: 120,
+});
+
+rain.update(deltaTime, viewport);
+rain.render(context, viewport);
+
+screenEffects.update(deltaTime, viewport);
+screenEffects.render(context, viewport);
+```
+
 ## 🧊 Cube Clusters
 
 | Export | Use It For |
@@ -629,8 +696,8 @@ The package exports TypeScript types for public data shapes, including:
 
 - Arena, sound, ticker, input, multiplayer, animation, camera, coordinate,
   heading, sprite, and render options.
-- Achievement, high-score, grid, box, physics, viewport, debug-vector, canvas
-  color, projection, arcade-motion, spatial-audio, cube-cluster, and explosion
-  types.
+- Achievement, high-score, grid, box, physics, viewport, debug-vector, debug
+  overlay, screen-effect, atmospheric-effect, canvas color, projection,
+  arcade-motion, spatial-audio, cube-cluster, and explosion types.
 
 Use these types when building reusable game systems on top of Arcade Engine.

@@ -43,6 +43,10 @@ helper systems could support other arcade-style browser games too.
 - Viewport zoom helpers for responsive UI/game scaling and manual zoom values.
 - Retro display filter presets and normalization helpers for CRT, VHS, custom,
   and runtime-boosted presentation settings.
+- Pixel-art screen effects for camera-surface droplets, player-state feedback,
+  and environmental conditions.
+- World-space atmospheric effects for rain, snow, ash, and embers.
+- Canvas-rendered FPS performance overlay with target-relative graph coloring.
 - Achievement state helpers for local unlocks, progress counters, and status
   lists.
 - Canvas achievement notification helpers for queued unlock popups.
@@ -360,18 +364,16 @@ visual preset demo.
 
 ### Screen Effects
 
-Screen-effect helpers provide a reusable camera-surface layer for temporary
-overlay effects such as rain droplets, frost, mud, embers, low-health pulses,
-and future visor-style effects. `ScreenEffectManager` registers effect
+Screen-effect helpers provide reusable Canvas 2D overlay layers for temporary
+player and environment feedback. `ScreenEffectManager` registers effect
 definitions, enables or disables them by id, fades intensity values, updates
 active effects, and renders them in priority order.
 
 ```ts
 const effects = new ScreenEffectManager();
 
-effects.enable("screen-droplets", {
-  intensity: 0.75,
-});
+effects.enable("screen-low-health", { intensity: 0.75 });
+effects.enable("environment-heat", { intensity: 0.35, priority: 5 });
 
 effects.update(deltaTime, { width: canvas.width, height: canvas.height });
 effects.render(context, { width: canvas.width, height: canvas.height });
@@ -381,6 +383,40 @@ The built-in `screen-droplets` effect uses pooled pixel-snapped rectangles for
 rain on a camera lens or visor. See the
 `Engine/Systems/Player Effects/ScreenDroplets` Storybook story for the live
 demo.
+
+Player effects include screen droplets, fire, frost, low health, poison, shock,
+and speed boost. Environment screen effects include heat, frost, fire, and
+underwater. The environment demos use a reusable pixel-art FPS corridor
+background with a fixed HUD weapon asset so effect layering can be judged
+against a readable game scene.
+
+Atmospheric effects live in `atmospheric-effects.ts` and render between the game
+world and HUD/screen overlays. Use `createAtmosphericRainEffect`,
+`createAtmosphericSnowEffect`, or `createAtmosphericAshEmberEffect` when the
+player should feel inside rain, snow, ash, or embers rather than looking through
+a wet or damaged camera surface.
+
+### Debug Overlay
+
+`GameArena` can render a Canvas 2D FPS debug overlay after the game scene. It is
+backed by `PerformanceSampler` and `FpsOverlay`, supports minimal, basic,
+detailed, and graph views, and colors the graph relative to the configured
+target FPS so 30 FPS can be healthy for a 30 FPS game but poor for a 144 FPS
+target.
+
+```ts
+const arena = new GameArena(host, {
+  debug: {
+    fps: {
+      enabled: true,
+      level: "graph",
+      targetFps: 60,
+    },
+  },
+});
+
+arena.renderDebugOverlay(deltaMs);
+```
 
 ### Canvas Rendering
 
@@ -469,7 +505,8 @@ Storybook contains live demos for the engine surface:
   rotation, spawning, and 2.5D variants.
 - **Systems**: input actions, local multiplayer, user options, achievements,
   achievement notifications, high scores, display filters, sprite animation,
-  follow cameras, and spatial-audio math.
+  follow cameras, player screen effects, environment screen effects,
+  atmospheric effects, and spatial-audio math.
 - **Audio**: master controls, effects, music, spatial panning, and global
   playback behavior.
 - **3D**: cube-cluster pickups and modular level pieces.
@@ -544,9 +581,10 @@ The test suite uses Vitest with jsdom and lightweight browser API shims for
 canvas, media elements, animation frames, and storage.
 
 Coverage includes package imports, arena behavior, viewport calculations, grid
-and box helpers, input and multiplayer helpers, 2.5D projection math, cube
-clusters, achievements, high scores, debug vectors, ticker scheduling, sound
-lifecycle, and helper math/events.
+and box helpers, input and multiplayer helpers, screen effects, atmospheric
+effects, FPS performance overlays, 2.5D projection math, cube clusters,
+achievements, high scores, debug vectors, ticker scheduling, sound lifecycle,
+and helper math/events.
 
 ## 🗺️ Package Modules
 
@@ -564,6 +602,11 @@ Active package modules:
 - `src/storage-reset.ts`
 - `src/viewport-scale.ts`
 - `src/display-filters.ts`
+- `src/screen-effects.ts`
+- `src/atmospheric-effects.ts`
+- `src/debug/FpsOverlay.ts`
+- `src/debug/PerformanceSampler.ts`
+- `src/debug/types.ts`
 - `src/achievements.ts`
 - `src/achievement-notifications.ts`
 - `src/high-scores.ts`

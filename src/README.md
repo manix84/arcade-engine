@@ -38,6 +38,11 @@ Use it when a game needs:
 `GameArena` is intentionally focused on canvas setup and common drawing helpers.
 It does not own game state, physics, input, or scene management.
 
+When `debug.fps.enabled` is set, call `renderDebugOverlay(deltaMs)` after the
+game scene to draw a compact Canvas 2D FPS panel. The overlay can show minimal,
+basic, detailed, or graph views and colors graph points relative to the target
+FPS configured by the game.
+
 ## ⏱️ Ticker
 
 [Ticker.ts](Ticker.ts) defines the requestAnimationFrame-backed loop scheduler.
@@ -139,6 +144,11 @@ frost, fire, and underwater conditions.
 [atmospheric-effects.ts](atmospheric-effects.ts) contains world-space weather
 and air feedback such as rain, snow, ash, and embers that renders between the
 game world and HUD overlays.
+
+The screen-effect stories use [stories/fps-demo-scene.ts](stories/fps-demo-scene.ts)
+as a reusable Canvas 2D retro FPS corridor renderer. It is demo infrastructure,
+not a package export, and uses a fixed HUD weapon image from Storybook public
+assets so screen effects can be evaluated over a readable first-person scene.
 
 Use it for:
 
@@ -272,7 +282,7 @@ visible during development.
 performance overlay. Use the sampler independently or call
 `GameArena.renderDebugOverlay()` after drawing a scene. The overlay supports
 minimal, basic, detailed, and graph display levels, corner positioning, scale,
-opacity, and runtime controls.
+opacity, target-FPS relative graph coloring, and runtime controls.
 
 ## 🧩 Grid And Box Collision
 

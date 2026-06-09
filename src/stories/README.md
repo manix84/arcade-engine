@@ -43,7 +43,9 @@ sound-ready controls, and visual debug information. The depth variant shows how
 [GameArena.stories.ts](GameArena.stories.ts) shows the canvas arena API:
 backgrounds, text, sprites, circles, assets, fullscreen behavior, and a
 perspective arena variant. It also includes the canvas-rendered FPS debug
-overlay with runtime level, position, and scale controls.
+overlay with runtime level, position, scale, opacity, and target-FPS controls.
+The graph view fills its compact panel and colors performance relative to the
+selected FPS target.
 
 [Ticker.stories.ts](Ticker.stories.ts) compares render-capped and fixed-step
 tickers in one view.
@@ -65,8 +67,14 @@ focused helper stories live in [helpers/README.md](helpers/README.md).
 [systems/Systems.stories.ts](systems/Systems.stories.ts) documents newer
 system-level helpers for input actions, local multiplayer, sprite animation,
 follow cameras, user options, display filters, achievements, achievement
-notifications, high scores, gravity, 2D/3D ragdolls, and spatial-audio math.
+notifications, high scores, player screen effects, environment screen effects,
+atmospheric effects, gravity, 2D/3D ragdolls, and spatial-audio math.
 See [systems/README.md](systems/README.md).
+
+Screen-effect and atmospheric demos share [fps-demo-scene.ts](fps-demo-scene.ts),
+a low-resolution Canvas 2D first-person corridor renderer with a fixed
+pixel-art HUD weapon asset. It exists so overlays can be judged over a coherent
+game-like background instead of flat color blocks.
 
 ### Audio
 
