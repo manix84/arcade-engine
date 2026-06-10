@@ -84,6 +84,8 @@
 - Added atmospheric Canvas 2D effects for rain, snow, ash, and embers, including
   density presets, wind, splashes, layered flakes, optional snow accumulation,
   and ash/ember balancing.
+- Added procedural background stars for generated pixel starfields with
+  player-relative lateral movement and z-axis fly-through/receding motion.
 - Added `PerformanceSampler` and `FpsOverlay` for Canvas 2D frame telemetry,
   including target-FPS relative graph coloring and `GameArena` integration.
 - Added shared `types.ts` contracts for public engine options and data shapes.
@@ -121,6 +123,8 @@
   coherent game-like view.
 - Added Storybook controls for the FPS debug overlay, including display level,
   position, scale, opacity, and target FPS.
+- Added a Presentation story for procedural stars with forward, reverse,
+  strafe, climb, and calm motion presets.
 - Added a GitHub Pages workflow that deploys Storybook from `storybook-static`
   without adding Storybook output to the npm package build.
 
@@ -133,8 +137,8 @@
   viewport math, debug vectors, grid helpers, box collision, 2.5D projection,
   cube clusters, browser capabilities, display filters, user options,
   achievements, achievement notifications, high scores, screen effects,
-  atmospheric effects, FPS overlay sampling/rendering, canvas rendering, and
-  helper utilities.
+  atmospheric effects, procedural background stars, FPS overlay
+  sampling/rendering, canvas rendering, and helper utilities.
 
 ## 🧹 Legacy Cleanup
 

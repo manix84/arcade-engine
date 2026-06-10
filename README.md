@@ -46,6 +46,8 @@ helper systems could support other arcade-style browser games too.
 - Pixel-art screen effects for camera-surface droplets, player-state feedback,
   and environmental conditions.
 - World-space atmospheric effects for rain, snow, ash, and embers.
+- Procedural background starfields with player-relative x/y scrolling and
+  z-axis fly-through motion.
 - Canvas-rendered FPS performance overlay with target-relative graph coloring.
 - Achievement state helpers for local unlocks, progress counters, and status
   lists.
@@ -404,6 +406,25 @@ world and HUD/screen overlays. Use `createAtmosphericRainEffect`,
 player should feel inside rain, snow, ash, or embers rather than looking through
 a wet or damaged camera surface.
 
+### Background Stars
+
+`ProceduralStarfield` renders generated stars as a background prop layer. It is
+useful for space, sky, or fast-travel scenes where background objects should
+move opposite player x/y motion and also expand away from, or contract toward,
+the screen centre for faux z-axis movement.
+
+```ts
+const stars = createProceduralStarfield({
+  starCount: 160,
+  velocityX: playerVelocity.x,
+  velocityY: playerVelocity.y,
+  velocityZ: playerVelocity.z,
+});
+
+stars.update(deltaTime, { width: canvas.width, height: canvas.height });
+stars.render(context, { width: canvas.width, height: canvas.height });
+```
+
 ### Debug Overlay
 
 `GameArena` can render a Canvas 2D FPS debug overlay after the game scene. It is
@@ -513,8 +534,8 @@ Storybook contains live demos for the engine surface:
   rotation, spawning, and 2.5D variants.
 - **Systems**: input actions, local multiplayer, user options, achievements,
   achievement notifications, high scores, display filters, sprite animation,
-  follow cameras, player screen effects, environment screen effects,
-  atmospheric effects, and spatial-audio math.
+  follow cameras, procedural background stars, player screen effects,
+  environment screen effects, atmospheric effects, and spatial-audio math.
 - **Audio**: master controls, effects, music, spatial panning, and global
   playback behavior.
 - **3D**: cube-cluster pickups and modular level pieces.
@@ -590,9 +611,9 @@ canvas, media elements, animation frames, and storage.
 
 Coverage includes package imports, arena behavior, viewport calculations, grid
 and box helpers, input and multiplayer helpers, screen effects, atmospheric
-effects, FPS performance overlays, 2.5D projection math, cube clusters,
-achievements, high scores, debug vectors, ticker scheduling, sound lifecycle,
-and helper math/events.
+effects, procedural background stars, FPS performance overlays, 2.5D projection
+math, cube clusters, achievements, high scores, debug vectors, ticker
+scheduling, sound lifecycle, and helper math/events.
 
 ## 🗺️ Package Modules
 
@@ -610,6 +631,7 @@ Active package modules:
 - `src/storage-reset.ts`
 - `src/viewport-scale.ts`
 - `src/display-filters.ts`
+- `src/background-stars.ts`
 - `src/screen-effects.ts`
 - `src/atmospheric-effects.ts`
 - `src/debug/FpsOverlay.ts`

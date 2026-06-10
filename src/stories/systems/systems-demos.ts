@@ -25,6 +25,7 @@ import {
   createLocalMultiplayerController,
   createMultiplayerSession,
   createPlayerInputIntent,
+  createProceduralStarfield,
   ScreenEffectManager,
   screenDropletsEffectId,
   screenFireEffectId,
@@ -106,6 +107,7 @@ type SystemsStoryArgs = {
     wind: number,
     accumulationEnabled: boolean
   ) => void;
+  onStarfieldMotionChange?: (label: string) => void;
   rainDensity?: AtmosphericRainDensity;
   rainWind?: number;
   screenEffectIntensity?: number;
@@ -1795,6 +1797,100 @@ export const SpriteAnimationAndCamera: Story = {
       setValue(frameValue, `${frame.frameX / 24}`);
       setValue(cameraValue, `${Math.round(camera.posX)}, ${Math.round(camera.posY)}`);
       setValue(targetValue, `${Math.round(target.posX)}, ${Math.round(target.posY)}`);
+      animationFrame = window.requestAnimationFrame(render);
+    };
+
+    animationFrame = window.requestAnimationFrame(render);
+    onRemove(shell, () => window.cancelAnimationFrame(animationFrame));
+
+    return shell;
+  },
+};
+
+export const ProceduralStars: Story = {
+  args: {
+    onStarfieldMotionChange: fn(),
+  },
+  render: (args) => {
+    const { canvas, metrics, shell } = createSystemsLayout("Procedural stars");
+    const context = canvas.getContext("2d");
+    const modeValue = createValue("mode", "forward");
+    const velocityValue = createValue("velocity", "0, 0, 34");
+    const usesValue = createValue("uses", "ProceduralStarfield");
+    const starfield = createProceduralStarfield({
+      pixelSize: 1,
+      spreadX: 760,
+      spreadY: 460,
+      starCount: 180,
+      velocityZ: 34,
+    });
+    let animationFrame = 0;
+    let lastTime = performance.now();
+    let mode = "forward";
+    let motion = { velocityX: 0, velocityY: 0, velocityZ: 34 };
+
+    const setMotion = (
+      label: string,
+      nextMotion: { velocityX: number; velocityY: number; velocityZ: number }
+    ): void => {
+      mode = label;
+      motion = nextMotion;
+      starfield.setMotion(motion);
+      args.onStarfieldMotionChange?.(label);
+    };
+
+    const controls = document.createElement("div");
+    controls.className = "ae-controls";
+    controls.append(
+      createButton("Forward", () => setMotion("forward", { velocityX: 0, velocityY: 0, velocityZ: 34 })),
+      createButton("Reverse", () => setMotion("reverse", { velocityX: 0, velocityY: 0, velocityZ: -28 })),
+      createButton("Strafe Left", () => setMotion("strafe left", { velocityX: -92, velocityY: 0, velocityZ: 18 })),
+      createButton("Strafe Right", () => setMotion("strafe right", { velocityX: 92, velocityY: 0, velocityZ: 18 })),
+      createButton("Climb", () => setMotion("climb", { velocityX: 0, velocityY: -68, velocityZ: 24 })),
+      createButton("Calm", () => setMotion("calm", { velocityX: 8, velocityY: 0, velocityZ: 4 }))
+    );
+    metrics.append(modeValue, velocityValue, usesValue, controls);
+
+    const renderReticle = (): void => {
+      if (!context) {
+        return;
+      }
+
+      const centerX = Math.round(canvas.width / 2);
+      const centerY = Math.round(canvas.height / 2);
+
+      context.fillStyle = "#4fd1c5";
+      context.fillRect(centerX - 1, centerY - 10, 2, 6);
+      context.fillRect(centerX - 1, centerY + 5, 2, 6);
+      context.fillRect(centerX - 10, centerY - 1, 6, 2);
+      context.fillRect(centerX + 5, centerY - 1, 6, 2);
+      context.fillStyle = "rgba(79, 209, 197, 0.18)";
+      context.fillRect(centerX - 20, centerY - 20, 2, 40);
+      context.fillRect(centerX + 18, centerY - 20, 2, 40);
+    };
+
+    const render = (now: number): void => {
+      if (!context) {
+        return;
+      }
+
+      const deltaTime = Math.min(0.05, Math.max(0, (now - lastTime) / 1000));
+      lastTime = now;
+      starfield.setMotion(motion);
+      starfield.update(deltaTime, canvas);
+
+      context.fillStyle = "#03050d";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.fillStyle = "rgba(79, 209, 197, 0.08)";
+      context.fillRect(0, Math.round(canvas.height * 0.5), canvas.width, 1);
+      starfield.render(context, canvas);
+      renderReticle();
+
+      setValue(modeValue, mode);
+      setValue(
+        velocityValue,
+        `${Math.round(motion.velocityX)}, ${Math.round(motion.velocityY)}, ${Math.round(motion.velocityZ)}`
+      );
       animationFrame = window.requestAnimationFrame(render);
     };
 

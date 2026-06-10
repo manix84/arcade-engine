@@ -145,6 +145,10 @@ frost, fire, and underwater conditions.
 and air feedback such as rain, snow, ash, and embers that renders between the
 game world and HUD overlays.
 
+[background-stars.ts](background-stars.ts) contains a generated background prop
+layer for procedural pixel stars. It supports player-relative x/y scrolling and
+z-axis fly-through or receding motion around the screen centre.
+
 The screen-effect stories use [stories/fps-demo-scene.ts](stories/fps-demo-scene.ts)
 as a reusable Canvas 2D retro FPS corridor renderer. It is demo infrastructure,
 not a package export, and uses a fixed HUD weapon image from Storybook public
@@ -165,6 +169,8 @@ Use it for:
 - Layered atmospheric snowflakes, wind drift, and optional accumulation.
 - Drifting ash and rising flickering embers for fire, volcano, industrial, and
   destroyed-city scenes.
+- Generated background stars that move opposite player x/y velocity and expand
+  or contract around the centre for z-axis motion.
 
 Games call `update(deltaTime, viewport)` and `render(context, viewport)` from
 their own render loop. Custom effects can register the same `update`, `render`,

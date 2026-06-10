@@ -668,6 +668,29 @@ screenEffects.update(deltaTime, viewport);
 screenEffects.render(context, viewport);
 ```
 
+## ✨ Procedural Background Stars
+
+| Export | Use It For |
+| --- | --- |
+| `ProceduralStarfield` | Generated pixel stars that scroll opposite player x/y motion and fly toward or away from a centre point on the z-axis. |
+| `createProceduralStarfield` | Factory for creating a configured `ProceduralStarfield`. |
+
+```ts
+const stars = createProceduralStarfield({
+  starCount: 180,
+  velocityX: playerVelocity.x,
+  velocityY: playerVelocity.y,
+  velocityZ: playerVelocity.z,
+});
+
+stars.update(deltaTime, viewport);
+stars.render(context, viewport);
+```
+
+Use positive `velocityZ` for forward fly-through motion, where stars expand
+away from the centre. Use negative `velocityZ` to make the field recede toward
+the centre.
+
 ## 🧊 Cube Clusters
 
 | Export | Use It For |
@@ -697,7 +720,8 @@ The package exports TypeScript types for public data shapes, including:
 - Arena, sound, ticker, input, multiplayer, animation, camera, coordinate,
   heading, sprite, and render options.
 - Achievement, high-score, grid, box, physics, viewport, debug-vector, debug
-  overlay, screen-effect, atmospheric-effect, canvas color, projection,
-  arcade-motion, spatial-audio, cube-cluster, and explosion types.
+  overlay, procedural-starfield, screen-effect, atmospheric-effect, canvas
+  color, projection, arcade-motion, spatial-audio, cube-cluster, and explosion
+  types.
 
 Use these types when building reusable game systems on top of Arcade Engine.

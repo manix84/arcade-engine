@@ -67,6 +67,23 @@ The story demonstrates:
 Use this pattern when a game needs CRT/VHS/custom display options but wants the
 renderer to stay game-owned.
 
+## ✨ Procedural Stars
+
+`ProceduralStars` shows generated background props with faux z-axis motion.
+
+The story demonstrates:
+
+- `ProceduralStarfield`.
+- Generated pixel stars instead of sprite assets.
+- Player-relative x/y movement where stars drift opposite the player.
+- Positive z velocity that expands stars away from the centre.
+- Negative z velocity that pulls stars back toward the centre.
+- Storybook actions for switching between forward, reverse, strafe, climb, and
+  calm motion presets.
+
+Use this pattern for space, sky, hyperspace, asteroid-field, or cloud-like
+background prop layers where the renderer owns the final art style.
+
 ## 🏆 Achievements
 
 `Achievements` shows local achievement definition, progress, unlock, and status
