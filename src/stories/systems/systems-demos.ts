@@ -1851,22 +1851,27 @@ export const ProceduralStars: Story = {
     );
     metrics.append(modeValue, velocityValue, usesValue, controls);
 
-    const renderReticle = (): void => {
+    const renderPlayerShip = (): void => {
       if (!context) {
         return;
       }
 
       const centerX = Math.round(canvas.width / 2);
       const centerY = Math.round(canvas.height / 2);
+      const bank = Math.max(-18, Math.min(18, motion.velocityX * 0.16));
+      const shipX = centerX + Math.max(-14, Math.min(14, motion.velocityX * 0.08));
+      const shipY = centerY + 62 + Math.max(-12, Math.min(12, motion.velocityY * 0.12));
+      const thrust = Math.max(0.18, Math.min(1, 0.28 + Math.abs(motion.velocityZ) / 42));
 
-      context.fillStyle = "#4fd1c5";
-      context.fillRect(centerX - 1, centerY - 10, 2, 6);
-      context.fillRect(centerX - 1, centerY + 5, 2, 6);
-      context.fillRect(centerX - 10, centerY - 1, 6, 2);
-      context.fillRect(centerX + 5, centerY - 1, 6, 2);
-      context.fillStyle = "rgba(79, 209, 197, 0.18)";
-      context.fillRect(centerX - 20, centerY - 20, 2, 40);
-      context.fillRect(centerX + 18, centerY - 20, 2, 40);
+      context.fillStyle = "rgba(79, 209, 197, 0.12)";
+      context.fillRect(centerX - 1, centerY - 42, 2, 24);
+      context.fillRect(centerX - 1, centerY + 18, 2, 24);
+      drawTopDownShip(context, shipX, shipY, {
+        accent: "#f6e05e",
+        heading: bank,
+        scale: 0.9,
+        thrust,
+      });
     };
 
     const render = (now: number): void => {
@@ -1884,7 +1889,7 @@ export const ProceduralStars: Story = {
       context.fillStyle = "rgba(79, 209, 197, 0.08)";
       context.fillRect(0, Math.round(canvas.height * 0.5), canvas.width, 1);
       starfield.render(context, canvas);
-      renderReticle();
+      renderPlayerShip();
 
       setValue(modeValue, mode);
       setValue(
