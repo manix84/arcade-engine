@@ -26,6 +26,24 @@ if (packageJson.private) {
   process.exit(1);
 }
 
+const files = Array.isArray(packageJson.files) ? packageJson.files : [];
+const excludedPackagePaths = [
+  "docs/screenshots",
+  "storybook-static",
+  "src",
+  ".storybook",
+];
+const includedExcludedPaths = files.filter((file) =>
+  excludedPackagePaths.some((excludedPath) => file === excludedPath || file.startsWith(`${excludedPath}/`))
+);
+
+if (includedExcludedPaths.length) {
+  console.error(
+    `Package files must not include demo/build-only paths: ${includedExcludedPaths.join(", ")}`
+  );
+  process.exit(1);
+}
+
 if (packageJson.readmeFilename !== "README.md") {
   console.error(
     `Package readmeFilename must point at README.md; found ${JSON.stringify(

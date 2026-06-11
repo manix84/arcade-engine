@@ -14,9 +14,11 @@
 
 - Arcade Engine is available from npm as `arcade-engine`.
 - The npm package exposes the typed ESM build from `dist` and includes the
-  package README, API reference, license, privacy, release, and what's-new docs.
+  public root Markdown docs.
 - Storybook remains live documentation and demo output; it is not included in
-  the npm package.
+  the npm package. Screenshot assets are not bundled into the npm tarball; the
+  package README rewrites screenshot links to GitHub raw URLs during package
+  packing.
 
 ## 🧱 TypeScript Package Modernization
 

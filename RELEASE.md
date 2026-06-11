@@ -52,7 +52,7 @@ npm run build
 npm run build:storybook
 npm run pack:dry-run
 npm run pack:release -- --ignore-scripts
-npm publish --access public
+npm publish release-artifacts/arcade-engine-X.Y.Z.tgz --access public
 ```
 
 The package build validates that `dist` contains the package entry point,
@@ -61,7 +61,10 @@ JavaScript output, source maps, declaration files, and declaration maps.
 The dry-run pack confirms that npm receives only the package files listed in
 `package.json`, including `dist`, public package docs, and metadata.
 Storybook output remains documentation/demo output and is not included in the
-npm package.
+npm package. `pack:release` rewrites README screenshot links to GitHub raw URLs
+for the tarball, then restores the source README afterward; screenshot files
+are not bundled into the npm tarball. For direct local `npm pack` calls, the
+same transform runs through the `prepack` and `postpack` lifecycle scripts.
 
 The release pack creates a tarball in `release-artifacts`, such as:
 
@@ -69,8 +72,10 @@ The release pack creates a tarball in `release-artifacts`, such as:
 release-artifacts/arcade-engine-X.Y.Z.tgz
 ```
 
-The workflow passes `--ignore-scripts` to `pack:release` because the package
-build has already produced and validated `dist` before packing.
+The workflow passes `--ignore-scripts` through to npm pack because the package
+build has already produced and validated `dist` before packing. The
+`pack:release` wrapper still applies and restores the package README transform
+around the pack command.
 
 The workflow creates the GitHub Release for the tag if it does not already
 exist, then uploads the tarball as a release asset.
@@ -115,7 +120,7 @@ input. If all checks pass, it:
 The npmjs publish step runs with trusted publishing:
 
 ```sh
-npm publish --access public
+npm publish release-artifacts/arcade-engine-X.Y.Z.tgz --access public
 ```
 
 Npm automatically generates provenance when trusted publishing is used from a

@@ -122,7 +122,17 @@ jobs:
           fi
 
       - name: Publish to npm
-        run: npm publish --access public --ignore-scripts
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./package.json').version")"
+          tarball="release-artifacts/arcade-engine-${version}.tgz"
+
+          if [ ! -f "$tarball" ]; then
+            echo "Release tarball not found: $tarball" >&2
+            exit 1
+          fi
+
+          npm publish "$tarball" --access public --ignore-scripts
 
       - name: Prepare GitHub Packages package
         run: |
