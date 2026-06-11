@@ -49,6 +49,28 @@ describe("procedural background stars", () => {
     expect(star.y).toBeCloseTo(4.98);
   });
 
+  it("wraps large lateral displacements back into the starfield", () => {
+    const starfield = createProceduralStarfield({
+      random: () => 0.5,
+      spreadX: 400,
+      spreadY: 300,
+      starCount: 1,
+      velocityX: 1400,
+      velocityY: -1100,
+      velocityZ: 0,
+    });
+    const [star] = starfield.getStars();
+
+    starfield.update(2, { height: 240, width: 320 });
+
+    expect(star.x).toBeGreaterThanOrEqual(-200);
+    expect(star.x).toBeLessThan(200);
+    expect(star.y).toBeGreaterThanOrEqual(-150);
+    expect(star.y).toBeLessThan(150);
+    expect(star.x).toBeCloseTo(76);
+    expect(star.y).toBeCloseTo(26);
+  });
+
   it("wraps stars through depth when flying forward or backward", () => {
     const forward = createProceduralStarfield({
       depth: 10,

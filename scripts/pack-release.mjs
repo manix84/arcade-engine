@@ -1,10 +1,18 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 
 mkdirSync("release-artifacts", { recursive: true });
 
+const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
+const packageReadmeRef =
+  process.env.PACKAGE_README_REF ?? process.env.RELEASE_TAG ?? `v${packageJson.version}`;
+
 const run = (args) =>
   spawnSync(process.execPath, args, {
+    env: {
+      ...process.env,
+      PACKAGE_README_REF: packageReadmeRef,
+    },
     stdio: "inherit",
   });
 

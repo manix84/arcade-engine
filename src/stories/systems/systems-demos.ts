@@ -1881,7 +1881,6 @@ export const ProceduralStars: Story = {
 
       const deltaTime = Math.min(0.05, Math.max(0, (now - lastTime) / 1000));
       lastTime = now;
-      starfield.setMotion(motion);
       starfield.update(deltaTime, canvas);
 
       context.fillStyle = "#03050d";

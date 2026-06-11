@@ -42,6 +42,12 @@ const clamp = (value: number, min: number, max: number): number =>
 const finiteNumber = (value: number | undefined, fallback: number): number =>
   typeof value === "number" && Number.isFinite(value) ? value : fallback;
 
+const wrapCentered = (value: number, range: number): number => {
+  const halfRange = range / 2;
+
+  return ((((value + halfRange) % range) + range) % range) - halfRange;
+};
+
 const normalizeOptions = (
   options: ProceduralStarfieldOptions,
   previous?: NormalizedProceduralStarfieldOptions
@@ -119,8 +125,6 @@ export class ProceduralStarfield {
 
   update(deltaTime: number, _viewport: ViewportDimensions): void {
     const delta = Math.max(0, deltaTime);
-    const halfSpreadX = this.options.spreadX / 2;
-    const halfSpreadY = this.options.spreadY / 2;
 
     this.time += delta;
 
@@ -132,17 +136,8 @@ export class ProceduralStarfield {
       star.y -= this.options.velocityY * parallax * delta;
       star.z -= this.options.velocityZ * delta;
 
-      if (star.x < -halfSpreadX) {
-        star.x += this.options.spreadX;
-      } else if (star.x > halfSpreadX) {
-        star.x -= this.options.spreadX;
-      }
-
-      if (star.y < -halfSpreadY) {
-        star.y += this.options.spreadY;
-      } else if (star.y > halfSpreadY) {
-        star.y -= this.options.spreadY;
-      }
+      star.x = wrapCentered(star.x, this.options.spreadX);
+      star.y = wrapCentered(star.y, this.options.spreadY);
 
       if (star.z < this.options.minDepth) {
         this.respawnStar(star, this.options.depth);
@@ -159,23 +154,22 @@ export class ProceduralStarfield {
     const centerY = Math.round(viewport.height / 2);
 
     context.imageSmoothingEnabled = false;
-    this.stars
-      .slice()
-      .sort((a, b) => b.z - a.z)
-      .forEach((star) => {
-        const projected = this.projectStar(star, centerX, centerY);
+    this.stars.sort((a, b) => b.z - a.z);
 
-        if (
-          projected.x < -8 ||
-          projected.x > viewport.width + 8 ||
-          projected.y < -8 ||
-          projected.y > viewport.height + 8
-        ) {
-          return;
-        }
+    for (const star of this.stars) {
+      const projected = this.projectStar(star, centerX, centerY);
 
-        this.renderStar(context, star, projected.x, projected.y, centerX, centerY);
-      });
+      if (
+        projected.x < -8 ||
+        projected.x > viewport.width + 8 ||
+        projected.y < -8 ||
+        projected.y > viewport.height + 8
+      ) {
+        continue;
+      }
+
+      this.renderStar(context, star, projected.x, projected.y, centerX, centerY);
+    }
 
     context.globalAlpha = previousAlpha;
     context.imageSmoothingEnabled = previousSmoothing;

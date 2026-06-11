@@ -3,11 +3,29 @@ import { copyFileSync, existsSync, readFileSync, rmSync, writeFileSync } from "n
 const action = process.argv[2];
 const readmePath = "README.md";
 const backupPath = ".readme.package-backup";
-const screenshotBaseUrl =
-  "https://raw.githubusercontent.com/manix84/arcade-engine/main/docs/screenshots/";
 
-const replaceScreenshotLinks = (content) =>
-  content.replaceAll("](docs/screenshots/", `](${screenshotBaseUrl}`);
+const getScreenshotRef = () => {
+  if (process.env.PACKAGE_README_REF) {
+    return process.env.PACKAGE_README_REF;
+  }
+
+  if (process.env.RELEASE_TAG) {
+    return process.env.RELEASE_TAG;
+  }
+
+  if (process.env.GITHUB_REF_TYPE === "tag" && process.env.GITHUB_REF_NAME) {
+    return process.env.GITHUB_REF_NAME;
+  }
+
+  return "main";
+};
+
+const replaceScreenshotLinks = (content) => {
+  const screenshotBaseUrl =
+    `https://raw.githubusercontent.com/manix84/arcade-engine/${getScreenshotRef()}/docs/screenshots/`;
+
+  return content.replaceAll("](docs/screenshots/", `](${screenshotBaseUrl}`);
+};
 
 if (action === "apply") {
   if (!existsSync(backupPath)) {
