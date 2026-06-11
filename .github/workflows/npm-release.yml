@@ -132,7 +132,7 @@ jobs:
             exit 1
           fi
 
-          npm publish "$tarball" --access public --ignore-scripts
+          npm publish "./$tarball" --access public --ignore-scripts
 
       - name: Prepare GitHub Packages package
         run: |
