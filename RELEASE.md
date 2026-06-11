@@ -52,7 +52,7 @@ npm run build
 npm run build:storybook
 npm run pack:dry-run
 npm run pack:release -- --ignore-scripts
-npm publish ./release-artifacts/arcade-engine-X.Y.Z.tgz --access public
+npm publish ./release-artifacts/arcade-engine-X.Y.Z.tgz --access public --ignore-scripts
 ```
 
 The package build validates that `dist` contains the package entry point,
@@ -120,7 +120,7 @@ input. If all checks pass, it:
 The npmjs publish step runs with trusted publishing:
 
 ```sh
-npm publish ./release-artifacts/arcade-engine-X.Y.Z.tgz --access public
+npm publish ./release-artifacts/arcade-engine-X.Y.Z.tgz --access public --ignore-scripts
 ```
 
 Npm automatically generates provenance when trusted publishing is used from a
