@@ -45,7 +45,8 @@ helper systems could support other arcade-style browser games too.
   and runtime-boosted presentation settings.
 - Pixel-art screen effects for camera-surface droplets, player-state feedback,
   and environmental conditions.
-- World-space atmospheric effects for rain, snow, ash, and embers.
+- World-space atmospheric effects for rain, snow, ash, and embers, with
+  optional player-relative motion.
 - Procedural background starfields with player-relative x/y scrolling and
   z-axis fly-through motion.
 - Canvas-rendered FPS performance overlay with target-relative graph coloring.
@@ -404,7 +405,9 @@ Atmospheric effects live in `atmospheric-effects.ts` and render between the game
 world and HUD/screen overlays. Use `createAtmosphericRainEffect`,
 `createAtmosphericSnowEffect`, or `createAtmosphericAshEmberEffect` when the
 player should feel inside rain, snow, ash, or embers rather than looking through
-a wet or damaged camera surface.
+a wet or damaged camera surface. Pass `playerMotion: { enabled: true, ... }` or
+call `setPlayerMotion()` when the particles should react to player velocity,
+forward movement, or turning.
 
 ### Background Stars
 

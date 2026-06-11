@@ -315,6 +315,7 @@ export type {
   AtmosphericAshEmberOptions,
   AtmosphericAshEmberParticle,
   AtmosphericEffectViewport,
+  AtmosphericPlayerMotion,
   AtmosphericRainDensity,
   AtmosphericRainDrop,
   AtmosphericRainOptions,

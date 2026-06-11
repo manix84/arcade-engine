@@ -9,6 +9,31 @@ import { createCanvasContextMock } from "../test/setup.js";
 const createContext = (): CanvasRenderingContext2D =>
   createCanvasContextMock() as unknown as CanvasRenderingContext2D;
 
+type CanvasCall = {
+  args: unknown[];
+  method: string;
+};
+
+const getFirstFillRectX = (context: CanvasRenderingContext2D): number => {
+  const calls = (context as unknown as { calls: CanvasCall[] }).calls;
+  const firstFillRect = calls.find((call) => call.method === "fillRect");
+
+  if (!firstFillRect || typeof firstFillRect.args[0] !== "number") {
+    throw new Error("Expected at least one fillRect call with a numeric x position.");
+  }
+
+  return firstFillRect.args[0];
+};
+
+const stepEffect = (
+  effect: { update: (deltaTime: number, viewport: { height: number; width: number }) => void },
+  count: number
+): void => {
+  for (let index = 0; index < count; index += 1) {
+    effect.update(0.1, viewport);
+  }
+};
+
 const viewport = { height: 180, width: 320 };
 const tallViewport = { height: 10000, width: 320 };
 
@@ -101,6 +126,30 @@ describe("atmospheric rain effect", () => {
 
     expect(effect.getActiveDropCount()).toBe(170);
   });
+
+  it("keeps player-relative rain motion disabled unless the flag is enabled", () => {
+    const staticRain = createAtmosphericRainEffect({
+      maxDrops: 5,
+      playerMotion: { velocityZ: 240 },
+      random: () => 0.25,
+      spawnRate: 50,
+    });
+    const movingRain = createAtmosphericRainEffect({
+      maxDrops: 5,
+      playerMotion: { enabled: true, velocityZ: 240 },
+      random: () => 0.25,
+      spawnRate: 50,
+    });
+    const staticContext = createContext();
+    const movingContext = createContext();
+
+    stepEffect(staticRain, 3);
+    stepEffect(movingRain, 3);
+    staticRain.render(staticContext, viewport);
+    movingRain.render(movingContext, viewport);
+
+    expect(getFirstFillRectX(movingContext)).toBeLessThan(getFirstFillRectX(staticContext));
+  });
 });
 
 describe("atmospheric snow effect", () => {
@@ -192,6 +241,30 @@ describe("atmospheric snow effect", () => {
 
     expect(effect.getActiveFlakeCount()).toBe(160);
   });
+
+  it("applies player-relative motion to snow only when enabled", () => {
+    const staticSnow = createAtmosphericSnowEffect({
+      maxFlakes: 1,
+      playerMotion: { velocityZ: 240 },
+      random: () => 0.25,
+      spawnRate: 10,
+    });
+    const movingSnow = createAtmosphericSnowEffect({
+      maxFlakes: 1,
+      playerMotion: { enabled: true, velocityZ: 240 },
+      random: () => 0.25,
+      spawnRate: 10,
+    });
+    const staticContext = createContext();
+    const movingContext = createContext();
+
+    stepEffect(staticSnow, 7);
+    stepEffect(movingSnow, 7);
+    staticSnow.render(staticContext, viewport);
+    movingSnow.render(movingContext, viewport);
+
+    expect(getFirstFillRectX(movingContext)).toBeLessThan(getFirstFillRectX(staticContext));
+  });
 });
 
 describe("atmospheric ash and ember effect", () => {
@@ -278,5 +351,31 @@ describe("atmospheric ash and ember effect", () => {
     }
 
     expect(effect.getActiveParticleCount()).toBe(140);
+  });
+
+  it("applies player-relative motion to ash and embers only when enabled", () => {
+    const staticAsh = createAtmosphericAshEmberEffect({
+      emberRatio: 0,
+      maxParticles: 1,
+      playerMotion: { velocityZ: 240 },
+      random: () => 0.25,
+      spawnRate: 10,
+    });
+    const movingAsh = createAtmosphericAshEmberEffect({
+      emberRatio: 0,
+      maxParticles: 1,
+      playerMotion: { enabled: true, velocityZ: 240 },
+      random: () => 0.25,
+      spawnRate: 10,
+    });
+    const staticContext = createContext();
+    const movingContext = createContext();
+
+    stepEffect(staticAsh, 7);
+    stepEffect(movingAsh, 7);
+    staticAsh.render(staticContext, viewport);
+    movingAsh.render(movingContext, viewport);
+
+    expect(getFirstFillRectX(movingContext)).toBeLessThan(getFirstFillRectX(staticContext));
   });
 });

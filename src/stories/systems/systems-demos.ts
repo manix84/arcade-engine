@@ -51,6 +51,7 @@ import {
   type AchievementDefinition,
   type AchievementState,
   type AtmosphericAshEmberIntensity,
+  type AtmosphericPlayerMotion,
   type AtmosphericRainDensity,
   type AtmosphericSnowDensity,
   type HighScoreEntry,
@@ -77,6 +78,7 @@ import {
 import { drawFpsDemoScene } from "../fps-demo-scene.js";
 
 type DemoAchievementId = "first-sortie" | "wave-breaker" | "precision-run";
+type AtmosphericMotionPreset = "still" | "walk-forward" | "turn-left" | "turn-right" | "patrol-loop";
 
 type SystemsStoryArgs = {
   baseScoreBudget?: number;
@@ -89,6 +91,8 @@ type SystemsStoryArgs = {
   onAchievementNotification?: (name: string) => void;
   onAchievementReset?: () => void;
   onAchievementUnlock?: (id: DemoAchievementId) => void;
+  comboMotionEnabled?: boolean;
+  comboMotionPreset?: AtmosphericMotionPreset;
   onAshEmberChange?: (
     intensity: AtmosphericAshEmberIntensity,
     wind: number,
@@ -100,7 +104,13 @@ type SystemsStoryArgs = {
   onHighScoreSave?: (entry: HighScoreEntry) => void;
   onHighScoreTamper?: (accepted: boolean, label: string) => void;
   onHighScoreValidate?: (accepted: boolean, label: string) => void;
-  onRainChange?: (density: AtmosphericRainDensity, wind: number) => void;
+  onRainChange?: (
+    density: AtmosphericRainDensity,
+    wind: number,
+    motionPreset: AtmosphericMotionPreset,
+    motionEnabled: boolean
+  ) => void;
+  onAtmosphericMotionChange?: (effect: string, preset: AtmosphericMotionPreset, enabled: boolean) => void;
   onScreenEffectChange?: (intensity: number) => void;
   onSnowChange?: (
     density: AtmosphericSnowDensity,
@@ -109,11 +119,17 @@ type SystemsStoryArgs = {
   ) => void;
   onStarfieldMotionChange?: (label: string) => void;
   rainDensity?: AtmosphericRainDensity;
+  rainMotionEnabled?: boolean;
+  rainMotionPreset?: AtmosphericMotionPreset;
   rainWind?: number;
+  snowMotionEnabled?: boolean;
+  snowMotionPreset?: AtmosphericMotionPreset;
   screenEffectIntensity?: number;
   snowAccumulationEnabled?: boolean;
   snowDensity?: AtmosphericSnowDensity;
   snowWind?: number;
+  ashEmberMotionEnabled?: boolean;
+  ashEmberMotionPreset?: AtmosphericMotionPreset;
   onUserOptionsChange?: (options: Record<string, unknown>) => void;
   precisionGoal?: number;
   waveGoal?: number;
@@ -1163,6 +1179,30 @@ type ScreenEffectStoryOptions = {
   title: string;
 };
 
+type AtmosphericComboEffect = {
+  clear: () => void;
+  render: (context: CanvasRenderingContext2D, viewport: { height: number; width: number }) => void;
+  setPlayerMotion: (motion: AtmosphericPlayerMotion) => void;
+  update: (deltaTime: number, viewport: { height: number; width: number }) => void;
+};
+
+type ComboEffectStoryOptions = {
+  atmosphericLabel: string;
+  createAtmosphericEffect: () => AtmosphericComboEffect;
+  getAtmosphericMetric: (effect: AtmosphericComboEffect) => string;
+  heavyLabel: string;
+  heavyScreenIntensity: number;
+  lightLabel: string;
+  lightScreenIntensity: number;
+  screenEffectId: string;
+  screenSettings?: Record<string, unknown>;
+  setClearAtmosphericPreset: (effect: AtmosphericComboEffect) => void;
+  setHeavyAtmosphericPreset: (effect: AtmosphericComboEffect) => void;
+  setLightAtmosphericPreset: (effect: AtmosphericComboEffect) => void;
+  theme?: "sciFi" | "concrete" | "industrial";
+  title: string;
+};
+
 const screenDropletStorySettings = {
   focusMode: "arcade",
   gravity: 96,
@@ -1175,6 +1215,148 @@ const screenDropletStorySettings = {
   trailFadeSpeed: 3.4,
   trailLength: 12,
 };
+
+const createComboEffectStory = ({
+  atmosphericLabel,
+  createAtmosphericEffect,
+  getAtmosphericMetric,
+  heavyLabel,
+  heavyScreenIntensity,
+  lightLabel,
+  lightScreenIntensity,
+  screenEffectId,
+  screenSettings,
+  setClearAtmosphericPreset,
+  setHeavyAtmosphericPreset,
+  setLightAtmosphericPreset,
+  theme = "sciFi",
+  title,
+}: ComboEffectStoryOptions): Story => ({
+  args: {
+    comboMotionEnabled: true,
+    comboMotionPreset: "patrol-loop",
+    onAtmosphericMotionChange: fn(),
+    onScreenEffectChange: fn(),
+    screenEffectIntensity: lightScreenIntensity,
+  },
+  argTypes: {
+    comboMotionEnabled: {
+      control: "boolean",
+      name: "Player motion",
+    },
+    comboMotionPreset: {
+      control: "select",
+      name: "Motion preset",
+      options: ["still", "walk-forward", "turn-left", "turn-right", "patrol-loop"],
+    },
+    screenEffectIntensity: {
+      control: { max: 1, min: 0, step: 0.05, type: "range" },
+      name: "Screen intensity",
+    },
+  },
+  render: (args) => {
+    const { canvas, metrics, shell } = createSystemsLayout(title);
+    const context = canvas.getContext("2d");
+    const screenValue = createValue("screen");
+    const motionValue = createValue("motion");
+    const atmosphericValue = createValue(atmosphericLabel);
+    const usesValue = createValue("uses", "ScreenEffectManager + atmospheric effect");
+    const manager = new ScreenEffectManager();
+    const atmosphericEffect = createAtmosphericEffect();
+    let screenIntensity = args.screenEffectIntensity ?? lightScreenIntensity;
+    let motionEnabled = args.comboMotionEnabled ?? true;
+    let motionPreset = args.comboMotionPreset ?? "patrol-loop";
+    let animationFrame = 0;
+    let lastTime = performance.now();
+
+    manager.enable(screenEffectId, {
+      fadeMs: 0,
+      intensity: screenIntensity,
+      settings: screenSettings,
+    });
+    setLightAtmosphericPreset(atmosphericEffect);
+
+    const setCombo = (
+      nextScreenIntensity: number,
+      configureAtmosphere: (effect: AtmosphericComboEffect) => void
+    ): void => {
+      screenIntensity = Math.min(1, Math.max(0, nextScreenIntensity));
+      manager.setIntensity(screenEffectId, screenIntensity, 260);
+      configureAtmosphere(atmosphericEffect);
+      setValue(screenValue, screenIntensity.toFixed(2));
+      setValue(atmosphericValue, getAtmosphericMetric(atmosphericEffect));
+      args.onScreenEffectChange?.(screenIntensity);
+    };
+
+    const setMotion = (
+      nextMotionPreset = motionPreset,
+      nextMotionEnabled = motionEnabled
+    ): void => {
+      motionPreset = nextMotionPreset;
+      motionEnabled = nextMotionEnabled;
+      setValue(motionValue, motionEnabled ? motionPreset : "disabled");
+      args.onAtmosphericMotionChange?.(title, motionPreset, motionEnabled);
+    };
+
+    const controls = document.createElement("div");
+    controls.className = "ae-controls";
+    controls.append(
+      createButton(lightLabel, () => setCombo(lightScreenIntensity, setLightAtmosphericPreset)),
+      createButton(heavyLabel, () => setCombo(heavyScreenIntensity, setHeavyAtmosphericPreset)),
+      createButton("Clear", () => setCombo(0, setClearAtmosphericPreset)),
+      createButton("Walk", () => setMotion("walk-forward", true)),
+      createButton("Turn Left", () => setMotion("turn-left", true)),
+      createButton("Turn Right", () => setMotion("turn-right", true)),
+      createButton("Patrol Loop", () => setMotion("patrol-loop", true)),
+      createButton("Motion Off", () => setMotion(motionPreset, false))
+    );
+    metrics.append(screenValue, motionValue, atmosphericValue, usesValue, controls);
+    setCombo(screenIntensity, setLightAtmosphericPreset);
+    setMotion(motionPreset, motionEnabled);
+
+    const render = (): void => {
+      if (!context) {
+        return;
+      }
+
+      const now = performance.now();
+      const delta = Math.min(0.05, (now - lastTime) / 1000);
+      const viewport = { height: canvas.height, width: canvas.width };
+
+      lastTime = now;
+      atmosphericEffect.setPlayerMotion({
+        enabled: motionEnabled,
+        ...getAtmosphericMotionPreset(motionPreset, now),
+      });
+      drawFpsDemoScene(context, {
+        height: canvas.height,
+        pixelScale: 3,
+        routeSpeed: 1.2,
+        theme,
+        timeMs: now,
+        width: canvas.width,
+      });
+
+      atmosphericEffect.update(delta, viewport);
+      atmosphericEffect.render(context, viewport);
+      manager.update(delta, viewport);
+      manager.render(context, viewport);
+
+      setValue(screenValue, screenIntensity.toFixed(2));
+      setValue(atmosphericValue, getAtmosphericMetric(atmosphericEffect));
+      animationFrame = window.requestAnimationFrame(render);
+    };
+
+    animationFrame = window.requestAnimationFrame(render);
+    onRemove(shell, () => {
+      window.cancelAnimationFrame(animationFrame);
+      atmosphericEffect.clear();
+      manager.clear();
+    });
+
+    return shell;
+  },
+});
 
 const createScreenEffectStory = ({
   effectId,
@@ -1336,10 +1518,191 @@ export const ScreenSpeedBoost: Story = createScreenEffectStory({
   title: "Speed boost",
 });
 
+export const RainCombo: Story = createComboEffectStory({
+  atmosphericLabel: "rain",
+  createAtmosphericEffect: () =>
+    createAtmosphericRainEffect({
+      density: "medium",
+      pixelSize: 2,
+      spawnRate: 120,
+      wind: 52,
+    }),
+  getAtmosphericMetric: (effect) => {
+    const rain = effect as ReturnType<typeof createAtmosphericRainEffect>;
+
+    return `${rain.getActiveDropCount()} drops`;
+  },
+  heavyLabel: "Storm Soaked",
+  heavyScreenIntensity: 1,
+  lightLabel: "Wet Lens",
+  lightScreenIntensity: 0.22,
+  screenEffectId: screenDropletsEffectId,
+  screenSettings: screenDropletStorySettings,
+  setClearAtmosphericPreset: (effect) => {
+    const rain = effect as ReturnType<typeof createAtmosphericRainEffect>;
+
+    rain.setOptions({ density: "light", spawnRate: 0, wind: 0 });
+    rain.clear();
+  },
+  setHeavyAtmosphericPreset: (effect) => {
+    const rain = effect as ReturnType<typeof createAtmosphericRainEffect>;
+
+    rain.setOptions({ density: "storm", spawnRate: 240, wind: 120 });
+  },
+  setLightAtmosphericPreset: (effect) => {
+    const rain = effect as ReturnType<typeof createAtmosphericRainEffect>;
+
+    rain.setOptions({ density: "medium", spawnRate: 120, wind: 52 });
+  },
+  title: "Rain combo",
+});
+
+export const FireAshCombo: Story = createComboEffectStory({
+  atmosphericLabel: "air",
+  createAtmosphericEffect: () =>
+    createAtmosphericAshEmberEffect({
+      emberRatio: 0.32,
+      intensity: "burning",
+      pixelSize: 2,
+      spawnRate: 72,
+      wind: 28,
+    }),
+  getAtmosphericMetric: (effect) => {
+    const ashAndEmbers = effect as ReturnType<typeof createAtmosphericAshEmberEffect>;
+
+    return `${ashAndEmbers.getActiveAshCount()} ash / ${ashAndEmbers.getActiveEmberCount()} embers`;
+  },
+  heavyLabel: "Burning Air",
+  heavyScreenIntensity: 0.92,
+  lightLabel: "Near Fire",
+  lightScreenIntensity: 0.42,
+  screenEffectId: screenFireEffectId,
+  setClearAtmosphericPreset: (effect) => {
+    const ashAndEmbers = effect as ReturnType<typeof createAtmosphericAshEmberEffect>;
+
+    ashAndEmbers.setOptions({ emberRatio: 0, intensity: "smolder", spawnRate: 0, wind: 0 });
+    ashAndEmbers.clear();
+  },
+  setHeavyAtmosphericPreset: (effect) => {
+    const ashAndEmbers = effect as ReturnType<typeof createAtmosphericAshEmberEffect>;
+
+    ashAndEmbers.setOptions({
+      emberRatio: 0.48,
+      intensity: "inferno",
+      spawnRate: 150,
+      wind: 68,
+    });
+  },
+  setLightAtmosphericPreset: (effect) => {
+    const ashAndEmbers = effect as ReturnType<typeof createAtmosphericAshEmberEffect>;
+
+    ashAndEmbers.setOptions({
+      emberRatio: 0.32,
+      intensity: "burning",
+      spawnRate: 72,
+      wind: 28,
+    });
+  },
+  theme: "industrial",
+  title: "Fire and ash combo",
+});
+
+export const FrostSnowCombo: Story = createComboEffectStory({
+  atmosphericLabel: "snow",
+  createAtmosphericEffect: () =>
+    createAtmosphericSnowEffect({
+      accumulationEnabled: false,
+      density: "heavy-snow",
+      pixelSize: 2,
+      spawnRate: 115,
+      wind: 36,
+    }),
+  getAtmosphericMetric: (effect) => {
+    const snow = effect as ReturnType<typeof createAtmosphericSnowEffect>;
+
+    return `${snow.getActiveFlakeCount()} flakes`;
+  },
+  heavyLabel: "Whiteout",
+  heavyScreenIntensity: 0.9,
+  lightLabel: "Freezing Air",
+  lightScreenIntensity: 0.4,
+  screenEffectId: screenFrostEffectId,
+  setClearAtmosphericPreset: (effect) => {
+    const snow = effect as ReturnType<typeof createAtmosphericSnowEffect>;
+
+    snow.setOptions({
+      accumulationEnabled: false,
+      density: "light-flurry",
+      spawnRate: 0,
+      wind: 0,
+    });
+    snow.clear();
+  },
+  setHeavyAtmosphericPreset: (effect) => {
+    const snow = effect as ReturnType<typeof createAtmosphericSnowEffect>;
+
+    snow.setOptions({
+      accumulationEnabled: false,
+      density: "blizzard",
+      spawnRate: 230,
+      wind: 120,
+    });
+  },
+  setLightAtmosphericPreset: (effect) => {
+    const snow = effect as ReturnType<typeof createAtmosphericSnowEffect>;
+
+    snow.setOptions({
+      accumulationEnabled: false,
+      density: "heavy-snow",
+      spawnRate: 115,
+      wind: 36,
+    });
+  },
+  title: "Frost and snow combo",
+});
+
+const getAtmosphericMotionPreset = (
+  preset: AtmosphericMotionPreset,
+  timeMs: number
+): Required<Pick<
+  AtmosphericPlayerMotion,
+  "influence" | "turnVelocity" | "velocityX" | "velocityY" | "velocityZ"
+>> => {
+  if (preset === "walk-forward") {
+    return { influence: 1.45, turnVelocity: 0, velocityX: 0, velocityY: 0, velocityZ: 420 };
+  }
+
+  if (preset === "turn-left") {
+    return { influence: 1.35, turnVelocity: -360, velocityX: 0, velocityY: 0, velocityZ: 260 };
+  }
+
+  if (preset === "turn-right") {
+    return { influence: 1.35, turnVelocity: 360, velocityX: 0, velocityY: 0, velocityZ: 260 };
+  }
+
+  if (preset === "patrol-loop") {
+    const phase = (timeMs / 1000) % 7.2;
+    const rightTurn = phase > 1.8 && phase < 2.55 ? 340 : 0;
+    const leftTurn = phase > 5.0 && phase < 5.75 ? -340 : 0;
+
+    return {
+      influence: 1.35,
+      turnVelocity: rightTurn + leftTurn,
+      velocityX: 0,
+      velocityY: 0,
+      velocityZ: rightTurn || leftTurn ? 250 : 390,
+    };
+  }
+
+  return { influence: 1, turnVelocity: 0, velocityX: 0, velocityY: 0, velocityZ: 0 };
+};
+
 export const AtmosphericRain: Story = {
   args: {
     onRainChange: fn(),
     rainDensity: "medium",
+    rainMotionEnabled: true,
+    rainMotionPreset: "patrol-loop",
     rainWind: 42,
   },
   argTypes: {
@@ -1347,6 +1710,15 @@ export const AtmosphericRain: Story = {
       control: "select",
       name: "Density",
       options: ["light", "medium", "heavy", "storm"],
+    },
+    rainMotionEnabled: {
+      control: "boolean",
+      name: "Player motion",
+    },
+    rainMotionPreset: {
+      control: "select",
+      name: "Motion preset",
+      options: ["still", "walk-forward", "turn-left", "turn-right", "patrol-loop"],
     },
     rainWind: {
       control: { max: 260, min: -260, step: 10, type: "range" },
@@ -1358,29 +1730,41 @@ export const AtmosphericRain: Story = {
     const context = canvas.getContext("2d");
     const densityValue = createValue("density");
     const windValue = createValue("wind");
+    const motionValue = createValue("motion");
     const dropsValue = createValue("drops");
     const splashesValue = createValue("splashes");
     const usesValue = createValue("uses", "AtmosphericRainEffect");
     const rain = createAtmosphericRainEffect({
       density: args.rainDensity ?? "medium",
       pixelSize: 2,
+      playerMotion: {
+        enabled: args.rainMotionEnabled ?? true,
+        ...getAtmosphericMotionPreset(args.rainMotionPreset ?? "patrol-loop", performance.now()),
+      },
       wind: args.rainWind ?? 42,
     });
     let density = args.rainDensity ?? "medium";
+    let motionEnabled = args.rainMotionEnabled ?? true;
+    let motionPreset = args.rainMotionPreset ?? "patrol-loop";
     let wind = args.rainWind ?? 42;
     let animationFrame = 0;
     let lastTime = performance.now();
 
     const updateRainOptions = (
       nextDensity: AtmosphericRainDensity,
-      nextWind: number
+      nextWind: number,
+      nextMotionPreset = motionPreset,
+      nextMotionEnabled = motionEnabled
     ): void => {
       density = nextDensity;
+      motionEnabled = nextMotionEnabled;
+      motionPreset = nextMotionPreset;
       wind = nextWind;
       rain.setOptions({ density, wind });
       setValue(densityValue, density);
+      setValue(motionValue, motionEnabled ? motionPreset : "disabled");
       setValue(windValue, `${wind}`);
-      args.onRainChange?.(density, wind);
+      args.onRainChange?.(density, wind, motionPreset, motionEnabled);
     };
 
     const controls = document.createElement("div");
@@ -1392,9 +1776,14 @@ export const AtmosphericRain: Story = {
       createButton("Storm", () => updateRainOptions("storm", wind)),
       createButton("Wind Left", () => updateRainOptions(density, -180)),
       createButton("Calm", () => updateRainOptions(density, 0)),
-      createButton("Wind Right", () => updateRainOptions(density, 180))
+      createButton("Wind Right", () => updateRainOptions(density, 180)),
+      createButton("Walk", () => updateRainOptions(density, wind, "walk-forward", true)),
+      createButton("Turn Left", () => updateRainOptions(density, wind, "turn-left", true)),
+      createButton("Turn Right", () => updateRainOptions(density, wind, "turn-right", true)),
+      createButton("Patrol Loop", () => updateRainOptions(density, wind, "patrol-loop", true)),
+      createButton("Motion Off", () => updateRainOptions(density, wind, motionPreset, false))
     );
-    metrics.append(densityValue, windValue, dropsValue, splashesValue, usesValue, controls);
+    metrics.append(densityValue, windValue, motionValue, dropsValue, splashesValue, usesValue, controls);
     updateRainOptions(density, wind);
 
     const render = (): void => {
@@ -1406,6 +1795,10 @@ export const AtmosphericRain: Story = {
       const delta = Math.min(0.05, (now - lastTime) / 1000);
 
       lastTime = now;
+      rain.setPlayerMotion({
+        enabled: motionEnabled,
+        ...getAtmosphericMotionPreset(motionPreset, now),
+      });
       drawFpsDemoScene(context, {
         height: canvas.height,
         pixelScale: 3,
@@ -1435,9 +1828,12 @@ export const AtmosphericRain: Story = {
 
 export const AtmosphericSnow: Story = {
   args: {
+    onAtmosphericMotionChange: fn(),
     onSnowChange: fn(),
     snowAccumulationEnabled: true,
     snowDensity: "snow",
+    snowMotionEnabled: true,
+    snowMotionPreset: "patrol-loop",
     snowWind: 18,
   },
   argTypes: {
@@ -1450,6 +1846,15 @@ export const AtmosphericSnow: Story = {
       name: "Density",
       options: ["light-flurry", "snow", "heavy-snow", "blizzard"],
     },
+    snowMotionEnabled: {
+      control: "boolean",
+      name: "Player motion",
+    },
+    snowMotionPreset: {
+      control: "select",
+      name: "Motion preset",
+      options: ["still", "walk-forward", "turn-left", "turn-right", "patrol-loop"],
+    },
     snowWind: {
       control: { max: 220, min: -220, step: 10, type: "range" },
       name: "Wind",
@@ -1460,6 +1865,7 @@ export const AtmosphericSnow: Story = {
     const context = canvas.getContext("2d");
     const densityValue = createValue("density");
     const windValue = createValue("wind");
+    const motionValue = createValue("motion");
     const flakesValue = createValue("flakes");
     const accumulationValue = createValue("accumulation");
     const usesValue = createValue("uses", "AtmosphericSnowEffect");
@@ -1467,10 +1873,16 @@ export const AtmosphericSnow: Story = {
       accumulationEnabled: args.snowAccumulationEnabled ?? true,
       density: args.snowDensity ?? "snow",
       pixelSize: 2,
+      playerMotion: {
+        enabled: args.snowMotionEnabled ?? true,
+        ...getAtmosphericMotionPreset(args.snowMotionPreset ?? "patrol-loop", performance.now()),
+      },
       wind: args.snowWind ?? 18,
     });
     let accumulationEnabled = args.snowAccumulationEnabled ?? true;
     let density = args.snowDensity ?? "snow";
+    let motionEnabled = args.snowMotionEnabled ?? true;
+    let motionPreset = args.snowMotionPreset ?? "patrol-loop";
     let wind = args.snowWind ?? 18;
     let animationFrame = 0;
     let lastTime = performance.now();
@@ -1478,15 +1890,21 @@ export const AtmosphericSnow: Story = {
     const updateSnowOptions = (
       nextDensity: AtmosphericSnowDensity,
       nextWind: number,
-      nextAccumulationEnabled: boolean
+      nextAccumulationEnabled: boolean,
+      nextMotionPreset = motionPreset,
+      nextMotionEnabled = motionEnabled
     ): void => {
       accumulationEnabled = nextAccumulationEnabled;
       density = nextDensity;
+      motionEnabled = nextMotionEnabled;
+      motionPreset = nextMotionPreset;
       wind = nextWind;
       snow.setOptions({ accumulationEnabled, density, wind });
       setValue(densityValue, density);
+      setValue(motionValue, motionEnabled ? motionPreset : "disabled");
       setValue(windValue, `${wind}`);
       args.onSnowChange?.(density, wind, accumulationEnabled);
+      args.onAtmosphericMotionChange?.("snow", motionPreset, motionEnabled);
     };
 
     const controls = document.createElement("div");
@@ -1499,9 +1917,14 @@ export const AtmosphericSnow: Story = {
       createButton("Wind Left", () => updateSnowOptions(density, -130, accumulationEnabled)),
       createButton("Calm", () => updateSnowOptions(density, 0, accumulationEnabled)),
       createButton("Build Up", () => updateSnowOptions(density, wind, true)),
-      createButton("No Build Up", () => updateSnowOptions(density, wind, false))
+      createButton("No Build Up", () => updateSnowOptions(density, wind, false)),
+      createButton("Walk", () => updateSnowOptions(density, wind, accumulationEnabled, "walk-forward", true)),
+      createButton("Turn Left", () => updateSnowOptions(density, wind, accumulationEnabled, "turn-left", true)),
+      createButton("Turn Right", () => updateSnowOptions(density, wind, accumulationEnabled, "turn-right", true)),
+      createButton("Patrol Loop", () => updateSnowOptions(density, wind, accumulationEnabled, "patrol-loop", true)),
+      createButton("Motion Off", () => updateSnowOptions(density, wind, accumulationEnabled, motionPreset, false))
     );
-    metrics.append(densityValue, windValue, flakesValue, accumulationValue, usesValue, controls);
+    metrics.append(densityValue, windValue, motionValue, flakesValue, accumulationValue, usesValue, controls);
     updateSnowOptions(density, wind, accumulationEnabled);
 
     const render = (): void => {
@@ -1513,6 +1936,10 @@ export const AtmosphericSnow: Story = {
       const delta = Math.min(0.05, (now - lastTime) / 1000);
 
       lastTime = now;
+      snow.setPlayerMotion({
+        enabled: motionEnabled,
+        ...getAtmosphericMotionPreset(motionPreset, now),
+      });
       drawFpsDemoScene(context, {
         height: canvas.height,
         pixelScale: 3,
@@ -1543,8 +1970,11 @@ export const AtmosphericSnow: Story = {
 export const AtmosphericAshAndEmbers: Story = {
   args: {
     ashEmberIntensity: "burning",
+    ashEmberMotionEnabled: true,
+    ashEmberMotionPreset: "patrol-loop",
     ashEmberRatio: 0.24,
     ashEmberWind: 24,
+    onAtmosphericMotionChange: fn(),
     onAshEmberChange: fn(),
   },
   argTypes: {
@@ -1552,6 +1982,15 @@ export const AtmosphericAshAndEmbers: Story = {
       control: "select",
       name: "Intensity",
       options: ["smolder", "burning", "wildfire", "inferno"],
+    },
+    ashEmberMotionEnabled: {
+      control: "boolean",
+      name: "Player motion",
+    },
+    ashEmberMotionPreset: {
+      control: "select",
+      name: "Motion preset",
+      options: ["still", "walk-forward", "turn-left", "turn-right", "patrol-loop"],
     },
     ashEmberRatio: {
       control: { max: 0.65, min: 0, step: 0.05, type: "range" },
@@ -1567,6 +2006,7 @@ export const AtmosphericAshAndEmbers: Story = {
     const context = canvas.getContext("2d");
     const intensityValue = createValue("intensity");
     const windValue = createValue("wind");
+    const motionValue = createValue("motion");
     const ashValue = createValue("ash");
     const emberValue = createValue("embers");
     const usesValue = createValue("uses", "AtmosphericAshEmberEffect");
@@ -1574,10 +2014,16 @@ export const AtmosphericAshAndEmbers: Story = {
       emberRatio: args.ashEmberRatio ?? 0.24,
       intensity: args.ashEmberIntensity ?? "burning",
       pixelSize: 2,
+      playerMotion: {
+        enabled: args.ashEmberMotionEnabled ?? true,
+        ...getAtmosphericMotionPreset(args.ashEmberMotionPreset ?? "patrol-loop", performance.now()),
+      },
       wind: args.ashEmberWind ?? 24,
     });
     let emberRatio = args.ashEmberRatio ?? 0.24;
     let intensity = args.ashEmberIntensity ?? "burning";
+    let motionEnabled = args.ashEmberMotionEnabled ?? true;
+    let motionPreset = args.ashEmberMotionPreset ?? "patrol-loop";
     let wind = args.ashEmberWind ?? 24;
     let animationFrame = 0;
     let lastTime = performance.now();
@@ -1585,15 +2031,21 @@ export const AtmosphericAshAndEmbers: Story = {
     const updateAshEmberOptions = (
       nextIntensity: AtmosphericAshEmberIntensity,
       nextWind: number,
-      nextEmberRatio: number
+      nextEmberRatio: number,
+      nextMotionPreset = motionPreset,
+      nextMotionEnabled = motionEnabled
     ): void => {
       emberRatio = nextEmberRatio;
       intensity = nextIntensity;
+      motionEnabled = nextMotionEnabled;
+      motionPreset = nextMotionPreset;
       wind = nextWind;
       ashAndEmbers.setOptions({ emberRatio, intensity, wind });
       setValue(intensityValue, intensity);
+      setValue(motionValue, motionEnabled ? motionPreset : "disabled");
       setValue(windValue, `${wind}`);
       args.onAshEmberChange?.(intensity, wind, emberRatio);
+      args.onAtmosphericMotionChange?.("ash-embers", motionPreset, motionEnabled);
     };
 
     const controls = document.createElement("div");
@@ -1606,9 +2058,14 @@ export const AtmosphericAshAndEmbers: Story = {
       createButton("Ash Only", () => updateAshEmberOptions(intensity, wind, 0)),
       createButton("More Embers", () => updateAshEmberOptions(intensity, wind, 0.52)),
       createButton("Wind Left", () => updateAshEmberOptions(intensity, -80, emberRatio)),
-      createButton("Wind Right", () => updateAshEmberOptions(intensity, 80, emberRatio))
+      createButton("Wind Right", () => updateAshEmberOptions(intensity, 80, emberRatio)),
+      createButton("Walk", () => updateAshEmberOptions(intensity, wind, emberRatio, "walk-forward", true)),
+      createButton("Turn Left", () => updateAshEmberOptions(intensity, wind, emberRatio, "turn-left", true)),
+      createButton("Turn Right", () => updateAshEmberOptions(intensity, wind, emberRatio, "turn-right", true)),
+      createButton("Patrol Loop", () => updateAshEmberOptions(intensity, wind, emberRatio, "patrol-loop", true)),
+      createButton("Motion Off", () => updateAshEmberOptions(intensity, wind, emberRatio, motionPreset, false))
     );
-    metrics.append(intensityValue, windValue, ashValue, emberValue, usesValue, controls);
+    metrics.append(intensityValue, windValue, motionValue, ashValue, emberValue, usesValue, controls);
     updateAshEmberOptions(intensity, wind, emberRatio);
 
     const render = (): void => {
@@ -1620,6 +2077,10 @@ export const AtmosphericAshAndEmbers: Story = {
       const delta = Math.min(0.05, (now - lastTime) / 1000);
 
       lastTime = now;
+      ashAndEmbers.setPlayerMotion({
+        enabled: motionEnabled,
+        ...getAtmosphericMotionPreset(motionPreset, now),
+      });
       drawFpsDemoScene(context, {
         height: canvas.height,
         pixelScale: 3,

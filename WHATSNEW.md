@@ -85,7 +85,7 @@
   heat, environmental frost, environmental fire, and underwater feedback.
 - Added atmospheric Canvas 2D effects for rain, snow, ash, and embers, including
   density presets, wind, splashes, layered flakes, optional snow accumulation,
-  and ash/ember balancing.
+  ash/ember balancing, and optional player-relative motion.
 - Added procedural background stars for generated pixel starfields with
   player-relative lateral movement and z-axis fly-through/receding motion.
 - Added `PerformanceSampler` and `FpsOverlay` for Canvas 2D frame telemetry,
