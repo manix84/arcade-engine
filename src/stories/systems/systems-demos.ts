@@ -25,6 +25,7 @@ import {
   createLocalMultiplayerController,
   createMultiplayerSession,
   createPlayerInputIntent,
+  createProceduralStarfield,
   ScreenEffectManager,
   screenDropletsEffectId,
   screenFireEffectId,
@@ -106,6 +107,7 @@ type SystemsStoryArgs = {
     wind: number,
     accumulationEnabled: boolean
   ) => void;
+  onStarfieldMotionChange?: (label: string) => void;
   rainDensity?: AtmosphericRainDensity;
   rainWind?: number;
   screenEffectIntensity?: number;
@@ -1795,6 +1797,104 @@ export const SpriteAnimationAndCamera: Story = {
       setValue(frameValue, `${frame.frameX / 24}`);
       setValue(cameraValue, `${Math.round(camera.posX)}, ${Math.round(camera.posY)}`);
       setValue(targetValue, `${Math.round(target.posX)}, ${Math.round(target.posY)}`);
+      animationFrame = window.requestAnimationFrame(render);
+    };
+
+    animationFrame = window.requestAnimationFrame(render);
+    onRemove(shell, () => window.cancelAnimationFrame(animationFrame));
+
+    return shell;
+  },
+};
+
+export const ProceduralStars: Story = {
+  args: {
+    onStarfieldMotionChange: fn(),
+  },
+  render: (args) => {
+    const { canvas, metrics, shell } = createSystemsLayout("Procedural stars");
+    const context = canvas.getContext("2d");
+    const modeValue = createValue("mode", "forward");
+    const velocityValue = createValue("velocity", "0, 0, 34");
+    const usesValue = createValue("uses", "ProceduralStarfield");
+    const starfield = createProceduralStarfield({
+      pixelSize: 1,
+      spreadX: 760,
+      spreadY: 460,
+      starCount: 180,
+      velocityZ: 34,
+    });
+    let animationFrame = 0;
+    let lastTime = performance.now();
+    let mode = "forward";
+    let motion = { velocityX: 0, velocityY: 0, velocityZ: 34 };
+
+    const setMotion = (
+      label: string,
+      nextMotion: { velocityX: number; velocityY: number; velocityZ: number }
+    ): void => {
+      mode = label;
+      motion = nextMotion;
+      starfield.setMotion(motion);
+      args.onStarfieldMotionChange?.(label);
+    };
+
+    const controls = document.createElement("div");
+    controls.className = "ae-controls";
+    controls.append(
+      createButton("Forward", () => setMotion("forward", { velocityX: 0, velocityY: 0, velocityZ: 34 })),
+      createButton("Reverse", () => setMotion("reverse", { velocityX: 0, velocityY: 0, velocityZ: -28 })),
+      createButton("Strafe Left", () => setMotion("strafe left", { velocityX: -92, velocityY: 0, velocityZ: 18 })),
+      createButton("Strafe Right", () => setMotion("strafe right", { velocityX: 92, velocityY: 0, velocityZ: 18 })),
+      createButton("Climb", () => setMotion("climb", { velocityX: 0, velocityY: -68, velocityZ: 24 })),
+      createButton("Calm", () => setMotion("calm", { velocityX: 8, velocityY: 0, velocityZ: 4 }))
+    );
+    metrics.append(modeValue, velocityValue, usesValue, controls);
+
+    const renderPlayerShip = (): void => {
+      if (!context) {
+        return;
+      }
+
+      const centerX = Math.round(canvas.width / 2);
+      const centerY = Math.round(canvas.height / 2);
+      const bank = Math.max(-18, Math.min(18, motion.velocityX * 0.16));
+      const shipX = centerX + Math.max(-14, Math.min(14, motion.velocityX * 0.08));
+      const shipY = centerY + 62 + Math.max(-12, Math.min(12, motion.velocityY * 0.12));
+      const thrust = Math.max(0.18, Math.min(1, 0.28 + Math.abs(motion.velocityZ) / 42));
+
+      context.fillStyle = "rgba(79, 209, 197, 0.12)";
+      context.fillRect(centerX - 1, centerY - 42, 2, 24);
+      context.fillRect(centerX - 1, centerY + 18, 2, 24);
+      drawTopDownShip(context, shipX, shipY, {
+        accent: "#f6e05e",
+        heading: bank,
+        scale: 0.9,
+        thrust,
+      });
+    };
+
+    const render = (now: number): void => {
+      if (!context) {
+        return;
+      }
+
+      const deltaTime = Math.min(0.05, Math.max(0, (now - lastTime) / 1000));
+      lastTime = now;
+      starfield.update(deltaTime, canvas);
+
+      context.fillStyle = "#03050d";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.fillStyle = "rgba(79, 209, 197, 0.08)";
+      context.fillRect(0, Math.round(canvas.height * 0.5), canvas.width, 1);
+      starfield.render(context, canvas);
+      renderPlayerShip();
+
+      setValue(modeValue, mode);
+      setValue(
+        velocityValue,
+        `${Math.round(motion.velocityX)}, ${Math.round(motion.velocityY)}, ${Math.round(motion.velocityZ)}`
+      );
       animationFrame = window.requestAnimationFrame(render);
     };
 

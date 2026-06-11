@@ -365,7 +365,6 @@ export const appendStyles = (root: HTMLElement): void => {
 
     .ae-stage {
       width: 100%;
-      min-height: 360px;
       overflow: hidden;
       border: 1px solid rgba(245, 247, 251, 0.16);
       background: #05070a;
@@ -374,7 +373,7 @@ export const appendStyles = (root: HTMLElement): void => {
     .ae-stage canvas {
       display: block;
       width: 100%;
-      height: 100%;
+      height: auto;
       image-rendering: pixelated;
     }
 

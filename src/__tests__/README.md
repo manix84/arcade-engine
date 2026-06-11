@@ -19,6 +19,9 @@ They verify package behavior without requiring a real browser window.
   locks, immersive mode requests, and installed-app exit fallbacks.
 - [display-filters.test.ts](display-filters.test.ts) checks CRT/VHS preset
   metadata, intensity normalization, setting normalization, and runtime boosts.
+- [background-stars.test.ts](background-stars.test.ts) checks generated
+  starfields, player-relative x/y motion, z-depth wrapping, and Canvas 2D
+  rendering state.
 - [user-options.test.ts](user-options.test.ts) checks option defaults,
   normalization, persistence, reset behavior, subscribers, and change events.
 - [runtime-logger.test.ts](runtime-logger.test.ts) checks log-level guards,
@@ -64,6 +67,7 @@ Add tests when changing:
 - Input or multiplayer helpers.
 - Browser capability wrappers.
 - Display filter presets and normalization.
+- Procedural background prop/starfield behavior.
 - User option persistence helpers.
 - Achievement helpers.
 - Achievement notification rendering.

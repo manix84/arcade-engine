@@ -2,6 +2,7 @@ import type { Meta } from "@storybook/html-vite";
 
 import {
   DisplayFilters as DisplayFiltersStory,
+  ProceduralStars as ProceduralStarsStory,
   SpriteAnimationAndCamera as SpriteAnimationAndCameraStory,
 } from "./systems-demos.js";
 
@@ -12,4 +13,5 @@ const meta = {
 export default meta;
 
 export const DisplayFilters = DisplayFiltersStory;
+export const ProceduralStars = ProceduralStarsStory;
 export const SpriteAnimationAndCamera = SpriteAnimationAndCameraStory;

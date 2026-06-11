@@ -72,6 +72,10 @@ export {
   createAtmosphericSnowEffect,
 } from "./atmospheric-effects.js";
 export {
+  createProceduralStarfield,
+  ProceduralStarfield,
+} from "./background-stars.js";
+export {
   appExitBlockedEventName,
   canLockOrientation,
   canUseFullscreen,
@@ -319,6 +323,11 @@ export type {
   AtmosphericSnowFlake,
   AtmosphericSnowOptions,
 } from "./atmospheric-effects.js";
+export type {
+  ProceduralStar,
+  ProceduralStarfieldMotion,
+  ProceduralStarfieldOptions,
+} from "./background-stars.js";
 export type {
   DisplayFilterMode,
   DisplayFilterRuntimeBoosts,
