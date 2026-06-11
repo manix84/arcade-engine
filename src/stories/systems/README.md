@@ -148,6 +148,8 @@ The stories demonstrate:
 - Pixel-snapped falling rain streaks.
 - Layered pixel snowflakes with soft drift and sway.
 - Slow drifting ash and rising flickering embers.
+- Optional player-relative motion so weather reacts to forward movement and
+  turning.
 - Density and wind controls.
 - Small bottom-edge splashes.
 - Optional bottom-edge snow accumulation.

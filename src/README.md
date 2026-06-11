@@ -165,7 +165,8 @@ Use it for:
   speed-boost feedback.
 - Pixel-snapped environment heat shimmer, frost masks, fire glow, and
   underwater distortion.
-- Pixel-snapped atmospheric rain drops, wind slant, and small splashes.
+- Pixel-snapped atmospheric rain drops, wind slant, optional player-relative
+  motion, and small splashes.
 - Layered atmospheric snowflakes, wind drift, and optional accumulation.
 - Drifting ash and rising flickering embers for fire, volcano, industrial, and
   destroyed-city scenes.

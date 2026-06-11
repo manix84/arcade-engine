@@ -644,9 +644,9 @@ overlays.
 | `createEnvironmentFrostEffectDefinition` | Edge frost, crystal clusters, and breath mist. |
 | `createEnvironmentFireEffectDefinition` | Edge flames, embers, smoke, and warm flicker. |
 | `createEnvironmentUnderwaterEffectDefinition` | Blue-green tint, slow wave distortion, bubbles, and debris. |
-| `AtmosphericRainEffect` / `createAtmosphericRainEffect` | Pixel rain streaks, wind slant, and small splashes. |
-| `AtmosphericSnowEffect` / `createAtmosphericSnowEffect` | Layered snow drift with optional accumulation. |
-| `AtmosphericAshEmberEffect` / `createAtmosphericAshEmberEffect` | Drifting ash plus rising flickering embers. |
+| `AtmosphericRainEffect` / `createAtmosphericRainEffect` | Pixel rain streaks, wind slant, small splashes, and optional player-relative motion. |
+| `AtmosphericSnowEffect` / `createAtmosphericSnowEffect` | Layered snow drift with optional accumulation and optional player-relative motion. |
+| `AtmosphericAshEmberEffect` / `createAtmosphericAshEmberEffect` | Drifting ash plus rising flickering embers with optional player-relative motion. |
 
 ```ts
 const screenEffects = new ScreenEffectManager();
