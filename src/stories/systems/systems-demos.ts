@@ -91,6 +91,8 @@ type SystemsStoryArgs = {
   onAchievementNotification?: (name: string) => void;
   onAchievementReset?: () => void;
   onAchievementUnlock?: (id: DemoAchievementId) => void;
+  comboMotionEnabled?: boolean;
+  comboMotionPreset?: AtmosphericMotionPreset;
   onAshEmberChange?: (
     intensity: AtmosphericAshEmberIntensity,
     wind: number,
@@ -1177,6 +1179,30 @@ type ScreenEffectStoryOptions = {
   title: string;
 };
 
+type AtmosphericComboEffect = {
+  clear: () => void;
+  render: (context: CanvasRenderingContext2D, viewport: { height: number; width: number }) => void;
+  setPlayerMotion: (motion: AtmosphericPlayerMotion) => void;
+  update: (deltaTime: number, viewport: { height: number; width: number }) => void;
+};
+
+type ComboEffectStoryOptions = {
+  atmosphericLabel: string;
+  createAtmosphericEffect: () => AtmosphericComboEffect;
+  getAtmosphericMetric: (effect: AtmosphericComboEffect) => string;
+  heavyLabel: string;
+  heavyScreenIntensity: number;
+  lightLabel: string;
+  lightScreenIntensity: number;
+  screenEffectId: string;
+  screenSettings?: Record<string, unknown>;
+  setClearAtmosphericPreset: (effect: AtmosphericComboEffect) => void;
+  setHeavyAtmosphericPreset: (effect: AtmosphericComboEffect) => void;
+  setLightAtmosphericPreset: (effect: AtmosphericComboEffect) => void;
+  theme?: "sciFi" | "concrete" | "industrial";
+  title: string;
+};
+
 const screenDropletStorySettings = {
   focusMode: "arcade",
   gravity: 96,
@@ -1189,6 +1215,148 @@ const screenDropletStorySettings = {
   trailFadeSpeed: 3.4,
   trailLength: 12,
 };
+
+const createComboEffectStory = ({
+  atmosphericLabel,
+  createAtmosphericEffect,
+  getAtmosphericMetric,
+  heavyLabel,
+  heavyScreenIntensity,
+  lightLabel,
+  lightScreenIntensity,
+  screenEffectId,
+  screenSettings,
+  setClearAtmosphericPreset,
+  setHeavyAtmosphericPreset,
+  setLightAtmosphericPreset,
+  theme = "sciFi",
+  title,
+}: ComboEffectStoryOptions): Story => ({
+  args: {
+    comboMotionEnabled: true,
+    comboMotionPreset: "patrol-loop",
+    onAtmosphericMotionChange: fn(),
+    onScreenEffectChange: fn(),
+    screenEffectIntensity: lightScreenIntensity,
+  },
+  argTypes: {
+    comboMotionEnabled: {
+      control: "boolean",
+      name: "Player motion",
+    },
+    comboMotionPreset: {
+      control: "select",
+      name: "Motion preset",
+      options: ["still", "walk-forward", "turn-left", "turn-right", "patrol-loop"],
+    },
+    screenEffectIntensity: {
+      control: { max: 1, min: 0, step: 0.05, type: "range" },
+      name: "Screen intensity",
+    },
+  },
+  render: (args) => {
+    const { canvas, metrics, shell } = createSystemsLayout(title);
+    const context = canvas.getContext("2d");
+    const screenValue = createValue("screen");
+    const motionValue = createValue("motion");
+    const atmosphericValue = createValue(atmosphericLabel);
+    const usesValue = createValue("uses", "ScreenEffectManager + atmospheric effect");
+    const manager = new ScreenEffectManager();
+    const atmosphericEffect = createAtmosphericEffect();
+    let screenIntensity = args.screenEffectIntensity ?? lightScreenIntensity;
+    let motionEnabled = args.comboMotionEnabled ?? true;
+    let motionPreset = args.comboMotionPreset ?? "patrol-loop";
+    let animationFrame = 0;
+    let lastTime = performance.now();
+
+    manager.enable(screenEffectId, {
+      fadeMs: 0,
+      intensity: screenIntensity,
+      settings: screenSettings,
+    });
+    setLightAtmosphericPreset(atmosphericEffect);
+
+    const setCombo = (
+      nextScreenIntensity: number,
+      configureAtmosphere: (effect: AtmosphericComboEffect) => void
+    ): void => {
+      screenIntensity = Math.min(1, Math.max(0, nextScreenIntensity));
+      manager.setIntensity(screenEffectId, screenIntensity, 260);
+      configureAtmosphere(atmosphericEffect);
+      setValue(screenValue, screenIntensity.toFixed(2));
+      setValue(atmosphericValue, getAtmosphericMetric(atmosphericEffect));
+      args.onScreenEffectChange?.(screenIntensity);
+    };
+
+    const setMotion = (
+      nextMotionPreset = motionPreset,
+      nextMotionEnabled = motionEnabled
+    ): void => {
+      motionPreset = nextMotionPreset;
+      motionEnabled = nextMotionEnabled;
+      setValue(motionValue, motionEnabled ? motionPreset : "disabled");
+      args.onAtmosphericMotionChange?.(title, motionPreset, motionEnabled);
+    };
+
+    const controls = document.createElement("div");
+    controls.className = "ae-controls";
+    controls.append(
+      createButton(lightLabel, () => setCombo(lightScreenIntensity, setLightAtmosphericPreset)),
+      createButton(heavyLabel, () => setCombo(heavyScreenIntensity, setHeavyAtmosphericPreset)),
+      createButton("Clear", () => setCombo(0, setClearAtmosphericPreset)),
+      createButton("Walk", () => setMotion("walk-forward", true)),
+      createButton("Turn Left", () => setMotion("turn-left", true)),
+      createButton("Turn Right", () => setMotion("turn-right", true)),
+      createButton("Patrol Loop", () => setMotion("patrol-loop", true)),
+      createButton("Motion Off", () => setMotion(motionPreset, false))
+    );
+    metrics.append(screenValue, motionValue, atmosphericValue, usesValue, controls);
+    setCombo(screenIntensity, setLightAtmosphericPreset);
+    setMotion(motionPreset, motionEnabled);
+
+    const render = (): void => {
+      if (!context) {
+        return;
+      }
+
+      const now = performance.now();
+      const delta = Math.min(0.05, (now - lastTime) / 1000);
+      const viewport = { height: canvas.height, width: canvas.width };
+
+      lastTime = now;
+      atmosphericEffect.setPlayerMotion({
+        enabled: motionEnabled,
+        ...getAtmosphericMotionPreset(motionPreset, now),
+      });
+      drawFpsDemoScene(context, {
+        height: canvas.height,
+        pixelScale: 3,
+        routeSpeed: 1.2,
+        theme,
+        timeMs: now,
+        width: canvas.width,
+      });
+
+      atmosphericEffect.update(delta, viewport);
+      atmosphericEffect.render(context, viewport);
+      manager.update(delta, viewport);
+      manager.render(context, viewport);
+
+      setValue(screenValue, screenIntensity.toFixed(2));
+      setValue(atmosphericValue, getAtmosphericMetric(atmosphericEffect));
+      animationFrame = window.requestAnimationFrame(render);
+    };
+
+    animationFrame = window.requestAnimationFrame(render);
+    onRemove(shell, () => {
+      window.cancelAnimationFrame(animationFrame);
+      atmosphericEffect.clear();
+      manager.clear();
+    });
+
+    return shell;
+  },
+});
 
 const createScreenEffectStory = ({
   effectId,
@@ -1348,6 +1516,149 @@ export const ScreenSpeedBoost: Story = createScreenEffectStory({
   lightLabel: "Sprint",
   lightValue: 0.36,
   title: "Speed boost",
+});
+
+export const RainCombo: Story = createComboEffectStory({
+  atmosphericLabel: "rain",
+  createAtmosphericEffect: () =>
+    createAtmosphericRainEffect({
+      density: "medium",
+      pixelSize: 2,
+      spawnRate: 120,
+      wind: 52,
+    }),
+  getAtmosphericMetric: (effect) => {
+    const rain = effect as ReturnType<typeof createAtmosphericRainEffect>;
+
+    return `${rain.getActiveDropCount()} drops`;
+  },
+  heavyLabel: "Storm Soaked",
+  heavyScreenIntensity: 1,
+  lightLabel: "Wet Lens",
+  lightScreenIntensity: 0.22,
+  screenEffectId: screenDropletsEffectId,
+  screenSettings: screenDropletStorySettings,
+  setClearAtmosphericPreset: (effect) => {
+    const rain = effect as ReturnType<typeof createAtmosphericRainEffect>;
+
+    rain.setOptions({ density: "light", spawnRate: 0, wind: 0 });
+    rain.clear();
+  },
+  setHeavyAtmosphericPreset: (effect) => {
+    const rain = effect as ReturnType<typeof createAtmosphericRainEffect>;
+
+    rain.setOptions({ density: "storm", spawnRate: 240, wind: 120 });
+  },
+  setLightAtmosphericPreset: (effect) => {
+    const rain = effect as ReturnType<typeof createAtmosphericRainEffect>;
+
+    rain.setOptions({ density: "medium", spawnRate: 120, wind: 52 });
+  },
+  title: "Rain combo",
+});
+
+export const FireAshCombo: Story = createComboEffectStory({
+  atmosphericLabel: "air",
+  createAtmosphericEffect: () =>
+    createAtmosphericAshEmberEffect({
+      emberRatio: 0.32,
+      intensity: "burning",
+      pixelSize: 2,
+      spawnRate: 72,
+      wind: 28,
+    }),
+  getAtmosphericMetric: (effect) => {
+    const ashAndEmbers = effect as ReturnType<typeof createAtmosphericAshEmberEffect>;
+
+    return `${ashAndEmbers.getActiveAshCount()} ash / ${ashAndEmbers.getActiveEmberCount()} embers`;
+  },
+  heavyLabel: "Burning Air",
+  heavyScreenIntensity: 0.92,
+  lightLabel: "Near Fire",
+  lightScreenIntensity: 0.42,
+  screenEffectId: screenFireEffectId,
+  setClearAtmosphericPreset: (effect) => {
+    const ashAndEmbers = effect as ReturnType<typeof createAtmosphericAshEmberEffect>;
+
+    ashAndEmbers.setOptions({ emberRatio: 0, intensity: "smolder", spawnRate: 0, wind: 0 });
+    ashAndEmbers.clear();
+  },
+  setHeavyAtmosphericPreset: (effect) => {
+    const ashAndEmbers = effect as ReturnType<typeof createAtmosphericAshEmberEffect>;
+
+    ashAndEmbers.setOptions({
+      emberRatio: 0.48,
+      intensity: "inferno",
+      spawnRate: 150,
+      wind: 68,
+    });
+  },
+  setLightAtmosphericPreset: (effect) => {
+    const ashAndEmbers = effect as ReturnType<typeof createAtmosphericAshEmberEffect>;
+
+    ashAndEmbers.setOptions({
+      emberRatio: 0.32,
+      intensity: "burning",
+      spawnRate: 72,
+      wind: 28,
+    });
+  },
+  theme: "industrial",
+  title: "Fire and ash combo",
+});
+
+export const FrostSnowCombo: Story = createComboEffectStory({
+  atmosphericLabel: "snow",
+  createAtmosphericEffect: () =>
+    createAtmosphericSnowEffect({
+      accumulationEnabled: false,
+      density: "heavy-snow",
+      pixelSize: 2,
+      spawnRate: 115,
+      wind: 36,
+    }),
+  getAtmosphericMetric: (effect) => {
+    const snow = effect as ReturnType<typeof createAtmosphericSnowEffect>;
+
+    return `${snow.getActiveFlakeCount()} flakes`;
+  },
+  heavyLabel: "Whiteout",
+  heavyScreenIntensity: 0.9,
+  lightLabel: "Freezing Air",
+  lightScreenIntensity: 0.4,
+  screenEffectId: screenFrostEffectId,
+  setClearAtmosphericPreset: (effect) => {
+    const snow = effect as ReturnType<typeof createAtmosphericSnowEffect>;
+
+    snow.setOptions({
+      accumulationEnabled: false,
+      density: "light-flurry",
+      spawnRate: 0,
+      wind: 0,
+    });
+    snow.clear();
+  },
+  setHeavyAtmosphericPreset: (effect) => {
+    const snow = effect as ReturnType<typeof createAtmosphericSnowEffect>;
+
+    snow.setOptions({
+      accumulationEnabled: false,
+      density: "blizzard",
+      spawnRate: 230,
+      wind: 120,
+    });
+  },
+  setLightAtmosphericPreset: (effect) => {
+    const snow = effect as ReturnType<typeof createAtmosphericSnowEffect>;
+
+    snow.setOptions({
+      accumulationEnabled: false,
+      density: "heavy-snow",
+      spawnRate: 115,
+      wind: 36,
+    });
+  },
+  title: "Frost and snow combo",
 });
 
 const getAtmosphericMotionPreset = (

@@ -153,6 +153,12 @@ The stories demonstrate:
 - Density and wind controls.
 - Small bottom-edge splashes.
 - Optional bottom-edge snow accumulation.
+
+## 🧪 Combo Effects
+
+The Combo Effects stories layer atmospheric world effects below player-facing
+screen effects, such as rain with screen droplets, fire with ash and embers, and
+frost with snow.
 - Rendering above the world and below HUD-style overlays.
 
 Use this pattern when the player should feel inside a weather condition without
