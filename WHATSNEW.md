@@ -74,7 +74,8 @@
   effects.
 - Added canvas rendering helpers for trails, lines, polygons, and color work.
 - Added 2D ray tracing helpers for visibility polygons, ray/segment hits,
-  rectangular bounds, and polygon occluders.
+  rectangular bounds, polygon occluders, surface colors, and capped diffuse
+  bounce layers.
 - Added 2.5D projection helpers for perspective, isometric, and looped-depth
   arcade scenes.
 - Added arcade-motion and spatial-audio math helpers for first-person framing,
@@ -131,7 +132,8 @@
   strafe, climb, and calm motion presets.
 - Added a Presentation story for a ray-traced top-down apartment with draggable
   furniture, a movable lamp, per-light intensity controls, blue window light,
-  warm lamp light, and monochrome TV-static flicker.
+  warm lamp light, one bounce enabled by default, bounce attenuation tuning, a
+  ray-guide toggle, material-tinted bounces, and monochrome TV-static flicker.
 - Added a GitHub Pages workflow that deploys Storybook from `storybook-static`
   without adding Storybook output to the npm package build.
 

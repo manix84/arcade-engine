@@ -864,6 +864,7 @@ describe("coverage-focused engine branches", () => {
       "stepExplosionBlocks",
       "stepRagdoll2D",
       "stepRagdoll3D",
+      "traceLightBounces",
       "traceRay",
       "traceVisibilityPolygon",
       "unlockAchievement",

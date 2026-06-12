@@ -66,11 +66,12 @@ import {
   type RagdollConstraint,
   type RagdollPoint2D,
   type RagdollPoint3D,
+  type RayTracingBounce,
   type RayTracingBounds,
-  type RayTracingHit,
   type RayTracingPoint,
   type RayTracingPolygon,
-  traceVisibilityPolygon,
+  type RayTracingSurface,
+  traceLightBounces,
 } from "../../index.js";
 import {
   appendStyles,
@@ -92,7 +93,10 @@ type SystemsStoryArgs = {
   displayFilterMode?: DisplayFilterMode;
   displayFilterBoost?: number;
   highScoreValue?: number;
+  bounceAttenuation?: number;
   lampLightIntensity?: number;
+  lightBounces?: number;
+  showLightRayGuides?: boolean;
   lowScoreValue?: number;
   maxAcceptedScore?: number;
   onAchievementProgress?: (id: DemoAchievementId) => void;
@@ -2762,6 +2766,7 @@ type ApartmentDrag = {
 
 const apartmentBounds: RayTracingBounds = {
   height: 332,
+  surfaceColor: "#2b3035",
   width: 612,
   x: 54,
   y: 34,
@@ -2896,7 +2901,7 @@ const getApartmentObjectCenter = (object: ApartmentObject): RayTracingPoint => (
 const getApartmentOccluders = (
   objects: readonly ApartmentObject[],
   origin?: RayTracingPoint
-): RayTracingPolygon[] =>
+): RayTracingSurface[] =>
   objects
     .filter(
       (object) =>
@@ -2907,7 +2912,10 @@ const getApartmentOccluders = (
           origin.y < object.y ||
           origin.y > object.y + object.height)
     )
-    .map((object) => getApartmentObjectPolygon(object));
+    .map((object) => ({
+      polygon: getApartmentObjectPolygon(object),
+      surfaceColor: object.fill,
+    }));
 
 const getApartmentObjectById = (
   objects: readonly ApartmentObject[],
@@ -3092,35 +3100,41 @@ const drawApartmentBase = (
   });
 };
 
-const drawApartmentLight = (
+const drawApartmentLightLayer = (
   context: CanvasRenderingContext2D,
   light: ApartmentLight,
-  frame: number,
-  occluders: readonly RayTracingPolygon[],
-  intensity: number
-): RayTracingHit[] => {
-  const pulse = 0.9 + Math.sin(frame / 42 + light.phase) * 0.08;
-  const strength = light.strength * intensity;
-  const hits = traceVisibilityPolygon(
-    light.position,
-    apartmentBounds,
-    occluders
-  );
+  layer: RayTracingBounce,
+  strength: number
+): void => {
+  const isBounce = layer.level > 0;
+  const radius = isBounce ? light.radius * 0.32 : light.radius;
   const gradient = context.createRadialGradient(
-    light.position.x,
-    light.position.y,
+    layer.origin.x,
+    layer.origin.y,
     2,
-    light.position.x,
-    light.position.y,
-    light.radius
+    layer.origin.x,
+    layer.origin.y,
+    radius
   );
+  const color = layer.color ?? light.color;
+  const alpha = isBounce ? strength * layer.intensity * 0.58 : strength * layer.intensity;
 
-  gradient.addColorStop(0, colorWithAlpha(light.color, strength * pulse));
-  gradient.addColorStop(0.46, colorWithAlpha(light.color, strength * 0.42 * pulse));
-  gradient.addColorStop(1, colorWithAlpha(light.color, 0));
+  gradient.addColorStop(0, colorWithAlpha(color, alpha));
+  gradient.addColorStop(0.46, colorWithAlpha(color, alpha * 0.32));
+  gradient.addColorStop(1, colorWithAlpha(color, 0));
 
   context.save();
-  drawApartmentPath(context, hits);
+  if (isBounce) {
+    context.beginPath();
+    context.rect(
+      apartmentBounds.x ?? 0,
+      apartmentBounds.y ?? 0,
+      apartmentBounds.width,
+      apartmentBounds.height
+    );
+  } else {
+    drawApartmentPath(context, layer.hits);
+  }
   context.clip();
   context.globalCompositeOperation = "lighter";
   context.fillStyle = gradient;
@@ -3131,15 +3145,40 @@ const drawApartmentLight = (
     apartmentBounds.height + 16
   );
   context.restore();
+};
 
-  context.save();
-  drawApartmentPath(context, hits);
-  context.strokeStyle = colorWithAlpha(light.color, 0.18);
-  context.lineWidth = 1;
-  context.stroke();
-  context.restore();
+const drawApartmentLight = (
+  context: CanvasRenderingContext2D,
+  light: ApartmentLight,
+  frame: number,
+  occluders: readonly RayTracingSurface[],
+  intensity: number,
+  bounces: number,
+  showRayGuides: boolean,
+  bounceAttenuation: number
+): RayTracingBounce[] => {
+  const pulse = 0.9 + Math.sin(frame / 42 + light.phase) * 0.08;
+  const strength = light.strength * intensity * pulse;
+  const layers = traceLightBounces(light.position, apartmentBounds, occluders, {
+    attenuation: bounceAttenuation,
+    bounces,
+    lightColor: light.color,
+    maxOriginsPerBounce: 3,
+    surfaceColorMix: 0.42,
+  });
 
-  return hits;
+  layers.forEach((layer) => drawApartmentLightLayer(context, light, layer, strength));
+
+  if (showRayGuides) {
+    context.save();
+    drawApartmentPath(context, layers[0]?.hits ?? []);
+    context.strokeStyle = colorWithAlpha(light.color, 0.18);
+    context.lineWidth = 1;
+    context.stroke();
+    context.restore();
+  }
+
+  return layers;
 };
 
 const drawApartmentFixtures = (
@@ -3209,12 +3248,18 @@ const moveApartmentObject = (
 
 export const RayTracedApartment: Story = {
   args: {
+    bounceAttenuation: 0.1,
     lampLightIntensity: 0.65,
+    lightBounces: 1,
+    showLightRayGuides: true,
     tvLightIntensity: 0.65,
     windowLightIntensity: 0.65,
   },
   argTypes: {
+    bounceAttenuation: { control: { max: 0.5, min: 0.02, step: 0.02, type: "range" } },
     lampLightIntensity: { control: { max: 1.2, min: 0.05, step: 0.05, type: "range" } },
+    lightBounces: { control: { max: 3, min: 0, step: 1, type: "range" } },
+    showLightRayGuides: { control: "boolean" },
     tvLightIntensity: { control: { max: 1.2, min: 0.05, step: 0.05, type: "range" } },
     windowLightIntensity: { control: { max: 1.2, min: 0.05, step: 0.05, type: "range" } },
   },
@@ -3225,6 +3270,9 @@ export const RayTracedApartment: Story = {
     const lampValue = createValue("lamp", "warm yellow");
     const tvValue = createValue("tv", "static flicker");
     const raysValue = createValue("rays");
+    const bouncesValue = createValue("bounces", args.lightBounces ?? 1);
+    const bounceAttenuationValue = createValue("bounce attenuation", args.bounceAttenuation ?? 0.1);
+    const guidesValue = createValue("guides", args.showLightRayGuides ? "on" : "off");
     const selectedValue = createValue("selected", "none");
     const windowIntensityValue = createValue("window intensity", args.windowLightIntensity ?? 0.65);
     const lampIntensityValue = createValue("lamp intensity", args.lampLightIntensity ?? 0.65);
@@ -3241,6 +3289,9 @@ export const RayTracedApartment: Story = {
       lampValue,
       tvValue,
       raysValue,
+      bouncesValue,
+      bounceAttenuationValue,
+      guidesValue,
       selectedValue,
       windowIntensityValue,
       lampIntensityValue,
@@ -3311,6 +3362,9 @@ export const RayTracedApartment: Story = {
         tv: Math.max(0, Math.min(1.5, args.tvLightIntensity ?? 0.65)),
         window: Math.max(0, Math.min(1.5, args.windowLightIntensity ?? 0.65)),
       };
+      const bounces = Math.max(0, Math.min(3, Math.floor(args.lightBounces ?? 1)));
+      const bounceAttenuation = Math.max(0.02, Math.min(0.5, args.bounceAttenuation ?? 0.1));
+      const showRayGuides = args.showLightRayGuides ?? true;
       drawApartmentBase(context, canvas, objects, drag?.index);
       const hitCount = lights.reduce(
         (count, light) =>
@@ -3320,8 +3374,11 @@ export const RayTracedApartment: Story = {
             light,
             frame,
             getApartmentOccluders(objects, light.position),
-            intensityByLight[light.id]
-          ).length,
+            intensityByLight[light.id],
+            bounces,
+            showRayGuides,
+            bounceAttenuation
+          ).reduce((total, layer) => total + layer.hits.length, 0),
         0
       );
       drawApartmentFixtures(context, lights);
@@ -3330,6 +3387,9 @@ export const RayTracedApartment: Story = {
       setValue(lampValue, lights[1]?.temperature ?? "");
       setValue(tvValue, lights[2]?.temperature ?? "");
       setValue(raysValue, hitCount);
+      setValue(bouncesValue, bounces);
+      setValue(bounceAttenuationValue, bounceAttenuation.toFixed(2));
+      setValue(guidesValue, showRayGuides ? "on" : "off");
       setValue(windowIntensityValue, intensityByLight.window.toFixed(2));
       setValue(lampIntensityValue, intensityByLight.lamp.toFixed(2));
       setValue(tvIntensityValue, intensityByLight.tv.toFixed(2));

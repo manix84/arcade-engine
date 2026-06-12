@@ -67,8 +67,8 @@ helper systems could support other arcade-style browser games too.
 - Gravity and lightweight 2D/3D ragdoll helpers for arcade physics effects.
 - Canvas rendering helpers for trails, lines, polygons, hex color parsing, and
   shading.
-- 2D ray tracing helpers for visibility polygons, line-segment ray hits, and
-  movable occluder lighting demos.
+- 2D ray tracing helpers for visibility polygons, line-segment ray hits,
+  capped light bounces, and movable occluder lighting demos.
 - 2.5D projection helpers for perspective lanes, isometric tiles, depth loops,
   and pseudo-3D arcade camera effects.
 - Arcade motion helpers for first-person camera framing, side-scroller loops,
@@ -477,11 +477,15 @@ against rectangular bounds and polygon occluders:
 - `getRayTracingSegments(bounds, occluders?)`.
 - `traceRay(origin, angle, segments)`.
 - `traceVisibilityPolygon(origin, bounds, occluders?)`.
+- `traceLightBounces(origin, bounds, occluders?, options?)`.
 
 Use them for Canvas 2D lighting, line-of-sight, fog-of-war, stealth vision
-cones, or visibility previews. See the `Engine/Systems/Presentation/Ray Traced
-Apartment` Storybook story for draggable furniture, a movable lamp, separate
-light-intensity controls, and monochrome TV-static flicker.
+cones, or visibility previews. Bounds and occluders can provide surface colors
+so bounced layers pick up material tint. See the
+`Engine/Systems/Presentation/Ray Traced Apartment` Storybook story for
+draggable furniture, a movable lamp, separate light-intensity controls, one
+low-reflectivity bounce enabled by default, a bounce attenuation control, a
+ray-guide toggle, and monochrome TV-static flicker.
 
 ### 2.5D Projection
 

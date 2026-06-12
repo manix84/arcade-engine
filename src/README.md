@@ -340,10 +340,13 @@ helpers:
 - Polygon-to-segment conversion.
 - Nearest ray/segment intersection.
 - Sorted visibility polygon tracing from a light or viewpoint.
+- Capped diffuse bounce layer tracing for simple indirect-light demos.
+- Optional surface colors for material-tinted bounce layers.
 
 Use these helpers for canvas lighting, vision cones, line-of-sight previews,
 fog-of-war shapes, or stealth visibility. The helpers return geometry only;
 games still own gradients, color blending, shadow styling, and interaction.
+Bounce requests are currently capped to `0..3` layers.
 
 ## 🕹️ 2.5D Projection
 

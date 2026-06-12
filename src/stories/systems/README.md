@@ -91,9 +91,14 @@ background prop layers where the renderer owns the final art style.
 The story demonstrates:
 
 - `traceVisibilityPolygon`.
+- `traceLightBounces`.
 - `createRayTracingRectangle`.
 - A blue window light, warm lamp light, and monochrome TV-static light.
 - Separate intensity controls for the window, lamp, and TV.
+- A bounce-count control capped to three, with one bounce enabled by default.
+- A bounce attenuation control for tuning how quickly indirect light drops off.
+- A light ray guide toggle for hiding or showing direct visibility edges.
+- Material-tinted bounces from furniture and room-boundary surface colors.
 - Draggable room objects, including the sofa, coffee table, TV, plant, shelf,
   rug, and lamp.
 - Live occluder rebuilding so moved furniture changes the light and shadows.

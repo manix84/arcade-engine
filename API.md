@@ -577,6 +577,7 @@ drawCanvasLine(context, from, to, "#f6e05e", 2);
 | `getRayTracingSegments` | Combine bounds and occluder polygons into a segment list. |
 | `traceRay` | Find the nearest segment hit from an origin and angle. |
 | `traceVisibilityPolygon` | Build sorted visibility hits for a light/viewpoint clipped by bounds and occluders. |
+| `traceLightBounces` | Build direct visibility plus capped diffuse bounce layers. |
 
 ```ts
 const bounds = { height: canvas.height, width: canvas.width };
@@ -589,11 +590,24 @@ const visibility = traceVisibilityPolygon({ x: 80, y: 120 }, bounds, occluders);
 drawCanvasPolygon(context, visibility, "rgba(255, 220, 120, 0.22)");
 ```
 
+```ts
+const layers = traceLightBounces({ x: 80, y: 120 }, bounds, occluders, {
+  bounces: 1,
+  lightColor: "#ffd36f",
+  surfaceColorMix: 0.4,
+});
+```
+
 These helpers only calculate 2D geometry. Games own the final rendering style,
-color blending, gradients, shadow treatment, and interaction model. See
+color blending, gradients, shadow treatment, and interaction model. Bounce
+requests are capped to `0..3` layers for now, and the demo assumes
+low-reflectivity materials with steep attenuation. Bounds and occluders can
+provide `surfaceColor` values so bounced layers inherit some of the material
+color they hit. See
 `Engine/Systems/Presentation/Ray Traced Apartment` in Storybook for a Canvas 2D
 lighting demo with draggable furniture, a movable lamp, per-light intensity
-controls, and monochrome TV-static flicker.
+controls, one bounce enabled by default, bounce attenuation tuning, a ray-guide
+toggle, and monochrome TV-static flicker.
 
 ## 🕹️ 2.5D Projection
 

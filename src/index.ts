@@ -132,6 +132,7 @@ export {
   createRayTracingRectangle,
   getRayTracingPolygonSegments,
   getRayTracingSegments,
+  traceLightBounces,
   traceRay,
   traceVisibilityPolygon,
 } from "./ray-tracing.js";
@@ -448,11 +449,14 @@ export type {
 } from "./spatial-audio.js";
 export type { RgbColor } from "./canvas-rendering.js";
 export type {
+  RayTracingBounce,
+  RayTracingBounceOptions,
   RayTracingBounds,
   RayTracingHit,
   RayTracingPoint,
   RayTracingPolygon,
   RayTracingSegment,
+  RayTracingSurface,
 } from "./ray-tracing.js";
 export type {
   GravityOptions,
