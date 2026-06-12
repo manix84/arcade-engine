@@ -105,7 +105,7 @@ styles that can be built from the engine's 2.5D and canvas helpers:
 - Starfighter run.
 - Isometric dungeon room.
 - Hyperspace gate.
-- First-person player.
+- First-person player using the shared FPS corridor scene.
 - 2D side scroller with obstacles, ladders, platforms, and dummy enemies.
 - 2.5D belt side scroller with depth-scaled obstacles and dummy enemies.
 

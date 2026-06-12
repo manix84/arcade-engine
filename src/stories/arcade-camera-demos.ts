@@ -6,7 +6,6 @@ import {
   drawCanvasPolygon,
   fillCanvasWithTrail,
   getDepthProgress,
-  getFirstPersonCamera,
   getIsometricTileCorners,
   getIsometricWallSide,
   getLoopedScrollerPosition,
@@ -25,6 +24,7 @@ import {
   onRemove,
   setValue,
 } from "./story-utils.js";
+import { drawFpsDemoScene } from "./fps-demo-scene.js";
 
 type Arcade3DStoryArgs = {
   accentColor: string;
@@ -524,90 +524,18 @@ const drawHyperspaceGate = (
 };
 
 const drawFirstPersonPlayer = (
-  { canvas, context, elapsed, pointer }: SceneContext,
+  { canvas, context, elapsed }: SceneContext,
   args: Arcade3DStoryArgs
 ): void => {
-  const { centerX, horizon } = getFirstPersonCamera(
-    { height: canvas.height, width: canvas.width },
-    {
-      bobAmount: 6,
-      bobSpeed: 1.5,
-      centerDrift: 78,
-      elapsedSeconds: elapsed,
-      horizonDrift: 34,
-      horizonRatio: 0.47,
-      look: pointer,
-      speed: args.speed,
-    }
-  );
-  const viewport = { height: canvas.height, width: canvas.width };
-
-  fillCanvasWithTrail(context, canvas, args.backgroundColor, args.trailOpacity);
-  context.fillStyle = colorWithAlpha(args.accentColor, 0.08);
-  context.fillRect(0, 0, canvas.width, horizon);
-  context.fillStyle = colorWithAlpha(args.secondaryColor, 0.06);
-  context.fillRect(0, horizon, canvas.width, canvas.height - horizon);
-
-  for (let index = 0; index < args.objectCount; index++) {
-    const z = getLoopedDepth({
-      depth: args.depth,
-      elapsedSeconds: elapsed,
-      index,
-      offset: 2,
-      spacing: 1.7,
-      speed: args.speed * 5,
-    });
-    const progress = getDepthProgress(z, args.depth);
-    const leftNear = projectPerspectivePoint({ x: -260, y: 220, z }, viewport, { centerX, horizon });
-    const rightNear = projectPerspectivePoint({ x: 260, y: 220, z }, viewport, { centerX, horizon });
-    const leftFar = projectPerspectivePoint({ x: -260, y: -140, z }, viewport, { centerX, horizon });
-    const rightFar = projectPerspectivePoint({ x: 260, y: -140, z }, viewport, { centerX, horizon });
-    const alpha = 0.08 + progress * 0.34;
-
-    drawCanvasLine(context, leftNear, leftFar, colorWithAlpha(args.accentColor, alpha), Math.max(1, progress * 5));
-    drawCanvasLine(context, rightNear, rightFar, colorWithAlpha(args.accentColor, alpha), Math.max(1, progress * 5));
-    drawCanvasLine(context, leftFar, rightFar, colorWithAlpha(args.secondaryColor, alpha * 0.8), Math.max(1, progress * 4));
-
-    if (index % 3 === 0) {
-      const marker = projectPerspectivePoint(
-        { x: Math.sin(index * 2.4) * 150, y: 64, z },
-        viewport,
-        { centerX, horizon }
-      );
-      const size = 34 * marker.scale;
-
-      drawCanvasPolygon(
-        context,
-        [
-          { x: marker.x, y: marker.y - size },
-          { x: marker.x + size, y: marker.y },
-          { x: marker.x, y: marker.y + size },
-          { x: marker.x - size, y: marker.y },
-        ],
-        colorWithAlpha(index % 2 === 0 ? args.secondaryColor : args.accentColor, 0.18 + progress * 0.5),
-        colorWithAlpha("#ffffff", 0.22 + progress * 0.2)
-      );
-    }
-  }
-
-  const reticle = { x: centerX, y: horizon - 4 };
-
-  drawCanvasLine(context, { x: reticle.x - 24, y: reticle.y }, { x: reticle.x - 6, y: reticle.y }, "#f5f7fb", 2);
-  drawCanvasLine(context, { x: reticle.x + 6, y: reticle.y }, { x: reticle.x + 24, y: reticle.y }, "#f5f7fb", 2);
-  drawCanvasLine(context, { x: reticle.x, y: reticle.y - 24 }, { x: reticle.x, y: reticle.y - 6 }, "#f5f7fb", 2);
-  drawCanvasLine(context, { x: reticle.x, y: reticle.y + 6 }, { x: reticle.x, y: reticle.y + 24 }, "#f5f7fb", 2);
-
-  drawCanvasPolygon(
-    context,
-    [
-      { x: canvas.width / 2 - 42 + pointer.x * 20, y: canvas.height },
-      { x: canvas.width / 2 - 20 + pointer.x * 9, y: canvas.height - 74 + pointer.y * 8 },
-      { x: canvas.width / 2 + 20 + pointer.x * 9, y: canvas.height - 74 + pointer.y * 8 },
-      { x: canvas.width / 2 + 42 + pointer.x * 20, y: canvas.height },
-    ],
-    colorWithAlpha(args.secondaryColor, 0.54),
-    colorWithAlpha("#ffffff", 0.36)
-  );
+  drawFpsDemoScene(context, {
+    height: canvas.height,
+    intensity: 0.92,
+    pixelScale: 3,
+    routeSpeed: args.speed * 1.2,
+    theme: "sciFi",
+    timeMs: elapsed * 1000,
+    width: canvas.width,
+  });
 };
 
 const drawSideScroller2D = (
@@ -1136,8 +1064,8 @@ export const FirstPersonPlayer: Story = {
   render: (args) =>
     createStoryShell("First-person player view", args, drawFirstPersonPlayer, [
       ["mode", "first person"],
-      ["markers", args.objectCount],
-      ["camera", "player"],
+      ["scene", "fps corridor"],
+      ["camera", "route"],
     ]),
 };
 
