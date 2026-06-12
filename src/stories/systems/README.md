@@ -1,7 +1,16 @@
-# 🧩 Systems Stories
+# 🧩 Shared Feature Stories
 
-This folder documents engine helpers that coordinate common game systems rather
-than a single geometry or drawing operation.
+This folder contains shared story implementations for several Storybook sidebar
+sections. The visible Storybook groups are feature-oriented rather than nested
+under a broad "Systems" bucket:
+
+- `Engine/Input`
+- `Engine/Player Data`
+- `Engine/Achievements`
+- `Engine/Rendering`
+- `Engine/Effects`
+- `Engine/Physics`
+- `Engine/Audio/Spatial Audio`
 
 ## 🎮 Input Actions
 
@@ -83,6 +92,29 @@ The story demonstrates:
 
 Use this pattern for space, sky, hyperspace, asteroid-field, or cloud-like
 background prop layers where the renderer owns the final art style.
+
+## 💡 Ray-Traced Apartment
+
+`RayTracedApartment` shows 2D ray-traced lighting in a top-down apartment scene.
+
+The story demonstrates:
+
+- `traceVisibilityPolygon`.
+- `traceLightBounces`.
+- `createRayTracingRectangle`.
+- A blue window light, warm lamp light, and monochrome TV-static light.
+- Separate intensity controls for the window, lamp, and TV.
+- A bounce-count control capped to three, with one bounce enabled by default.
+- A bounce attenuation control for tuning how quickly indirect light drops off.
+- A light ray guide toggle for hiding or showing direct visibility edges.
+- Material-tinted bounces from furniture and room-boundary surface colors.
+- Draggable room objects, including the sofa, coffee table, TV, plant, shelf,
+  rug, and lamp.
+- Live occluder rebuilding so moved furniture changes the light and shadows.
+
+Use this pattern for Canvas 2D lighting, line-of-sight previews, vision cones,
+fog-of-war masks, or stealth visibility where the renderer owns the final color
+and blend mode.
 
 ## 🏆 Achievements
 

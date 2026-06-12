@@ -111,6 +111,54 @@ const heading = helpers.findHeading(enemy, player);
 enemy.heading = helpers.rotateTo(heading.angle, enemy.heading, 3);
 ```
 
+## 🗺️ String Tile Maps
+
+Use these helpers to author grid maps as text, then query cells by row/column or
+centered world coordinates.
+
+| Export | Use It For |
+| --- | --- |
+| `parseStringTileMap` | Parse a multiline string into padded tile rows, with optional tile normalization. |
+| `findStringTileMapCell` | Find the first cell containing a tile symbol. |
+| `findStringTileMapCells` | Find all cells containing a tile symbol. |
+| `getStringTileMapTile` | Read one tile by column and row. |
+| `getStringTileMapCenteredPoint` | Convert a column/row into centered `x`/`z` coordinates. |
+| `getStringTileMapCellFromCenteredPoint` | Convert centered `x`/`z` coordinates back into a cell. |
+
+```ts
+const map = parseStringTileMap(
+  `
+########D########
+#      S        #
+#   P      o    #
+#################
+`.trim()
+);
+const spawn = findStringTileMapCell(map, "S");
+```
+
+The isometric dungeon demo uses this editable legend on top of the generic
+string map parser:
+
+| Symbol | Meaning | Role |
+| --- | --- | --- |
+| `space` | Floor | Walkable floor |
+| `#` | Stone wall | Blocking wall |
+| `.` | Floor marker | Walkable floor marker |
+| `C` | Chest | Interactable prop |
+| `D` | Door | Interactable doorway |
+| `P` | Pillar | Blocking prop |
+| `S` | Player spawn | Spawn point |
+| `d` | Stairs down | Interactable stairs |
+| `o` | Light source | Light |
+| `r` | Rubble | Blocking prop |
+| `u` | Stairs up | Interactable stairs |
+| `w` | Water | Walkable slow floor |
+
+Ragged rows can be padded with an internal empty tile such as `_`; the dungeon
+demo treats that as void space outside the playable floor and hides it from the
+editor legend.
+
 ## 🎮 Input Actions
 
 | Export | Use It For |
@@ -325,7 +373,7 @@ achievements = addAchievementProgress(
 
 Achievement helpers are local game-state utilities. Remote leaderboard
 validation is handled by the high-score helpers. See
-`Engine/Systems/New Helpers/Achievements` in Storybook for an interactive
+`Engine/Achievements/Achievements` in Storybook for an interactive
 progress and unlock demo.
 
 ## 🏆 Achievement Notifications
@@ -450,7 +498,7 @@ if (!trusted) {
 ```
 
 Use these helpers alongside your API routes, score storage, used-receipt
-updates, and rate limits. See `Engine/Systems/New Helpers/High Scores` in
+updates, and rate limits. See `Engine/Player Data/High Scores` in
 Storybook for a local leaderboard and validation demo.
 
 ## 🎞️ Sprite Animation
@@ -566,6 +614,48 @@ const camera = getFollowCamera({
 fillCanvasWithTrail(context, canvas, "#05070a", 0.18);
 drawCanvasLine(context, from, to, "#f6e05e", 2);
 ```
+
+## 💡 Ray Tracing
+
+| Export | Use It For |
+| --- | --- |
+| `createRayTracingRectangle` | Create a clockwise rectangle polygon from top-left coordinates and size. |
+| `createRayTracingBoundsPolygon` | Convert render bounds into a rectangular clipping polygon. |
+| `getRayTracingPolygonSegments` | Convert a polygon into line segments for intersection checks. |
+| `getRayTracingSegments` | Combine bounds and occluder polygons into a segment list. |
+| `traceRay` | Find the nearest segment hit from an origin and angle. |
+| `traceVisibilityPolygon` | Build sorted visibility hits for a light/viewpoint clipped by bounds and occluders. |
+| `traceLightBounces` | Build direct visibility plus capped diffuse bounce layers. |
+
+```ts
+const bounds = { height: canvas.height, width: canvas.width };
+const occluders = [
+  createRayTracingRectangle(120, 90, 64, 48),
+  createRayTracingRectangle(260, 140, 96, 32),
+];
+const visibility = traceVisibilityPolygon({ x: 80, y: 120 }, bounds, occluders);
+
+drawCanvasPolygon(context, visibility, "rgba(255, 220, 120, 0.22)");
+```
+
+```ts
+const layers = traceLightBounces({ x: 80, y: 120 }, bounds, occluders, {
+  bounces: 1,
+  lightColor: "#ffd36f",
+  surfaceColorMix: 0.4,
+});
+```
+
+These helpers only calculate 2D geometry. Games own the final rendering style,
+color blending, gradients, shadow treatment, and interaction model. Bounce
+requests are capped to `0..3` layers for now, and the demo assumes
+low-reflectivity materials with steep attenuation. Bounds and occluders can
+provide `surfaceColor` values so bounced layers inherit some of the material
+color they hit. See
+`Engine/Rendering/Ray Traced Apartment` in Storybook for a Canvas 2D
+lighting demo with draggable furniture, a movable lamp, per-light intensity
+controls, one bounce enabled by default, bounce attenuation tuning, a ray-guide
+toggle, and monochrome TV-static flicker.
 
 ## 🕹️ 2.5D Projection
 

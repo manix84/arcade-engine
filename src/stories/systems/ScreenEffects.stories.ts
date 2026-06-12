@@ -11,7 +11,7 @@ import {
 } from "./systems-demos.js";
 
 const meta = {
-  title: "Engine/Systems/Player Effects",
+  title: "Engine/Effects/Player",
 } satisfies Meta;
 
 export default meta;

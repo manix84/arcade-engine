@@ -73,6 +73,9 @@
 - Added gravity and lightweight 2D/3D ragdoll helpers for arcade physics
   effects.
 - Added canvas rendering helpers for trails, lines, polygons, and color work.
+- Added 2D ray tracing helpers for visibility polygons, ray/segment hits,
+  rectangular bounds, polygon occluders, surface colors, and capped diffuse
+  bounce layers.
 - Added 2.5D projection helpers for perspective, isometric, and looped-depth
   arcade scenes.
 - Added arcade-motion and spatial-audio math helpers for first-person framing,
@@ -104,21 +107,21 @@
 - Expanded the 2D and 2.5D side-scroller demos with obstacles, ladders,
   platforms, depth-scaled belt actors, and stompable dummy enemies.
 - Added cube-cluster demos for destructible pickups and modular level pieces.
-- Added systems demos for input actions, local multiplayer, sprite animation,
+- Added Storybook demos for input actions, local multiplayer, sprite animation,
   follow cameras, and spatial-audio math.
-- Added systems demos for gravity and 2D/3D ragdoll helpers.
-- Added a systems demo for persisted user option stores.
-- Added a systems demo for CRT/VHS display filter presets.
-- Added a systems demo for achievement notification popups.
-- Added systems demos for achievement progress/unlocks and high-score
+- Added Storybook demos for gravity and 2D/3D ragdoll helpers.
+- Added a Storybook demo for persisted user option stores.
+- Added a Storybook demo for CRT/VHS display filter presets.
+- Added a Storybook demo for achievement notification popups.
+- Added Storybook demos for achievement progress/unlocks and high-score
   leaderboard validation helpers, including Storybook actions and interaction
   checks for their controls.
-- Added Player Effects stories under `Engine/Systems/Player Effects` for screen
+- Added Player Effects stories under `Engine/Effects/Player` for screen
   droplets and player-state fire, frost, poison, low-health, shock, and
   speed-boost overlays.
-- Added Screen Effects stories under `Engine/Systems/Screen Effects` for heat,
+- Added Environment Effects stories under `Engine/Effects/Environment` for heat,
   frost, fire, and underwater environmental overlays.
-- Added Atmospheric Effects stories under `Engine/Systems/Atmospheric Effects`
+- Added Atmospheric Effects stories under `Engine/Effects/Atmospheric`
   for rain, snow, ash, and embers.
 - Replaced flat screen-effect backgrounds with a reusable pixel-art FPS corridor
   demo scene and fixed HUD weapon asset so effects can be evaluated over a
@@ -127,6 +130,10 @@
   position, scale, opacity, and target FPS.
 - Added a Presentation story for procedural stars with forward, reverse,
   strafe, climb, and calm motion presets.
+- Added a Presentation story for a ray-traced top-down apartment with draggable
+  furniture, a movable lamp, per-light intensity controls, blue window light,
+  warm lamp light, one bounce enabled by default, bounce attenuation tuning, a
+  ray-guide toggle, material-tinted bounces, and monochrome TV-static flicker.
 - Added a GitHub Pages workflow that deploys Storybook from `storybook-static`
   without adding Storybook output to the npm package build.
 

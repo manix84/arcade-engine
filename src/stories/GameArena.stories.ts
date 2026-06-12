@@ -337,7 +337,15 @@ export const PerspectiveArena: Story = {
       fontFamily: "monospace",
     });
     const ticker = new Ticker();
-    const pointer = { x: 0, y: 0 };
+    const pointer = {
+      active: false,
+      baseX: 0,
+      baseY: 0,
+      dragStartX: 0,
+      dragStartY: 0,
+      x: 0,
+      y: 0,
+    };
     let lastTime = performance.now();
     let elapsedSeconds = 0;
     let fpsAge = 0;
@@ -362,24 +370,49 @@ export const PerspectiveArena: Story = {
     values.append(modeValue, pointerValue, fpsValue);
     controls.append(
       createButton("Reset View", () => {
+        pointer.baseX = 0;
+        pointer.baseY = 0;
+        pointer.dragStartX = 0;
+        pointer.dragStartY = 0;
         pointer.x = 0;
         pointer.y = 0;
       })
     );
 
-    const updatePointer = (event: PointerEvent): void => {
+    const getNormalizedPointer = (event: PointerEvent): { x: number; y: number } => {
       const bounds = canvas.getBoundingClientRect();
 
-      pointer.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
-      pointer.y = ((event.clientY - bounds.top) / bounds.height) * 2 - 1;
+      return {
+        x: ((event.clientX - bounds.left) / bounds.width) * 2 - 1,
+        y: ((event.clientY - bounds.top) / bounds.height) * 2 - 1,
+      };
+    };
+    const updatePointer = (event: PointerEvent): void => {
+      const normalizedPointer = getNormalizedPointer(event);
+
+      pointer.x = pointer.baseX + normalizedPointer.x - pointer.dragStartX;
+      pointer.y = pointer.baseY + normalizedPointer.y - pointer.dragStartY;
     };
     const handlePointerDown = (event: PointerEvent): void => {
-      updatePointer(event);
+      const normalizedPointer = getNormalizedPointer(event);
+
+      pointer.active = true;
+      pointer.baseX = pointer.x;
+      pointer.baseY = pointer.y;
+      pointer.dragStartX = normalizedPointer.x;
+      pointer.dragStartY = normalizedPointer.y;
       canvas.style.cursor = "grabbing";
       canvas.setPointerCapture(event.pointerId);
     };
-    const handlePointerMove = (event: PointerEvent): void => updatePointer(event);
+    const handlePointerMove = (event: PointerEvent): void => {
+      if (!pointer.active) {
+        return;
+      }
+
+      updatePointer(event);
+    };
     const handlePointerUp = (event: PointerEvent): void => {
+      pointer.active = false;
       canvas.style.cursor = "grab";
 
       if (canvas.hasPointerCapture(event.pointerId)) {

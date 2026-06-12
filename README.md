@@ -67,8 +67,11 @@ helper systems could support other arcade-style browser games too.
 - Gravity and lightweight 2D/3D ragdoll helpers for arcade physics effects.
 - Canvas rendering helpers for trails, lines, polygons, hex color parsing, and
   shading.
+- 2D ray tracing helpers for visibility polygons, line-segment ray hits,
+  capped light bounces, and movable occluder lighting demos.
 - 2.5D projection helpers for perspective lanes, isometric tiles, depth loops,
   and pseudo-3D arcade camera effects.
+- String tile-map helpers for authoring board or room layouts as editable text.
 - Arcade motion helpers for first-person camera framing, side-scroller loops,
   jump arcs, and spatial audio pan/depth calculations.
 - Spatial audio math helpers for distance gain, pan, and listener/source mixes.
@@ -311,7 +314,7 @@ platformers.
 
 Achievement helpers keep definition metadata separate from persisted state.
 Games can unlock achievements, increment progress counters, and render status
-lists from the returned data. See the `Engine/Systems/Achievements/Achievements`
+lists from the returned data. See the `Engine/Achievements/Achievements`
 Storybook story for an interactive unlock/progress example.
 
 ### Achievement Notifications
@@ -321,7 +324,7 @@ context. Games provide the achievement text, optional icon frame, viewport, and
 render loop; the renderer owns queue timing, slide/hold/exit animation, text
 wrapping, and placeholder icons.
 
-See the `Engine/Systems/Achievements/Achievement Notifications` Storybook story
+See the `Engine/Achievements/Achievement Notifications` Storybook story
 for a popup queue demo.
 
 ### High Scores
@@ -329,7 +332,7 @@ for a popup queue demo.
 High-score helpers support local score tables and optional remote sync. Games
 provide their own storage key, default scores, API path, settings
 normalizers, and plausibility rules. See the
-`Engine/Systems/Player Data/High Scores` Storybook story for local leaderboard,
+`Engine/Player Data/High Scores` Storybook story for local leaderboard,
 threshold, integrity, and plausibility examples.
 
 Remote leaderboard submissions can use run receipts and integrity payloads.
@@ -345,7 +348,7 @@ providing reusable persistence mechanics. Games provide defaults, optional
 normalization, and a storage key; the store handles localStorage access,
 best-effort writes, reset, subscriptions, and optional DOM change events.
 
-See the `Engine/Systems/Player Data/User Options` Storybook story for a live
+See the `Engine/Player Data/User Options` Storybook story for a live
 options-store example.
 
 ### Runtime Utilities
@@ -370,7 +373,7 @@ normalization math. Use them to offer CRT/VHS/custom settings menus, clamp
 untrusted stored intensities, and layer temporary runtime boosts into effective
 filter settings.
 
-See the `Engine/Systems/Presentation/Display Filters` Storybook story for a
+See the `Engine/Rendering/Display Filters` Storybook story for a
 visual preset demo.
 
 ### Screen Effects
@@ -392,7 +395,7 @@ effects.render(context, { width: canvas.width, height: canvas.height });
 
 The built-in `screen-droplets` effect uses pooled pixel-snapped rectangles for
 rain on a camera lens or visor. See the
-`Engine/Systems/Player Effects/ScreenDroplets` Storybook story for the live
+`Engine/Effects/Player/ScreenDroplets` Storybook story for the live
 demo.
 
 Player effects include screen droplets, fire, frost, low health, poison, shock,
@@ -463,6 +466,27 @@ available to games:
 
 `fillCanvasWithTrail` accepts any valid CSS color string. Hex-specific helpers
 require 3 or 6 digit hex colors.
+
+### Ray Tracing
+
+Ray tracing helpers calculate 2D visibility polygons from a light or viewpoint
+against rectangular bounds and polygon occluders:
+
+- `createRayTracingRectangle(x, y, width, height)`.
+- `createRayTracingBoundsPolygon(bounds)`.
+- `getRayTracingPolygonSegments(polygon)`.
+- `getRayTracingSegments(bounds, occluders?)`.
+- `traceRay(origin, angle, segments)`.
+- `traceVisibilityPolygon(origin, bounds, occluders?)`.
+- `traceLightBounces(origin, bounds, occluders?, options?)`.
+
+Use them for Canvas 2D lighting, line-of-sight, fog-of-war, stealth vision
+cones, or visibility previews. Bounds and occluders can provide surface colors
+so bounced layers pick up material tint. See the
+`Engine/Rendering/Ray Traced Apartment` Storybook story for
+draggable furniture, a movable lamp, separate light-intensity controls, one
+low-reflectivity bounce enabled by default, a bounce attenuation control, a
+ray-guide toggle, and monochrome TV-static flicker.
 
 ### 2.5D Projection
 
@@ -535,10 +559,14 @@ Storybook contains live demos for the engine surface:
 - **Core**: `GameArena`, ticker behavior, viewport scaling, and debug vectors.
 - **Helpers**: math, geometry, object cloning, event binding, collisions,
   rotation, spawning, and 2.5D variants.
-- **Systems**: input actions, local multiplayer, user options, achievements,
-  achievement notifications, high scores, display filters, sprite animation,
-  follow cameras, procedural background stars, player screen effects,
-  environment screen effects, atmospheric effects, and spatial-audio math.
+- **Input**: input actions and local multiplayer input state.
+- **Player Data**: user options and high scores.
+- **Achievements**: achievement progress and notification rendering.
+- **Rendering**: display filters, sprite animation, follow cameras, procedural
+  background stars, and ray-traced apartment lighting.
+- **Effects**: player screen effects, environment screen effects, atmospheric
+  effects, and combined effect scenes.
+- **Physics**: gravity and 2D/3D ragdolls.
 - **Audio**: master controls, effects, music, spatial panning, and global
   playback behavior.
 - **3D**: cube-cluster pickups and modular level pieces.

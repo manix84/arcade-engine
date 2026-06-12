@@ -64,6 +64,19 @@ export {
   wrapDepth,
 } from "./arcade-3d.js";
 export {
+  findStringTileMapCell,
+  findStringTileMapCells,
+  getStringTileMapCellFromCenteredPoint,
+  getStringTileMapCenteredPoint,
+  getStringTileMapTile,
+  parseStringTileMap,
+} from "./string-tile-map.js";
+export type {
+  ParseStringTileMapOptions,
+  StringTileMap,
+  StringTileMapCell,
+} from "./string-tile-map.js";
+export {
   AtmosphericAshEmberEffect,
   AtmosphericRainEffect,
   AtmosphericSnowEffect,
@@ -127,6 +140,15 @@ export {
   parseHexColor,
   shadeHexColor,
 } from "./canvas-rendering.js";
+export {
+  createRayTracingBoundsPolygon,
+  createRayTracingRectangle,
+  getRayTracingPolygonSegments,
+  getRayTracingSegments,
+  traceLightBounces,
+  traceRay,
+  traceVisibilityPolygon,
+} from "./ray-tracing.js";
 export {
   defaultCustomDisplayFilterSettings,
   defaultDisplayFilterMode,
@@ -439,6 +461,16 @@ export type {
   SpatialAudioMixOptions,
 } from "./spatial-audio.js";
 export type { RgbColor } from "./canvas-rendering.js";
+export type {
+  RayTracingBounce,
+  RayTracingBounceOptions,
+  RayTracingBounds,
+  RayTracingHit,
+  RayTracingPoint,
+  RayTracingPolygon,
+  RayTracingSegment,
+  RayTracingSurface,
+} from "./ray-tracing.js";
 export type {
   GravityOptions,
   PhysicsBody2D,

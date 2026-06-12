@@ -78,6 +78,9 @@ Audio must still be started by user gestures when browsers require it.
 - Spawn coordinates along an arc.
 - Radial collision and area-exit checks.
 - Object cloning.
+
+[string-tile-map.ts](string-tile-map.ts) parses text-authored tile maps and
+provides cell lookup helpers for grid, board, and room-style games.
 - Random colors.
 - Event binding and unbinding.
 
@@ -190,7 +193,7 @@ Use it for:
 
 Games keep their concrete option schema, migrations, and validation rules. The
 module is exported from the package root, and the
-`Engine/Systems/Player Data/User Options` Storybook story shows a small
+`Engine/Player Data/User Options` Storybook story shows a small
 settings store.
 
 ## 🧰 Runtime Utilities
@@ -216,7 +219,7 @@ Use it for:
 - Achievement definitions, unlock state, progress counters, and status lists.
 
 The module has no browser dependency and is exported from the package root. The
-`Engine/Systems/Achievements/Achievements` Storybook story shows progress
+`Engine/Achievements/Achievements` Storybook story shows progress
 counters, direct unlocks, status lists, and immutable state updates.
 
 ## 🏆 Achievement Notifications
@@ -252,7 +255,7 @@ Use it for:
 
 Backends can import `arcade-engine/high-scores` for receipt and submission
 validation helpers while keeping route handling, score storage, used-receipt
-updates, and rate limits app-owned. See the `Engine/Systems/Player Data/High Scores`
+updates, and rate limits app-owned. See the `Engine/Player Data/High Scores`
 Storybook story for local leaderboards, default-score merging, thresholds, integrity
 validation, and plausibility feedback.
 
@@ -330,6 +333,23 @@ helpers used by the visual demos:
 
 `fillCanvasWithTrail` accepts normal CSS colors. The color conversion helpers
 expect 3 or 6 digit hex strings.
+
+## 💡 Ray Tracing
+
+[ray-tracing.ts](ray-tracing.ts) contains renderer-agnostic 2D visibility
+helpers:
+
+- Rectangle and bounds polygon creation.
+- Polygon-to-segment conversion.
+- Nearest ray/segment intersection.
+- Sorted visibility polygon tracing from a light or viewpoint.
+- Capped diffuse bounce layer tracing for simple indirect-light demos.
+- Optional surface colors for material-tinted bounce layers.
+
+Use these helpers for canvas lighting, vision cones, line-of-sight previews,
+fog-of-war shapes, or stealth visibility. The helpers return geometry only;
+games still own gradients, color blending, shadow styling, and interaction.
+Bounce requests are currently capped to `0..3` layers.
 
 ## 🕹️ 2.5D Projection
 
