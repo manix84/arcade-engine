@@ -8,7 +8,7 @@ import {
 } from "./systems-demos.js";
 
 const meta = {
-  title: "Engine/Systems/Presentation",
+  title: "Engine/Rendering",
 } satisfies Meta;
 
 export default meta;

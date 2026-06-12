@@ -7,7 +7,7 @@ import {
 } from "./systems-demos.js";
 
 const meta = {
-  title: "Engine/Systems/Physics",
+  title: "Engine/Physics",
 } satisfies Meta;
 
 export default meta;

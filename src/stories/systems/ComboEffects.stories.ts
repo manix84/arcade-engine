@@ -7,7 +7,7 @@ import {
 } from "./systems-demos.js";
 
 const meta = {
-  title: "Engine/Systems/Combo Effects",
+  title: "Engine/Effects/Combos",
 } satisfies Meta;
 
 export default meta;

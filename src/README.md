@@ -190,7 +190,7 @@ Use it for:
 
 Games keep their concrete option schema, migrations, and validation rules. The
 module is exported from the package root, and the
-`Engine/Systems/Player Data/User Options` Storybook story shows a small
+`Engine/Player Data/User Options` Storybook story shows a small
 settings store.
 
 ## 🧰 Runtime Utilities
@@ -216,7 +216,7 @@ Use it for:
 - Achievement definitions, unlock state, progress counters, and status lists.
 
 The module has no browser dependency and is exported from the package root. The
-`Engine/Systems/Achievements/Achievements` Storybook story shows progress
+`Engine/Achievements/Achievements` Storybook story shows progress
 counters, direct unlocks, status lists, and immutable state updates.
 
 ## 🏆 Achievement Notifications
@@ -252,7 +252,7 @@ Use it for:
 
 Backends can import `arcade-engine/high-scores` for receipt and submission
 validation helpers while keeping route handling, score storage, used-receipt
-updates, and rate limits app-owned. See the `Engine/Systems/Player Data/High Scores`
+updates, and rate limits app-owned. See the `Engine/Player Data/High Scores`
 Storybook story for local leaderboards, default-score merging, thresholds, integrity
 validation, and plausibility feedback.
 

@@ -1,7 +1,16 @@
-# 🧩 Systems Stories
+# 🧩 Shared Feature Stories
 
-This folder documents engine helpers that coordinate common game systems rather
-than a single geometry or drawing operation.
+This folder contains shared story implementations for several Storybook sidebar
+sections. The visible Storybook groups are feature-oriented rather than nested
+under a broad "Systems" bucket:
+
+- `Engine/Input`
+- `Engine/Player Data`
+- `Engine/Achievements`
+- `Engine/Rendering`
+- `Engine/Effects`
+- `Engine/Physics`
+- `Engine/Audio/Spatial Audio`
 
 ## 🎮 Input Actions
 

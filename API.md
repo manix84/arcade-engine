@@ -325,7 +325,7 @@ achievements = addAchievementProgress(
 
 Achievement helpers are local game-state utilities. Remote leaderboard
 validation is handled by the high-score helpers. See
-`Engine/Systems/New Helpers/Achievements` in Storybook for an interactive
+`Engine/Achievements/Achievements` in Storybook for an interactive
 progress and unlock demo.
 
 ## 🏆 Achievement Notifications
@@ -450,7 +450,7 @@ if (!trusted) {
 ```
 
 Use these helpers alongside your API routes, score storage, used-receipt
-updates, and rate limits. See `Engine/Systems/New Helpers/High Scores` in
+updates, and rate limits. See `Engine/Player Data/High Scores` in
 Storybook for a local leaderboard and validation demo.
 
 ## 🎞️ Sprite Animation
@@ -604,7 +604,7 @@ requests are capped to `0..3` layers for now, and the demo assumes
 low-reflectivity materials with steep attenuation. Bounds and occluders can
 provide `surfaceColor` values so bounced layers inherit some of the material
 color they hit. See
-`Engine/Systems/Presentation/Ray Traced Apartment` in Storybook for a Canvas 2D
+`Engine/Rendering/Ray Traced Apartment` in Storybook for a Canvas 2D
 lighting demo with draggable furniture, a movable lamp, per-light intensity
 controls, one bounce enabled by default, bounce attenuation tuning, a ray-guide
 toggle, and monochrome TV-static flicker.

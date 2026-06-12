@@ -7,7 +7,7 @@ import {
 } from "./systems-demos.js";
 
 const meta = {
-  title: "Engine/Systems/Atmospheric Effects",
+  title: "Engine/Effects/Atmospheric",
 } satisfies Meta;
 
 export default meta;

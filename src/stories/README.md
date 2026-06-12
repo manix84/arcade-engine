@@ -62,15 +62,21 @@ viewport scaling, padded radii, movement vectors, and a depth variant.
 [Helpers.stories.ts](Helpers.stories.ts) is the broad helper overview. More
 focused helper stories live in [helpers/README.md](helpers/README.md).
 
-### Systems
+### Input, Data, Rendering, Effects, And Physics
 
-[systems/Systems.stories.ts](systems/Systems.stories.ts) documents newer
-system-level helpers for input actions, local multiplayer, sprite animation,
-follow cameras, user options, display filters, achievements, achievement
-notifications, high scores, procedural background stars, player screen effects,
-environment screen effects, atmospheric effects, ray-traced apartment lighting,
-gravity, 2D/3D ragdolls, and spatial-audio math.
-See [systems/README.md](systems/README.md).
+The shared demo implementations in [systems/](systems/README.md) are grouped in
+the Storybook sidebar by the feature they demonstrate:
+
+- `Engine/Input` for input actions and local multiplayer.
+- `Engine/Player Data` for user options and high scores.
+- `Engine/Achievements` for achievement progress and notifications.
+- `Engine/Rendering` for display filters, sprite animation, procedural stars,
+  camera helpers, and ray-traced apartment lighting.
+- `Engine/Effects` for player, environment, atmospheric, and combo effects.
+- `Engine/Physics` for gravity and 2D/3D ragdolls.
+- `Engine/Audio/Spatial Audio` for spatial-audio math.
+
+See [systems/README.md](systems/README.md) for the shared implementation notes.
 
 Screen-effect and atmospheric demos share [fps-demo-scene.ts](fps-demo-scene.ts),
 a low-resolution Canvas 2D first-person corridor renderer with a fixed

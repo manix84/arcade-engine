@@ -6,7 +6,7 @@ import {
 } from "./systems-demos.js";
 
 const meta = {
-  title: "Engine/Systems/Achievements",
+  title: "Engine/Achievements",
 } satisfies Meta;
 
 export default meta;
