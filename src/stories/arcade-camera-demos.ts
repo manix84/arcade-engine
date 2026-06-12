@@ -7,7 +7,6 @@ import {
   fillCanvasWithTrail,
   getDepthProgress,
   getIsometricTileCorners,
-  getIsometricWallSide,
   getLoopedScrollerPosition,
   getLoopedDepth,
   projectIsometricPoint,
@@ -40,8 +39,19 @@ type Story = StoryObj<Arcade3DStoryArgs>;
 
 type PointerState = {
   active: boolean;
+  baseX: number;
+  baseY: number;
+  dragStartX: number;
+  dragStartY: number;
   x: number;
   y: number;
+  zoom: number;
+};
+
+type KeyboardState = {
+  playerX: number;
+  playerZ: number;
+  pressed: Set<string>;
 };
 
 type SceneContext = {
@@ -50,7 +60,15 @@ type SceneContext = {
   delta: number;
   elapsed: number;
   frame: number;
+  keyboard: KeyboardState;
   pointer: PointerState;
+};
+
+type IsometricDungeonTile = "#" | "." | "C" | "D" | "P" | "S" | "T" | "W";
+
+type StoryShellOptions = {
+  enableArrowMovement?: boolean;
+  enableWheelZoom?: boolean;
 };
 
 const argTypes: Story["argTypes"] = {
@@ -63,6 +81,16 @@ const argTypes: Story["argTypes"] = {
   trailOpacity: { name: "Trail opacity", control: { type: "range", min: 0, max: 0.45, step: 0.01 } },
 };
 
+const isometricDungeonArgTypes: Story["argTypes"] = {
+  ...argTypes,
+  depth: {
+    table: { disable: true },
+  },
+  objectCount: {
+    table: { disable: true },
+  },
+};
+
 const defaultArgs = {
   accentColor: "#4fd1c5",
   backgroundColor: "#05070a",
@@ -73,11 +101,28 @@ const defaultArgs = {
   trailOpacity: 0.16,
 } satisfies Arcade3DStoryArgs;
 
+const isometricDungeonMap = [
+  "###########",
+  "#..T...T..#",
+  "#.........#",
+  "#..P...P..#",
+  "#....W....#",
+  "#.........#",
+  "#..C...S..#",
+  "#.........#",
+  "#..T...T..#",
+  "###..D..###",
+  "###########",
+] as const;
+
+let isometricDungeonCanvas: HTMLCanvasElement | undefined;
+
 const createStoryShell = (
   title: string,
   args: Arcade3DStoryArgs,
   renderScene: (scene: SceneContext, args: Arcade3DStoryArgs) => void,
-  stats: Array<[string, string | number]>
+  stats: Array<[string, string | number]>,
+  options: StoryShellOptions = {}
 ): HTMLElement => {
   const shell = createDemoShell(title);
   const grid = document.createElement("div");
@@ -89,7 +134,21 @@ const createStoryShell = (
   const valueItems = stats.map(([label, value]) => createValue(label, value));
   const fpsValue = createValue("fps", "0");
   const ticker = new Ticker();
-  const pointer: PointerState = { active: false, x: 0, y: 0 };
+  const keyboard: KeyboardState = {
+    playerX: -1,
+    playerZ: 1,
+    pressed: new Set<string>(),
+  };
+  const pointer: PointerState = {
+    active: false,
+    baseX: 0,
+    baseY: 0,
+    dragStartX: 0,
+    dragStartY: 0,
+    x: 0,
+    y: 0,
+    zoom: 1,
+  };
   let frame = 0;
   let lastTime = performance.now();
   let fpsAge = 0;
@@ -103,6 +162,7 @@ const createStoryShell = (
   canvas.height = 420;
   canvas.style.cursor = "grab";
   canvas.style.touchAction = "none";
+  canvas.tabIndex = 0;
   stage.appendChild(canvas);
   values.append(...valueItems, fpsValue);
   scenePanel.appendChild(stage);
@@ -116,23 +176,45 @@ const createStoryShell = (
     return shell;
   }
 
-  const updatePointer = (event: PointerEvent): void => {
+  const getNormalizedPointer = (event: PointerEvent): { x: number; y: number } => {
     const bounds = canvas.getBoundingClientRect();
 
-    pointer.active = true;
-    pointer.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
-    pointer.y = ((event.clientY - bounds.top) / bounds.height) * 2 - 1;
+    return {
+      x: ((event.clientX - bounds.left) / bounds.width) * 2 - 1,
+      y: ((event.clientY - bounds.top) / bounds.height) * 2 - 1,
+    };
+  };
+
+  const updatePointer = (event: PointerEvent): void => {
+    const normalizedPointer = getNormalizedPointer(event);
+
+    pointer.x = pointer.baseX + normalizedPointer.x - pointer.dragStartX;
+    pointer.y = pointer.baseY + normalizedPointer.y - pointer.dragStartY;
   };
 
   const handlePointerDown = (event: PointerEvent): void => {
-    updatePointer(event);
+    const normalizedPointer = getNormalizedPointer(event);
+
+    canvas.focus();
+    pointer.active = true;
+    pointer.baseX = pointer.x;
+    pointer.baseY = pointer.y;
+    pointer.dragStartX = normalizedPointer.x;
+    pointer.dragStartY = normalizedPointer.y;
     canvas.style.cursor = "grabbing";
     canvas.setPointerCapture(event.pointerId);
   };
 
-  const handlePointerMove = (event: PointerEvent): void => updatePointer(event);
+  const handlePointerMove = (event: PointerEvent): void => {
+    if (!pointer.active) {
+      return;
+    }
+
+    updatePointer(event);
+  };
 
   const handlePointerUp = (event: PointerEvent): void => {
+    pointer.active = false;
     canvas.style.cursor = "grab";
 
     if (canvas.hasPointerCapture(event.pointerId)) {
@@ -141,9 +223,38 @@ const createStoryShell = (
   };
 
   const handlePointerLeave = (): void => {
-    pointer.active = false;
-    pointer.x = 0;
-    pointer.y = 0;
+    if (!pointer.active) {
+      canvas.style.cursor = "grab";
+    }
+  };
+
+  const handleWheel = (event: WheelEvent): void => {
+    if (!options.enableWheelZoom) {
+      return;
+    }
+
+    event.preventDefault();
+    const zoomDelta = event.deltaY > 0 ? -0.08 : 0.08;
+
+    pointer.zoom = Math.max(0.65, Math.min(2.2, pointer.zoom + zoomDelta));
+  };
+
+  const handleKeyDown = (event: KeyboardEvent): void => {
+    if (!options.enableArrowMovement || !isArrowKey(event.key)) {
+      return;
+    }
+
+    event.preventDefault();
+    keyboard.pressed.add(event.key);
+  };
+
+  const handleKeyUp = (event: KeyboardEvent): void => {
+    if (!options.enableArrowMovement || !isArrowKey(event.key)) {
+      return;
+    }
+
+    event.preventDefault();
+    keyboard.pressed.delete(event.key);
   };
 
   canvas.addEventListener("pointerdown", handlePointerDown);
@@ -151,6 +262,9 @@ const createStoryShell = (
   canvas.addEventListener("pointerup", handlePointerUp);
   canvas.addEventListener("pointercancel", handlePointerUp);
   canvas.addEventListener("pointerleave", handlePointerLeave);
+  canvas.addEventListener("wheel", handleWheel, { passive: false });
+  window.addEventListener("keydown", handleKeyDown);
+  window.addEventListener("keyup", handleKeyUp);
 
   const render = (): void => {
     const now = performance.now();
@@ -174,6 +288,7 @@ const createStoryShell = (
         delta,
         elapsed: now / 1000,
         frame,
+        keyboard,
         pointer,
       },
       args
@@ -189,10 +304,16 @@ const createStoryShell = (
     canvas.removeEventListener("pointerup", handlePointerUp);
     canvas.removeEventListener("pointercancel", handlePointerUp);
     canvas.removeEventListener("pointerleave", handlePointerLeave);
+    canvas.removeEventListener("wheel", handleWheel);
+    window.removeEventListener("keydown", handleKeyDown);
+    window.removeEventListener("keyup", handleKeyUp);
   });
 
   return shell;
 };
+
+const isArrowKey = (key: string): boolean =>
+  key === "ArrowUp" || key === "ArrowDown" || key === "ArrowLeft" || key === "ArrowRight";
 
 const drawNeonRacer = (
   { canvas, context, elapsed, pointer }: SceneContext,
@@ -396,60 +517,373 @@ const drawStarfighterRun = (
 };
 
 const drawIsometricDungeon = (
-  { canvas, context, elapsed, pointer }: SceneContext,
+  { canvas, context, delta, elapsed, keyboard, pointer }: SceneContext,
   args: Arcade3DStoryArgs
 ): void => {
-  const tile = 34;
-  const origin = { x: canvas.width / 2 + pointer.x * 86, y: 112 + pointer.y * 46 };
+  const pixelScale = 2;
+  const width = Math.max(1, Math.floor(canvas.width / pixelScale));
+  const height = Math.max(1, Math.floor(canvas.height / pixelScale));
+  const internalCanvas = getIsometricDungeonCanvas(width, height);
+  const internalContext = internalCanvas.getContext("2d");
+
+  if (!internalContext) {
+    return;
+  }
+
+  internalContext.imageSmoothingEnabled = false;
+  drawIsometricDungeonScene(internalContext, {
+    args,
+    delta,
+    elapsed,
+    height,
+    keyboard,
+    pointer,
+    width,
+  });
+
+  context.save();
+  context.imageSmoothingEnabled = false;
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(internalCanvas, 0, 0, canvas.width, canvas.height);
+  context.restore();
+};
+
+const getIsometricDungeonCanvas = (
+  width: number,
+  height: number
+): HTMLCanvasElement => {
+  isometricDungeonCanvas ??= document.createElement("canvas");
+  isometricDungeonCanvas.width = width;
+  isometricDungeonCanvas.height = height;
+
+  return isometricDungeonCanvas;
+};
+
+const drawIsometricDungeonScene = (
+  context: CanvasRenderingContext2D,
+  options: {
+    args: Arcade3DStoryArgs;
+    delta: number;
+    elapsed: number;
+    height: number;
+    keyboard: KeyboardState;
+    pointer: PointerState;
+    width: number;
+  }
+): void => {
+  const { args, delta, elapsed, height, keyboard, pointer, width } = options;
+  const tile = Math.max(12, Math.round(18 * pointer.zoom));
+  const origin = {
+    x: width / 2,
+    y: height / 2,
+  };
   const isoOptions = { origin, tileHeight: tile, tileWidth: tile * 2 };
-  const bob = Math.sin(elapsed * args.speed * 1.8) * 4;
+  const rotation = pointer.x * Math.PI;
 
-  fillCanvasWithTrail(context, canvas, args.backgroundColor, args.trailOpacity * 0.4);
+  updateIsometricDungeonPlayer(keyboard, rotation, delta, args.speed);
+  drawIsometricDungeonBackdrop(context, width, height, args.backgroundColor);
 
-  for (let z = 7; z >= -7; z--) {
-    for (let x = -7; x <= 7; x++) {
-      const distance = Math.abs(x) + Math.abs(z);
-      const center = projectIsometricPoint({ x, y: 0, z }, isoOptions);
-      const tileCorners = getIsometricTileCorners(center, isoOptions);
-      const isWall = distance > 8 || (x === -2 && z > -5 && z < 4) || (z === 3 && x > -1 && x < 6);
-      const pulse = 0.55 + Math.sin(elapsed * args.speed + distance) * 0.08;
+  isometricDungeonMap
+    .flatMap((row, zIndex) =>
+      [...row].map((tileCode, xIndex) => {
+        const gridX = xIndex - Math.floor(row.length / 2);
+        const gridZ = zIndex - Math.floor(isometricDungeonMap.length / 2);
+        const corners = getRotatedIsometricTileCorners(gridX, gridZ, rotation, isoOptions);
+        const center = getPolygonCenter(corners);
 
-      drawCanvasPolygon(
-        context,
-        tileCorners,
-        colorWithAlpha(isWall ? args.secondaryColor : args.accentColor, isWall ? 0.16 : 0.08 + pulse * 0.08),
-        colorWithAlpha(isWall ? args.secondaryColor : args.accentColor, isWall ? 0.48 : 0.22)
-      );
+        return {
+          center,
+          corners,
+          tileCode,
+          xIndex,
+          zIndex,
+        };
+      })
+    )
+    .sort((first, second) => first.center.y - second.center.y)
+    .forEach(({ center, corners, tileCode, xIndex, zIndex }) => {
+      const tileKind = tileCode as IsometricDungeonTile;
 
-      if (isWall) {
-        drawCanvasPolygon(
-          context,
-          getIsometricWallSide(tileCorners, tile),
-          colorWithAlpha(args.secondaryColor, 0.15)
-        );
+      if (tileKind === "#") {
+        drawIsometricDungeonWall(context, corners, tile);
+        return;
       }
+
+      drawIsometricDungeonFloor(context, corners, tileKind, xIndex, zIndex);
+      drawIsometricDungeonProp(context, center, tileKind, elapsed, args);
+    });
+
+  drawIsometricDungeonPlayer(context, isoOptions, rotation, keyboard, elapsed, args);
+};
+
+const updateIsometricDungeonPlayer = (
+  keyboard: KeyboardState,
+  rotation: number,
+  delta: number,
+  speed: number
+): void => {
+  let screenX = 0;
+  let screenZ = 0;
+
+  if (keyboard.pressed.has("ArrowLeft")) {
+    screenX -= 1;
+  }
+
+  if (keyboard.pressed.has("ArrowRight")) {
+    screenX += 1;
+  }
+
+  if (keyboard.pressed.has("ArrowUp")) {
+    screenZ -= 1;
+  }
+
+  if (keyboard.pressed.has("ArrowDown")) {
+    screenZ += 1;
+  }
+
+  if (screenX === 0 && screenZ === 0) {
+    return;
+  }
+
+  const magnitude = Math.hypot(screenX, screenZ);
+  const normalizedX = screenX / magnitude;
+  const normalizedZ = screenZ / magnitude;
+  const cos = Math.cos(-rotation);
+  const sin = Math.sin(-rotation);
+  const worldX = normalizedX * cos - normalizedZ * sin;
+  const worldZ = normalizedX * sin + normalizedZ * cos;
+  const step = delta * (2.4 + speed * 0.35);
+  const nextX = keyboard.playerX + worldX * step;
+  const nextZ = keyboard.playerZ + worldZ * step;
+
+  if (isIsometricDungeonWalkable(nextX, keyboard.playerZ)) {
+    keyboard.playerX = nextX;
+  }
+
+  if (isIsometricDungeonWalkable(keyboard.playerX, nextZ)) {
+    keyboard.playerZ = nextZ;
+  }
+};
+
+const isIsometricDungeonWalkable = (x: number, z: number): boolean => {
+  const column = Math.floor(x + isometricDungeonMap[0].length / 2);
+  const row = Math.floor(z + isometricDungeonMap.length / 2);
+  const tile = isometricDungeonMap[row]?.[column] as IsometricDungeonTile | undefined;
+
+  return tile !== undefined && tile !== "#";
+};
+
+const projectRotatedIsometricPoint = (
+  x: number,
+  z: number,
+  rotation: number,
+  isoOptions: Parameters<typeof projectIsometricPoint>[1]
+): ReturnType<typeof projectIsometricPoint> => {
+  const cos = Math.cos(rotation);
+  const sin = Math.sin(rotation);
+
+  return projectIsometricPoint(
+    {
+      x: x * cos - z * sin,
+      y: 0,
+      z: x * sin + z * cos,
+    },
+    isoOptions
+  );
+};
+
+const getRotatedIsometricTileCorners = (
+  x: number,
+  z: number,
+  rotation: number,
+  isoOptions: Parameters<typeof projectIsometricPoint>[1]
+): ReturnType<typeof getIsometricTileCorners> => [
+  projectRotatedIsometricPoint(x, z, rotation, isoOptions),
+  projectRotatedIsometricPoint(x + 1, z, rotation, isoOptions),
+  projectRotatedIsometricPoint(x + 1, z + 1, rotation, isoOptions),
+  projectRotatedIsometricPoint(x, z + 1, rotation, isoOptions),
+];
+
+const getPolygonCenter = (
+  points: ReturnType<typeof getIsometricTileCorners>
+): ReturnType<typeof projectIsometricPoint> => {
+  const total = points.reduce(
+    (sum, point) => ({
+      x: sum.x + point.x,
+      y: sum.y + point.y,
+    }),
+    { x: 0, y: 0 }
+  );
+
+  return {
+    x: total.x / points.length,
+    y: total.y / points.length,
+  };
+};
+
+const drawIsometricDungeonBackdrop = (
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  backgroundColor: string
+): void => {
+  const gradient = context.createLinearGradient(0, 0, 0, height);
+
+  gradient.addColorStop(0, backgroundColor);
+  gradient.addColorStop(0.58, "#111017");
+  gradient.addColorStop(1, "#06070b");
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, width, height);
+  context.fillStyle = "rgba(0, 0, 0, 0.28)";
+  context.fillRect(0, Math.floor(height * 0.78), width, Math.ceil(height * 0.22));
+};
+
+const drawIsometricDungeonFloor = (
+  context: CanvasRenderingContext2D,
+  corners: ReturnType<typeof getIsometricTileCorners>,
+  tileKind: IsometricDungeonTile,
+  xIndex: number,
+  zIndex: number
+): void => {
+  const isWater = tileKind === "W";
+  const isDoor = tileKind === "D";
+  const shade = (xIndex + zIndex) % 2 === 0 ? 0.92 : 1;
+
+  drawCanvasPolygon(
+    context,
+    corners,
+    isWater
+      ? "rgba(54, 117, 138, 0.72)"
+      : isDoor
+        ? "rgba(87, 61, 42, 0.92)"
+        : `rgba(${Math.round(42 * shade)}, ${Math.round(43 * shade)}, ${Math.round(52 * shade)}, 0.95)`,
+    isWater ? "rgba(144, 205, 244, 0.42)" : "rgba(10, 11, 16, 0.7)"
+  );
+
+  if (!isWater && tileKind !== "D") {
+    const [top, right, bottom, left] = corners;
+
+    drawCanvasLine(context, top, bottom, "rgba(255, 255, 255, 0.05)");
+    drawCanvasLine(context, left, right, "rgba(0, 0, 0, 0.18)");
+  }
+};
+
+const drawIsometricDungeonWall = (
+  context: CanvasRenderingContext2D,
+  corners: ReturnType<typeof getIsometricTileCorners>,
+  height: number
+): void => {
+  const raised = corners.map((point) => ({ x: point.x, y: point.y - height }));
+  const shades = [
+    "rgba(31, 28, 39, 0.98)",
+    "rgba(42, 37, 52, 0.98)",
+    "rgba(24, 22, 31, 0.98)",
+    "rgba(36, 32, 45, 0.98)",
+  ];
+
+  getIsometricWallFaces(raised, height)
+    .sort((first, second) => first.depth - second.depth)
+    .forEach((face) => {
+      drawCanvasPolygon(context, face.points, shades[face.index]);
+    });
+
+  drawCanvasPolygon(context, raised, "rgba(62, 55, 75, 0.98)", "rgba(148, 122, 176, 0.35)");
+
+  const [, right, , left] = raised;
+  drawCanvasLine(context, left, right, "rgba(255, 255, 255, 0.08)");
+};
+
+const getIsometricWallFaces = (
+  raised: ReturnType<typeof getIsometricTileCorners>,
+  height: number
+): Array<{
+  depth: number;
+  index: number;
+  points: ReturnType<typeof getIsometricTileCorners>;
+}> =>
+  raised.map((from, index) => {
+    const to = raised[(index + 1) % raised.length];
+    const lowerTo = { x: to.x, y: to.y + height };
+    const lowerFrom = { x: from.x, y: from.y + height };
+    const points = [from, to, lowerTo, lowerFrom] as ReturnType<typeof getIsometricTileCorners>;
+
+    return {
+      depth: getPolygonCenter(points).y,
+      index,
+      points,
+    };
+  });
+
+const drawIsometricDungeonProp = (
+  context: CanvasRenderingContext2D,
+  center: { x: number; y: number },
+  tileKind: IsometricDungeonTile,
+  elapsed: number,
+  args: Arcade3DStoryArgs
+): void => {
+  if (tileKind === "T") {
+    const flicker = 0.75 + Math.sin(elapsed * args.speed * 12 + center.x) * 0.15;
+
+    context.fillStyle = "rgba(61, 42, 28, 0.9)";
+    context.fillRect(center.x - 2, center.y + 1, 4, 12);
+    context.fillStyle = colorWithAlpha(args.secondaryColor, 0.52 * flicker);
+    context.beginPath();
+    context.arc(center.x, center.y - 2, 10, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = colorWithAlpha("#f6e05e", 0.92);
+    context.fillRect(center.x - 2, center.y - 8, 4, 7);
+    return;
+  }
+
+  if (tileKind === "P") {
+    context.fillStyle = "rgba(14, 15, 20, 0.48)";
+    context.fillRect(center.x - 8, center.y + 10, 16, 5);
+    context.fillStyle = "rgba(73, 67, 87, 0.96)";
+    context.fillRect(center.x - 6, center.y - 18, 12, 30);
+    context.fillStyle = "rgba(112, 100, 132, 0.96)";
+    context.fillRect(center.x - 8, center.y - 23, 16, 6);
+    context.fillRect(center.x - 8, center.y + 8, 16, 6);
+    return;
+  }
+
+  if (tileKind === "C") {
+    context.fillStyle = "rgba(12, 11, 14, 0.45)";
+    context.fillRect(center.x - 12, center.y + 11, 24, 5);
+    context.fillStyle = "rgba(99, 62, 34, 0.96)";
+    context.fillRect(center.x - 12, center.y - 7, 24, 17);
+    context.fillStyle = colorWithAlpha(args.secondaryColor, 0.82);
+    context.fillRect(center.x - 2, center.y - 6, 4, 16);
+    context.fillRect(center.x - 12, center.y, 24, 3);
+    return;
+  }
+
+  if (tileKind === "S") {
+    for (let step = 0; step < 4; step++) {
+      context.fillStyle = `rgba(75, 69, 88, ${0.88 - step * 0.08})`;
+      context.fillRect(center.x - 14 + step * 3, center.y - 4 + step * 5, 28 - step * 6, 4);
     }
   }
+};
 
-  for (let index = 0; index < Math.min(10, args.objectCount); index++) {
-    const angle = elapsed * args.speed * 0.8 + index * 2.1;
-    const gridX = Math.round(Math.cos(angle) * 4);
-    const gridZ = Math.round(Math.sin(angle * 0.7) * 3);
-    const loot = projectIsometricPoint({ x: gridX, y: 0, z: gridZ }, isoOptions);
-    const x = loot.x;
-    const y = loot.y - 18 - bob;
+const drawIsometricDungeonPlayer = (
+  context: CanvasRenderingContext2D,
+  isoOptions: Parameters<typeof projectIsometricPoint>[1],
+  rotation: number,
+  keyboard: KeyboardState,
+  elapsed: number,
+  args: Arcade3DStoryArgs
+): void => {
+  const bob = Math.sin(elapsed * args.speed * 4) * 2;
+  const center = projectRotatedIsometricPoint(keyboard.playerX, keyboard.playerZ, rotation, isoOptions);
 
-    context.fillStyle = colorWithAlpha(index % 2 === 0 ? args.accentColor : args.secondaryColor, 0.82);
-    context.beginPath();
-    context.moveTo(x, y - 18);
-    context.lineTo(x + 15, y);
-    context.lineTo(x, y + 18);
-    context.lineTo(x - 15, y);
-    context.closePath();
-    context.fill();
-    context.strokeStyle = colorWithAlpha("#ffffff", 0.45);
-    context.stroke();
-  }
+  context.fillStyle = "rgba(0, 0, 0, 0.34)";
+  context.fillRect(center.x - 9, center.y + 11, 18, 5);
+  context.fillStyle = colorWithAlpha(args.accentColor, 0.95);
+  context.fillRect(center.x - 6, center.y - 18 + bob, 12, 21);
+  context.fillStyle = "#e8d4b2";
+  context.fillRect(center.x - 5, center.y - 27 + bob, 10, 9);
+  context.fillStyle = colorWithAlpha(args.secondaryColor, 0.84);
+  context.fillRect(center.x + 4, center.y - 12 + bob, 12, 4);
 };
 
 const drawHyperspaceGate = (
@@ -1022,13 +1456,13 @@ export const IsometricDungeonRoom: Story = {
     speed: 0.8,
     trailOpacity: 0.05,
   },
-  argTypes,
+  argTypes: isometricDungeonArgTypes,
   render: (args) =>
     createStoryShell("3D isometric dungeon room", args, drawIsometricDungeon, [
       ["mode", "room"],
-      ["loot", args.objectCount],
-      ["camera", "isometric"],
-    ]),
+      ["drag", "rotate"],
+      ["keys", "move"],
+    ], { enableArrowMovement: true, enableWheelZoom: true }),
 };
 
 export const HyperspaceGate: Story = {
