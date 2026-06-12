@@ -762,109 +762,330 @@ const drawNeonRacer = (
   { canvas, context, elapsed, pointer }: SceneContext,
   args: Arcade3DStoryArgs
 ): void => {
-  const cameraOffset = pointer.x * 54;
-  const horizon = canvas.height * 0.38 + pointer.y * 18;
-  const centerX = canvas.width / 2 + cameraOffset;
-  const roadTop = canvas.width * 0.08;
-  const roadBottom = canvas.width * 0.43;
-  const road = [
-    { x: centerX - roadTop, y: horizon },
-    { x: centerX + roadTop, y: horizon },
-    { x: canvas.width / 2 + roadBottom + cameraOffset * 0.22, y: canvas.height },
-    { x: canvas.width / 2 - roadBottom + cameraOffset * 0.22, y: canvas.height },
-  ];
+  const viewport = { height: canvas.height, width: canvas.width };
+  const centerX = canvas.width / 2 + pointer.x * 76;
+  const horizon = canvas.height * 0.4 + pointer.y * 26;
+  const roadDepth = Math.max(18, args.depth);
+  const roadY = (z: number): number => 282 - z * 4.5;
+  const roadCurve = (z: number): number =>
+    Math.sin(elapsed * 0.24 + z * 0.18) * 24 * getDepthProgress(z, roadDepth) + pointer.x * z * 2.4;
+  const roadPoint = (x: number, z: number) =>
+    projectPerspectivePoint(
+      { x: x + roadCurve(z), y: roadY(z), z },
+      viewport,
+      { centerX, focalLength: 470, horizon }
+    );
 
-  fillCanvasWithTrail(context, canvas, args.backgroundColor, args.trailOpacity);
+  fillCanvasWithTrail(context, canvas, args.backgroundColor, Math.min(args.trailOpacity, 0.12));
+
   const sky = context.createLinearGradient(0, 0, 0, canvas.height);
 
-  sky.addColorStop(0, colorWithAlpha(args.accentColor, 0.12));
-  sky.addColorStop(0.52, colorWithAlpha(args.backgroundColor, 0.2));
-  sky.addColorStop(1, colorWithAlpha(args.secondaryColor, 0.08));
+  sky.addColorStop(0, "#08111f");
+  sky.addColorStop(0.42, "#171126");
+  sky.addColorStop(0.7, "#241529");
+  sky.addColorStop(1, "#05070a");
   context.fillStyle = sky;
   context.fillRect(0, 0, canvas.width, canvas.height);
-  drawCanvasPolygon(context, road, "rgba(8, 12, 18, 0.92)", colorWithAlpha(args.accentColor, 0.42));
 
-  for (let index = 0; index < Math.max(8, args.objectCount); index++) {
-    const z = getLoopedDepth({
-      depth: args.depth,
-      elapsedSeconds: elapsed,
-      index,
-      spacing: 2.6,
-      speed: args.speed * 7,
-    });
-    const width = 10 + z * 5.5;
-    const y = horizon + (canvas.height - horizon) * (1 - z / args.depth) ** 2;
-    const center = centerX + Math.sin(z * 0.9 + elapsed) * 18 * (1 - z / args.depth);
+  const haze = context.createLinearGradient(0, horizon - 70, 0, horizon + 90);
 
-    drawCanvasLine(
-      context,
-      { x: center - width, y },
-      { x: center + width, y },
-      index % 2 === 0 ? colorWithAlpha(args.secondaryColor, 0.95) : colorWithAlpha(args.accentColor, 0.85),
-      Math.max(1, 5 * (1 - z / args.depth))
-    );
+  haze.addColorStop(0, colorWithAlpha(args.accentColor, 0));
+  haze.addColorStop(0.54, colorWithAlpha(args.accentColor, 0.18));
+  haze.addColorStop(1, colorWithAlpha("#05070a", 0));
+  context.fillStyle = haze;
+  context.fillRect(0, Math.max(0, horizon - 80), canvas.width, 190);
+
+  for (let index = 0; index < 24; index++) {
+    const width = 28 + (index % 5) * 14;
+    const height = 42 + ((index * 19) % 76);
+    const x = ((index * 83 + Math.floor(elapsed * 12)) % (canvas.width + 140)) - 70;
+    const y = horizon - height + 14 + Math.sin(index) * 10;
+
+    context.fillStyle = colorWithAlpha(index % 3 === 0 ? "#24324f" : "#101827", 0.72);
+    context.fillRect(x, y, width, height);
+
+    if (index % 2 === 0) {
+      context.fillStyle = colorWithAlpha(args.secondaryColor, 0.2);
+      for (let windowY = y + 10; windowY < horizon + 4; windowY += 16) {
+        context.fillRect(x + width * 0.25, windowY, 3, 5);
+        context.fillRect(x + width * 0.62, windowY + 4, 3, 5);
+      }
+    }
   }
 
-  for (let lane = -2; lane <= 2; lane++) {
-    const from = projectPerspectivePoint(
-      { x: lane * 58, y: 140, z: args.depth },
-      { height: canvas.height, width: canvas.width },
-      { centerX, horizon }
-    );
-    const to = projectPerspectivePoint(
-      { x: lane * 210, y: 280, z: 0.5 },
-      { height: canvas.height, width: canvas.width },
-      { centerX, horizon }
-    );
+  drawCanvasLine(
+    context,
+    { x: 0, y: horizon + 8 },
+    { x: canvas.width, y: horizon + 8 },
+    colorWithAlpha(args.accentColor, 0.28),
+    2
+  );
 
-    drawCanvasLine(context, from, to, colorWithAlpha(args.accentColor, lane === 0 ? 0.55 : 0.22), lane === 0 ? 2 : 1);
-  }
+  const segmentCount = 18;
 
-  for (let index = 0; index < Math.min(8, args.objectCount); index++) {
-    const z = getLoopedDepth({
-      depth: args.depth,
-      elapsedSeconds: elapsed,
-      index,
-      offset: 4,
-      spacing: 4.7,
-      speed: args.speed * 5,
-    });
-    const side = index % 2 === 0 ? -1 : 1;
-    const p = projectPerspectivePoint(
-      {
-        x: side * (120 + Math.sin(index) * 40),
-        y: 190,
-        z,
-      },
-      { height: canvas.height, width: canvas.width },
-      { centerX, horizon }
-    );
-    const width = 38 * p.scale;
-    const height = 24 * p.scale;
+  for (let segment = segmentCount - 1; segment >= 0; segment--) {
+    const zFar = 0.8 + (roadDepth / segmentCount) * (segment + 1);
+    const zNear = 0.8 + (roadDepth / segmentCount) * segment;
+    const leftNear = roadPoint(-340, zNear);
+    const rightNear = roadPoint(340, zNear);
+    const rightFar = roadPoint(340, zFar);
+    const leftFar = roadPoint(-340, zFar);
+    const stripAlpha = segment % 2 === 0 ? 0.96 : 0.88;
 
     drawCanvasPolygon(
       context,
-      [
-        { x: p.x - width, y: p.y + height },
-        { x: p.x - width * 0.58, y: p.y - height },
-        { x: p.x + width * 0.58, y: p.y - height },
-        { x: p.x + width, y: p.y + height },
-      ],
-      colorWithAlpha(index % 2 === 0 ? args.accentColor : args.secondaryColor, 0.45),
-      colorWithAlpha("#ffffff", 0.28)
+      [leftNear, rightNear, rightFar, leftFar],
+      colorWithAlpha(segment % 2 === 0 ? "#0a101b" : "#101827", stripAlpha),
+      colorWithAlpha(args.accentColor, 0.04)
+    );
+
+    drawCanvasPolygon(
+      context,
+      [roadPoint(-430, zNear), leftNear, leftFar, roadPoint(-430, zFar)],
+      colorWithAlpha("#14121e", 0.82),
+      colorWithAlpha("#f472b6", 0.16)
+    );
+    drawCanvasPolygon(
+      context,
+      [rightNear, roadPoint(430, zNear), roadPoint(430, zFar), rightFar],
+      colorWithAlpha("#14121e", 0.82),
+      colorWithAlpha(args.secondaryColor, 0.13)
     );
   }
+
+  [-340, 340].forEach((edgeX) => {
+    drawCanvasLine(
+      context,
+      roadPoint(edgeX, roadDepth),
+      roadPoint(edgeX, 0.8),
+      colorWithAlpha(edgeX < 0 ? "#f472b6" : args.secondaryColor, 0.74),
+      3
+    );
+  });
+
+  [-115, 0, 115].forEach((laneX) => {
+    for (let dash = 0; dash < 9; dash++) {
+      const z = getLoopedDepth({
+        depth: roadDepth,
+        elapsedSeconds: elapsed,
+        index: dash,
+        spacing: 4,
+        speed: args.speed * 8.5,
+      });
+      const near = roadPoint(laneX, Math.max(0.8, z - 0.85));
+      const far = roadPoint(laneX, z + 0.85);
+      const alpha = 0.14 + getDepthProgress(z, roadDepth) * 0.72;
+
+      drawCanvasLine(context, far, near, colorWithAlpha("#dbeafe", alpha), Math.max(1, near.scale * 5));
+    }
+  });
+
+  const obstacleCount = Math.min(Math.max(10, args.objectCount), 34);
+  const obstacles = Array.from({ length: obstacleCount }, (_, index) => {
+    const z = getLoopedDepth({
+      depth: roadDepth,
+      elapsedSeconds: elapsed,
+      index,
+      offset: 2.5,
+      spacing: 2.45,
+      speed: args.speed * 7.2,
+    });
+    const lane = [-1, 1, 0, -2, 2][index % 5];
+    const side = index % 2 === 0 ? -1 : 1;
+    const kind = index % 7 === 0 ? "gate" : index % 4 === 0 ? "traffic" : index % 3 === 0 ? "sign" : "barrier";
+
+    return { index, kind, lane, side, z };
+  });
+
+  obstacles
+    .sort((a, b) => b.z - a.z)
+    .forEach((obstacle) => {
+      const progress = getDepthProgress(obstacle.z, roadDepth);
+      const scaleAlpha = 0.24 + progress * 0.72;
+
+      if (obstacle.kind === "gate") {
+        const leftBase = roadPoint(-372, obstacle.z);
+        const rightBase = roadPoint(372, obstacle.z);
+        const topLift = 118 * leftBase.scale;
+        const beamLift = 92 * leftBase.scale;
+
+        drawCanvasLine(
+          context,
+          leftBase,
+          { x: leftBase.x, y: leftBase.y - topLift },
+          colorWithAlpha("#f472b6", scaleAlpha),
+          Math.max(2, 7 * leftBase.scale)
+        );
+        drawCanvasLine(
+          context,
+          rightBase,
+          { x: rightBase.x, y: rightBase.y - topLift },
+          colorWithAlpha(args.secondaryColor, scaleAlpha),
+          Math.max(2, 7 * rightBase.scale)
+        );
+        drawCanvasLine(
+          context,
+          { x: leftBase.x, y: leftBase.y - beamLift },
+          { x: rightBase.x, y: rightBase.y - beamLift },
+          colorWithAlpha(args.accentColor, scaleAlpha),
+          Math.max(2, 6 * leftBase.scale)
+        );
+        return;
+      }
+
+      const point = roadPoint(obstacle.kind === "sign" ? obstacle.side * 395 : obstacle.lane * 118, obstacle.z);
+
+      if (point.x < -90 || point.x > canvas.width + 90) {
+        return;
+      }
+
+      if (obstacle.kind === "traffic") {
+        drawNeonRacerVehicle(context, point.x, point.y, point.scale, {
+          body: obstacle.index % 2 === 0 ? "#f472b6" : args.secondaryColor,
+          glass: args.accentColor,
+          outline: colorWithAlpha("#f8fafc", scaleAlpha),
+          shadow: colorWithAlpha("#05070a", 0.35 + progress * 0.22),
+        });
+        return;
+      }
+
+      if (obstacle.kind === "sign") {
+        const width = 58 * point.scale;
+        const height = 34 * point.scale;
+
+        drawCanvasLine(
+          context,
+          { x: point.x, y: point.y },
+          { x: point.x, y: point.y - 58 * point.scale },
+          colorWithAlpha("#dbeafe", scaleAlpha),
+          Math.max(1, 3 * point.scale)
+        );
+        drawCanvasPolygon(
+          context,
+          [
+            { x: point.x - width, y: point.y - 72 * point.scale },
+            { x: point.x + width, y: point.y - 72 * point.scale },
+            { x: point.x + width * 0.82, y: point.y - 72 * point.scale - height },
+            { x: point.x - width * 0.82, y: point.y - 72 * point.scale - height },
+          ],
+          colorWithAlpha(args.accentColor, 0.16 + progress * 0.36),
+          colorWithAlpha(args.accentColor, scaleAlpha)
+        );
+        return;
+      }
+
+      const width = 46 * point.scale;
+      const height = 34 * point.scale;
+
+      drawCanvasPolygon(
+        context,
+        [
+          { x: point.x - width, y: point.y },
+          { x: point.x + width, y: point.y },
+          { x: point.x + width * 0.72, y: point.y - height },
+          { x: point.x - width * 0.72, y: point.y - height },
+        ],
+        colorWithAlpha(obstacle.index % 2 === 0 ? args.secondaryColor : "#f472b6", 0.18 + progress * 0.46),
+        colorWithAlpha("#f8fafc", 0.18 + progress * 0.42)
+      );
+    });
+
+  const playerX = canvas.width / 2 + pointer.x * 34;
+  const playerY = canvas.height - 52 + pointer.y * 4;
+
+  drawNeonRacerVehicle(context, playerX, playerY, 1.18, {
+    body: args.accentColor,
+    glass: "#dbeafe",
+    outline: "#f8fafc",
+    shadow: colorWithAlpha("#05070a", 0.52),
+  });
+};
+
+const drawNeonRacerVehicle = (
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  scale: number,
+  colors: {
+    body: string;
+    glass: string;
+    outline: string;
+    shadow: string;
+  }
+): void => {
+  const width = 72 * scale;
+  const height = 72 * scale;
+
+  context.fillStyle = colors.shadow;
+  context.beginPath();
+  context.ellipse(x, y + 8 * scale, width * 0.62, 10 * scale, 0, 0, Math.PI * 2);
+  context.fill();
 
   drawCanvasPolygon(
     context,
     [
-      { x: canvas.width / 2 - 56 + pointer.x * 18, y: canvas.height - 34 },
-      { x: canvas.width / 2 - 30 + pointer.x * 8, y: canvas.height - 92 + pointer.y * 8 },
-      { x: canvas.width / 2 + 30 + pointer.x * 8, y: canvas.height - 92 + pointer.y * 8 },
-      { x: canvas.width / 2 + 56 + pointer.x * 18, y: canvas.height - 34 },
+      { x: x - width * 0.64, y },
+      { x: x + width * 0.64, y },
+      { x: x + width * 0.46, y: y - height * 0.38 },
+      { x: x - width * 0.46, y: y - height * 0.38 },
     ],
-    colorWithAlpha(args.accentColor, 0.78),
-    "#f5f7fb"
+    colorWithAlpha(colors.body, 0.86),
+    colors.outline
+  );
+  drawCanvasPolygon(
+    context,
+    [
+      { x: x - width * 0.36, y: y - height * 0.4 },
+      { x: x + width * 0.36, y: y - height * 0.4 },
+      { x: x + width * 0.2, y: y - height * 0.78 },
+      { x: x - width * 0.2, y: y - height * 0.78 },
+    ],
+    colorWithAlpha("#05070a", 0.88),
+    colorWithAlpha(colors.glass, 0.78)
+  );
+  drawCanvasPolygon(
+    context,
+    [
+      { x: x - width * 0.82, y: y - height * 0.02 },
+      { x: x - width * 0.58, y: y - height * 0.44 },
+      { x: x - width * 0.46, y: y - height * 0.38 },
+      { x: x - width * 0.64, y },
+    ],
+    colorWithAlpha("#f472b6", 0.5),
+    colorWithAlpha("#f472b6", 0.76)
+  );
+  drawCanvasPolygon(
+    context,
+    [
+      { x: x + width * 0.82, y: y - height * 0.02 },
+      { x: x + width * 0.58, y: y - height * 0.44 },
+      { x: x + width * 0.46, y: y - height * 0.38 },
+      { x: x + width * 0.64, y },
+    ],
+    colorWithAlpha(colors.body, 0.4),
+    colorWithAlpha(colors.body, 0.82)
+  );
+
+  drawCanvasLine(
+    context,
+    { x: x - width * 0.36, y: y - height * 0.14 },
+    { x: x - width * 0.72, y: y + height * 0.05 },
+    colorWithAlpha("#f8fafc", 0.7),
+    Math.max(1, 3 * scale)
+  );
+  drawCanvasLine(
+    context,
+    { x: x + width * 0.36, y: y - height * 0.14 },
+    { x: x + width * 0.72, y: y + height * 0.05 },
+    colorWithAlpha("#f8fafc", 0.7),
+    Math.max(1, 3 * scale)
+  );
+  drawCanvasLine(
+    context,
+    { x: x - width * 0.44, y: y - height * 0.02 },
+    { x: x + width * 0.44, y: y - height * 0.02 },
+    colorWithAlpha(colors.glass, 0.72),
+    Math.max(1, 2 * scale)
   );
 };
 
