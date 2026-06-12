@@ -111,6 +111,54 @@ const heading = helpers.findHeading(enemy, player);
 enemy.heading = helpers.rotateTo(heading.angle, enemy.heading, 3);
 ```
 
+## 🗺️ String Tile Maps
+
+Use these helpers to author grid maps as text, then query cells by row/column or
+centered world coordinates.
+
+| Export | Use It For |
+| --- | --- |
+| `parseStringTileMap` | Parse a multiline string into padded tile rows, with optional tile normalization. |
+| `findStringTileMapCell` | Find the first cell containing a tile symbol. |
+| `findStringTileMapCells` | Find all cells containing a tile symbol. |
+| `getStringTileMapTile` | Read one tile by column and row. |
+| `getStringTileMapCenteredPoint` | Convert a column/row into centered `x`/`z` coordinates. |
+| `getStringTileMapCellFromCenteredPoint` | Convert centered `x`/`z` coordinates back into a cell. |
+
+```ts
+const map = parseStringTileMap(
+  `
+########D########
+#      S        #
+#   P      o    #
+#################
+`.trim()
+);
+const spawn = findStringTileMapCell(map, "S");
+```
+
+The isometric dungeon demo uses this editable legend on top of the generic
+string map parser:
+
+| Symbol | Meaning | Role |
+| --- | --- | --- |
+| `space` | Floor | Walkable floor |
+| `#` | Stone wall | Blocking wall |
+| `.` | Floor marker | Walkable floor marker |
+| `C` | Chest | Interactable prop |
+| `D` | Door | Interactable doorway |
+| `P` | Pillar | Blocking prop |
+| `S` | Player spawn | Spawn point |
+| `d` | Stairs down | Interactable stairs |
+| `o` | Light source | Light |
+| `r` | Rubble | Blocking prop |
+| `u` | Stairs up | Interactable stairs |
+| `w` | Water | Walkable slow floor |
+
+Ragged rows can be padded with an internal empty tile such as `_`; the dungeon
+demo treats that as void space outside the playable floor and hides it from the
+editor legend.
+
 ## 🎮 Input Actions
 
 | Export | Use It For |

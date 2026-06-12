@@ -5,14 +5,21 @@ import {
   drawCanvasLine,
   drawCanvasPolygon,
   fillCanvasWithTrail,
+  findStringTileMapCell,
+  findStringTileMapCells,
   getDepthProgress,
   getIsometricTileCorners,
   getLoopedScrollerPosition,
   getLoopedDepth,
+  getStringTileMapCellFromCenteredPoint,
+  getStringTileMapCenteredPoint,
+  getStringTileMapTile,
   projectIsometricPoint,
   projectPerspectivePoint,
+  parseStringTileMap,
   getSideScrollerActorPosition,
   getSideScrollerJumpY,
+  type StringTileMap,
   Ticker,
 } from "../index.js";
 import {
@@ -49,26 +56,80 @@ type PointerState = {
 };
 
 type KeyboardState = {
+  chestOpen: boolean;
+  doorOpenProgress: Map<string, number>;
+  exitReached: boolean;
+  facingX: number;
+  facingZ: number;
+  interactionLabel: string;
   playerX: number;
   playerZ: number;
   pressed: Set<string>;
+  stairsReached: boolean;
 };
 
 type SceneContext = {
   canvas: HTMLCanvasElement;
   context: CanvasRenderingContext2D;
   delta: number;
+  dungeonMap: DungeonMapState;
   elapsed: number;
   frame: number;
   keyboard: KeyboardState;
   pointer: PointerState;
 };
 
-type IsometricDungeonTile = "#" | "." | "C" | "D" | "P" | "S" | "T" | "W";
+type IsometricDungeonTile = "#" | " " | "." | "_" | "C" | "D" | "P" | "S" | "d" | "o" | "r" | "u" | "w";
+type IsometricDungeonTileRole = "blocked" | "floor" | "interactable" | "light" | "prop" | "spawn" | "void";
 
 type StoryShellOptions = {
   enableArrowMovement?: boolean;
+  mapEditor?: {
+    initialText: string;
+  };
   enableWheelZoom?: boolean;
+  updateStats?: (scene: SceneContext, args: Arcade3DStoryArgs) => Array<string | number>;
+};
+
+type DungeonMapState = StringTileMap<IsometricDungeonTile> & {
+  spawnX: number;
+  spawnZ: number;
+};
+
+type IsometricDungeonCamera = {
+  focusX: number;
+  focusZ: number;
+};
+
+type IsometricDungeonDirection = "east" | "north" | "south" | "west";
+
+type DungeonMapEditorSurface = {
+  editor: HTMLTextAreaElement;
+  element: HTMLElement;
+  legend: HTMLElement;
+  resetLegendPosition: () => void;
+};
+
+type DungeonMapLegendSurface = {
+  element: HTMLElement;
+  resetPosition: () => void;
+};
+
+type DungeonProjectedTile = {
+  center: ReturnType<typeof projectIsometricPoint>;
+  corners: ReturnType<typeof getIsometricTileCorners>;
+  facing: IsometricDungeonDirection;
+  gridX: number;
+  gridZ: number;
+  tileKind: IsometricDungeonTile;
+  xIndex: number;
+  zIndex: number;
+};
+
+type DungeonRenderable = {
+  depth: number;
+  draw: () => void;
+  order: number;
 };
 
 const argTypes: Story["argTypes"] = {
@@ -101,21 +162,121 @@ const defaultArgs = {
   trailOpacity: 0.16,
 } satisfies Arcade3DStoryArgs;
 
-const isometricDungeonMap = [
-  "###########",
-  "#..T...T..#",
-  "#.........#",
-  "#..P...P..#",
-  "#....W....#",
-  "#.........#",
-  "#..C...S..#",
-  "#.........#",
-  "#..T...T..#",
-  "###..D..###",
-  "###########",
-] as const;
+const defaultIsometricDungeonMapText = `
+#################
+#       r  o    #
+#      www      #
+#   P       P   #
+#     wwwww     #
+#     wwwww     #
+#     wwwww     ######
+#     wwwww     #  o #
+#     wwwww    rDr C #
+#     wwwww     #  o #
+#     wwwww     ######
+#     wwwww     #
+#     wwwww     #
+#   P       P   #
+#   o       o   #
+#               #
+########D########
+###  o     o  ###
+#      www      #
+#   P       P   #
+#               #
+#       S       #
+#       .       #
+#               #
+#               #
+#               #
+#               #
+#               #
+#   u       d   #
+#   C       r   #
+#   P   o   P   #
+#               #
+#################
+`.trim();
+
+const isometricDungeonTiles = {
+  " ": { label: "floor", role: "floor", walkable: true },
+  "#": { label: "stone wall", role: "blocked", walkable: false },
+  ".": { label: "floor marker", role: "floor", walkable: true },
+  _: { label: "empty", role: "void", walkable: false },
+  C: { label: "chest", role: "interactable", walkable: true },
+  D: { label: "door", role: "interactable", walkable: true },
+  P: { label: "pillar", role: "prop", walkable: false },
+  S: { label: "player spawn", role: "spawn", walkable: true },
+  d: { label: "stairs down", role: "interactable", walkable: true },
+  o: { label: "light source", role: "light", walkable: true },
+  r: { label: "rubble", role: "prop", walkable: false },
+  u: { label: "stairs up", role: "interactable", walkable: true },
+  w: { label: "water", role: "floor", walkable: true },
+} satisfies Record<
+  IsometricDungeonTile,
+  {
+    label: string;
+    role: IsometricDungeonTileRole;
+    walkable: boolean;
+  }
+>;
 
 let isometricDungeonCanvas: HTMLCanvasElement | undefined;
+
+const parseIsometricDungeonMap = (text: string): DungeonMapState => {
+  const map = parseStringTileMap<IsometricDungeonTile>(text, {
+    emptyTile: "_",
+    normalizeTile: parseIsometricDungeonTile,
+  });
+  const spawn = findStringTileMapCell(map, "S");
+  const fallbackSpawn = getStringTileMapCenteredPoint(
+    map,
+    Math.floor(map.width / 2),
+    Math.floor(map.height / 2)
+  );
+
+  return {
+    ...map,
+    spawnX: (spawn?.x ?? fallbackSpawn.x) + 0.5,
+    spawnZ: (spawn?.z ?? fallbackSpawn.z) + 0.5,
+  };
+};
+
+const parseIsometricDungeonTile = (tile: string): IsometricDungeonTile => {
+  if (tile in isometricDungeonTiles) {
+    return tile as IsometricDungeonTile;
+  }
+
+  return " ";
+};
+
+const getIsometricDungeonGridX = (column: number, width: number): number =>
+  column - Math.floor(width / 2);
+
+const getIsometricDungeonGridZ = (row: number, height: number): number =>
+  row - Math.floor(height / 2);
+
+const getIsometricDungeonColumn = (x: number, width: number): number =>
+  Math.floor(x + Math.floor(width / 2));
+
+const getIsometricDungeonRow = (z: number, height: number): number =>
+  Math.floor(z + Math.floor(height / 2));
+
+const resetIsometricDungeonPlayer = (
+  keyboard: KeyboardState,
+  dungeonMap: DungeonMapState
+): void => {
+  keyboard.chestOpen = false;
+  keyboard.doorOpenProgress.clear();
+  keyboard.exitReached = false;
+  keyboard.facingX = 1;
+  keyboard.facingZ = 0;
+  keyboard.interactionLabel = "none";
+  keyboard.playerX = dungeonMap.spawnX;
+  keyboard.playerZ = dungeonMap.spawnZ;
+  keyboard.pressed.clear();
+  keyboard.stairsReached = false;
+};
 
 const createStoryShell = (
   title: string,
@@ -134,10 +295,18 @@ const createStoryShell = (
   const valueItems = stats.map(([label, value]) => createValue(label, value));
   const fpsValue = createValue("fps", "0");
   const ticker = new Ticker();
+  let dungeonMap = parseIsometricDungeonMap(options.mapEditor?.initialText ?? defaultIsometricDungeonMapText);
   const keyboard: KeyboardState = {
-    playerX: -1,
-    playerZ: 1,
+    chestOpen: false,
+    doorOpenProgress: new Map<string, number>(),
+    exitReached: false,
+    facingX: 1,
+    facingZ: 0,
+    interactionLabel: "none",
+    playerX: dungeonMap.spawnX,
+    playerZ: dungeonMap.spawnZ,
     pressed: new Set<string>(),
+    stairsReached: false,
   };
   const pointer: PointerState = {
     active: false,
@@ -165,10 +334,35 @@ const createStoryShell = (
   canvas.tabIndex = 0;
   stage.appendChild(canvas);
   values.append(...valueItems, fpsValue);
+  const mapEditorSurface = options.mapEditor
+    ? createIsometricDungeonMapEditor(options.mapEditor.initialText)
+    : undefined;
+  const mapEditor = mapEditorSurface?.editor;
+  const telemetryHeading = telemetryPanel.querySelector("h2");
+
+  mapEditor?.addEventListener("input", () => {
+    dungeonMap = parseIsometricDungeonMap(mapEditor.value);
+    resetIsometricDungeonPlayer(keyboard, dungeonMap);
+  });
+
+  if (mapEditorSurface) {
+    telemetryPanel.style.position = "relative";
+
+    if (telemetryHeading instanceof HTMLElement) {
+      telemetryHeading.style.marginRight = "42px";
+    }
+  }
+
   scenePanel.appendChild(stage);
-  telemetryPanel.appendChild(values);
+  telemetryPanel.append(
+    ...(mapEditorSurface ? [mapEditorSurface.legend, values, mapEditorSurface.element] : [values])
+  );
   grid.append(scenePanel, telemetryPanel);
   shell.appendChild(grid);
+  mapEditorSurface?.resetLegendPosition();
+  requestAnimationFrame(() => {
+    mapEditorSurface?.resetLegendPosition();
+  });
 
   const context = canvas.getContext("2d");
 
@@ -240,7 +434,7 @@ const createStoryShell = (
   };
 
   const handleKeyDown = (event: KeyboardEvent): void => {
-    if (!options.enableArrowMovement || !isArrowKey(event.key)) {
+    if (!options.enableArrowMovement || isTextEditingTarget(event.target) || !isArrowKey(event.key)) {
       return;
     }
 
@@ -249,7 +443,7 @@ const createStoryShell = (
   };
 
   const handleKeyUp = (event: KeyboardEvent): void => {
-    if (!options.enableArrowMovement || !isArrowKey(event.key)) {
+    if (!options.enableArrowMovement || isTextEditingTarget(event.target) || !isArrowKey(event.key)) {
       return;
     }
 
@@ -281,18 +475,26 @@ const createStoryShell = (
       fpsFrames = 0;
     }
 
-    renderScene(
-      {
-        canvas,
-        context,
-        delta,
-        elapsed: now / 1000,
-        frame,
-        keyboard,
-        pointer,
-      },
-      args
-    );
+    const scene = {
+      canvas,
+      context,
+      delta,
+      dungeonMap,
+      elapsed: now / 1000,
+      frame,
+      keyboard,
+      pointer,
+    };
+
+    renderScene(scene, args);
+
+    options.updateStats?.(scene, args).forEach((value, index) => {
+      const item = valueItems[index];
+
+      if (item) {
+        setValue(item, value);
+      }
+    });
   };
 
   ticker.addSchedule(render, 1);
@@ -314,6 +516,247 @@ const createStoryShell = (
 
 const isArrowKey = (key: string): boolean =>
   key === "ArrowUp" || key === "ArrowDown" || key === "ArrowLeft" || key === "ArrowRight";
+
+const isTextEditingTarget = (target: EventTarget | null): boolean =>
+  target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement;
+
+const createIsometricDungeonMapEditor = (initialText: string): DungeonMapEditorSurface => {
+  const surface = document.createElement("div");
+  const editor = document.createElement("textarea");
+  const legend = createIsometricDungeonMapLegend();
+
+  surface.style.position = "relative";
+  surface.style.marginTop = "18px";
+  editor.value = initialText;
+  editor.setAttribute("aria-label", "Dungeon map editor");
+  editor.spellcheck = false;
+  editor.style.boxSizing = "border-box";
+  editor.style.width = "100%";
+  editor.style.minHeight = "190px";
+  editor.style.padding = "12px";
+  editor.style.border = "1px solid rgba(148, 163, 184, 0.28)";
+  editor.style.borderRadius = "8px";
+  editor.style.background = "rgba(5, 7, 10, 0.72)";
+  editor.style.color = "#dbeafe";
+  editor.style.font = "13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+  editor.style.lineHeight = "1.35";
+  editor.style.resize = "vertical";
+  editor.style.whiteSpace = "pre";
+  editor.style.overflow = "auto";
+
+  surface.append(editor);
+
+  return { editor, element: surface, legend: legend.element, resetLegendPosition: legend.resetPosition };
+};
+
+const createIsometricDungeonMapLegend = (): DungeonMapLegendSurface => {
+  const legend = document.createElement("aside");
+  const title = document.createElement("button");
+  const list = document.createElement("dl");
+  const position = {
+    left: 0,
+    restingLeft: 0,
+    restingTop: 10,
+    pointerX: 0,
+    pointerY: 0,
+    startX: 0,
+    startY: 0,
+    top: 10,
+  };
+  let collapsed = true;
+  let dragged = false;
+  let dragEnabled = false;
+
+  legend.setAttribute("aria-label", "Dungeon map legend");
+  legend.style.position = "absolute";
+  legend.style.left = `${position.left}px`;
+  legend.style.top = `${position.top}px`;
+  legend.style.zIndex = "2";
+  legend.style.boxSizing = "border-box";
+  legend.style.border = "1px solid rgba(148, 163, 184, 0.38)";
+  legend.style.borderRadius = "8px";
+  legend.style.background = "rgba(12, 18, 27, 0.95)";
+  legend.style.boxShadow = "0 14px 30px rgba(0, 0, 0, 0.3)";
+  legend.style.color = "#dbeafe";
+  legend.style.font = "12px Inter, ui-sans-serif, system-ui, sans-serif";
+  legend.style.userSelect = "none";
+
+  title.type = "button";
+  title.setAttribute("aria-label", "Toggle dungeon map legend");
+  title.setAttribute("aria-expanded", "false");
+  title.style.display = "block";
+  title.style.width = "100%";
+  title.style.height = "32px";
+  title.style.padding = "0 10px";
+  title.style.border = "0";
+  title.style.background = "rgba(30, 41, 59, 0.92)";
+  title.style.color = "#f8fafc";
+  title.style.cursor = "grab";
+  title.style.font = "700 12px Inter, ui-sans-serif, system-ui, sans-serif";
+  title.style.textAlign = "center";
+
+  list.style.display = "grid";
+  list.style.gridTemplateColumns = "max-content 1fr";
+  list.style.gap = "6px 10px";
+  list.style.margin = "0";
+  list.style.padding = "10px";
+
+  Object.entries(isometricDungeonTiles).forEach(([symbol, tile]) => {
+    if (tile.role === "void") {
+      return;
+    }
+
+    const term = document.createElement("dt");
+    const description = document.createElement("dd");
+
+    term.textContent = symbol === " " ? "space" : symbol;
+    term.style.display = "grid";
+    term.style.placeItems = "center";
+    term.style.minWidth = "32px";
+    term.style.height = "22px";
+    term.style.margin = "0";
+    term.style.border = "1px solid rgba(148, 163, 184, 0.3)";
+    term.style.borderRadius = "4px";
+    term.style.background = "rgba(5, 7, 10, 0.64)";
+    term.style.color = "#f6e05e";
+    term.style.font = "700 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+
+    description.textContent = `${tile.label} · ${tile.role}`;
+    description.style.margin = "0";
+    description.style.color = "#cbd5e1";
+    description.style.lineHeight = "22px";
+
+    list.append(term, description);
+  });
+
+  const applyLegendState = (): void => {
+    if (collapsed) {
+      position.top = position.restingTop;
+    }
+
+    title.textContent = collapsed ? "?" : "Legend";
+    title.setAttribute("aria-expanded", String(!collapsed));
+    title.style.borderBottom = collapsed ? "0" : "1px solid rgba(148, 163, 184, 0.24)";
+    title.style.textAlign = collapsed ? "center" : "left";
+    legend.style.width = collapsed ? "34px" : "min(220px, calc(100% - 24px))";
+    legend.style.maxHeight = collapsed ? "34px" : "190px";
+    legend.style.overflow = collapsed ? "hidden" : "auto";
+    list.hidden = collapsed;
+    updateLegendRestingPosition();
+    clampLegendPosition();
+  };
+
+  const updateLegendRestingPosition = (): void => {
+    const parent = legend.parentElement;
+
+    if (!parent || !collapsed) {
+      return;
+    }
+
+    const parentBounds = parent.getBoundingClientRect();
+    const legendBounds = legend.getBoundingClientRect();
+
+    position.restingLeft = Math.max(0, parentBounds.width - legendBounds.width - 16);
+    position.left = position.restingLeft;
+    position.top = position.restingTop;
+  };
+
+  const clampLegendPosition = (): void => {
+    const parent = legend.parentElement;
+
+    if (!parent) {
+      return;
+    }
+
+    const parentBounds = parent.getBoundingClientRect();
+    const legendBounds = legend.getBoundingClientRect();
+    const maxLeft = Math.max(0, parentBounds.width - legendBounds.width);
+    const maxTop = Math.max(0, parentBounds.height - legendBounds.height);
+
+    position.left = Math.min(Math.max(0, position.left), maxLeft);
+    position.top = Math.min(Math.max(0, position.top), maxTop);
+    legend.style.left = `${position.left}px`;
+    legend.style.top = `${position.top}px`;
+  };
+
+  title.addEventListener("pointerdown", (event) => {
+    dragEnabled = !collapsed;
+
+    if (dragEnabled) {
+      title.setPointerCapture(event.pointerId);
+    }
+
+    title.style.cursor = "grabbing";
+    position.pointerX = event.clientX - position.left;
+    position.pointerY = event.clientY - position.top;
+    position.startX = event.clientX;
+    position.startY = event.clientY;
+    dragged = false;
+  });
+
+  title.addEventListener("pointermove", (event) => {
+    if (!dragEnabled || !title.hasPointerCapture(event.pointerId)) {
+      return;
+    }
+
+    if (Math.hypot(event.clientX - position.startX, event.clientY - position.startY) > 3) {
+      dragged = true;
+    }
+
+    position.left = event.clientX - position.pointerX;
+    position.top = event.clientY - position.pointerY;
+    clampLegendPosition();
+  });
+
+  const stopLegendDrag = (event: PointerEvent, shouldToggle: boolean): void => {
+    title.style.cursor = "grab";
+
+    if (title.hasPointerCapture(event.pointerId)) {
+      title.releasePointerCapture(event.pointerId);
+    }
+
+    if (shouldToggle && !dragged) {
+      collapsed = !collapsed;
+      applyLegendState();
+    }
+
+    dragEnabled = false;
+  };
+
+  title.addEventListener("pointerup", (event) => {
+    stopLegendDrag(event, true);
+  });
+  title.addEventListener("pointercancel", (event) => {
+    stopLegendDrag(event, false);
+  });
+  legend.append(title, list);
+  applyLegendState();
+
+  return {
+    element: legend,
+    resetPosition: () => {
+      if (!collapsed) {
+        return;
+      }
+
+      updateLegendRestingPosition();
+      clampLegendPosition();
+    },
+  };
+};
+
+const getIsometricDungeonStats = (
+  { dungeonMap, keyboard, pointer }: SceneContext
+): Array<string | number> => {
+  const column = getIsometricDungeonColumn(keyboard.playerX, dungeonMap.width);
+  const row = getIsometricDungeonRow(keyboard.playerZ, dungeonMap.height);
+
+  return [
+    `${column}, ${row}`,
+    keyboard.interactionLabel,
+    `${Math.round(pointer.x * 180)}deg / ${pointer.zoom.toFixed(2)}x`,
+  ];
+};
 
 const drawNeonRacer = (
   { canvas, context, elapsed, pointer }: SceneContext,
@@ -517,7 +960,7 @@ const drawStarfighterRun = (
 };
 
 const drawIsometricDungeon = (
-  { canvas, context, delta, elapsed, keyboard, pointer }: SceneContext,
+  { canvas, context, delta, dungeonMap, elapsed, keyboard, pointer }: SceneContext,
   args: Arcade3DStoryArgs
 ): void => {
   const pixelScale = 2;
@@ -534,6 +977,7 @@ const drawIsometricDungeon = (
   drawIsometricDungeonScene(internalContext, {
     args,
     delta,
+    dungeonMap,
     elapsed,
     height,
     keyboard,
@@ -564,6 +1008,7 @@ const drawIsometricDungeonScene = (
   options: {
     args: Arcade3DStoryArgs;
     delta: number;
+    dungeonMap: DungeonMapState;
     elapsed: number;
     height: number;
     keyboard: KeyboardState;
@@ -571,7 +1016,7 @@ const drawIsometricDungeonScene = (
     width: number;
   }
 ): void => {
-  const { args, delta, elapsed, height, keyboard, pointer, width } = options;
+  const { args, delta, dungeonMap, elapsed, height, keyboard, pointer, width } = options;
   const tile = Math.max(12, Math.round(18 * pointer.zoom));
   const origin = {
     x: width / 2,
@@ -580,44 +1025,84 @@ const drawIsometricDungeonScene = (
   const isoOptions = { origin, tileHeight: tile, tileWidth: tile * 2 };
   const rotation = pointer.x * Math.PI;
 
-  updateIsometricDungeonPlayer(keyboard, rotation, delta, args.speed);
+  updateIsometricDungeonPlayer(keyboard, dungeonMap, rotation, delta, args.speed);
+  updateIsometricDungeonInteractions(keyboard, dungeonMap, delta);
   drawIsometricDungeonBackdrop(context, width, height, args.backgroundColor);
 
-  isometricDungeonMap
-    .flatMap((row, zIndex) =>
-      [...row].map((tileCode, xIndex) => {
-        const gridX = xIndex - Math.floor(row.length / 2);
-        const gridZ = zIndex - Math.floor(isometricDungeonMap.length / 2);
-        const corners = getRotatedIsometricTileCorners(gridX, gridZ, rotation, isoOptions);
+  const camera = {
+    focusX: keyboard.playerX,
+    focusZ: keyboard.playerZ,
+  };
+  const tiles = dungeonMap.rows.flatMap((row, zIndex) =>
+    [...row].map((tileCode, xIndex): DungeonProjectedTile => {
+        const gridX = getIsometricDungeonGridX(xIndex, dungeonMap.width);
+        const gridZ = getIsometricDungeonGridZ(zIndex, dungeonMap.height);
+        const corners = getRotatedIsometricTileCorners(gridX, gridZ, rotation, isoOptions, camera);
         const center = getPolygonCenter(corners);
 
         return {
           center,
           corners,
-          tileCode,
+          facing: getIsometricDungeonPropFacing(dungeonMap, xIndex, zIndex, tileCode as IsometricDungeonTile),
+          gridX,
+          gridZ,
+          tileKind: tileCode as IsometricDungeonTile,
           xIndex,
           zIndex,
         };
       })
-    )
-    .sort((first, second) => first.center.y - second.center.y)
-    .forEach(({ center, corners, tileCode, xIndex, zIndex }) => {
-      const tileKind = tileCode as IsometricDungeonTile;
+  );
+  const renderables: DungeonRenderable[] = [];
+  let renderOrder = 0;
+  const addRenderable = (depth: number, draw: () => void): void => {
+    renderables.push({ depth, draw, order: renderOrder });
+    renderOrder += 1;
+  };
 
-      if (tileKind === "#") {
-        drawIsometricDungeonWall(context, corners, tile);
+  tiles
+    .slice()
+    .sort((first, second) => first.center.y - second.center.y)
+    .forEach((tileInfo) => {
+      if (tileInfo.tileKind === "_") {
         return;
       }
 
-      drawIsometricDungeonFloor(context, corners, tileKind, xIndex, zIndex);
-      drawIsometricDungeonProp(context, center, tileKind, elapsed, args);
+      if (tileInfo.tileKind === "#") {
+        enqueueIsometricDungeonWallRenderables(addRenderable, context, tileInfo.corners, tile);
+        return;
+      }
+
+      drawIsometricDungeonFloor(context, tileInfo, keyboard);
+      if (tileInfo.tileKind === "o") {
+        drawIsometricDungeonTorchLight(context, tileInfo.center, tile, elapsed, args);
+      }
+
+      if (tileInfo.tileKind === "D") {
+        enqueueIsometricDungeonDoorRenderables(addRenderable, context, tileInfo, keyboard, args);
+        return;
+      }
+
+      if (tileInfo.tileKind !== " " && tileInfo.tileKind !== "S") {
+        addRenderable(
+          tileInfo.center.y + getIsometricDungeonPropDepthOffset(tileInfo.tileKind, tile),
+          () => drawIsometricDungeonProp(context, tileInfo, keyboard, elapsed, args)
+        );
+      }
     });
 
-  drawIsometricDungeonPlayer(context, isoOptions, rotation, keyboard, elapsed, args);
+  addRenderable(
+    projectRotatedIsometricPoint(keyboard.playerX, keyboard.playerZ, rotation, isoOptions, camera).y + tile * 0.7,
+    () => drawIsometricDungeonPlayer(context, isoOptions, rotation, camera, keyboard, elapsed, args)
+  );
+
+  renderables
+    .sort((first, second) => first.depth - second.depth || first.order - second.order)
+    .forEach((renderable) => renderable.draw());
 };
 
 const updateIsometricDungeonPlayer = (
   keyboard: KeyboardState,
+  dungeonMap: DungeonMapState,
   rotation: number,
   delta: number,
   speed: number
@@ -652,41 +1137,314 @@ const updateIsometricDungeonPlayer = (
   const sin = Math.sin(-rotation);
   const worldX = normalizedX * cos - normalizedZ * sin;
   const worldZ = normalizedX * sin + normalizedZ * cos;
-  const step = delta * (2.4 + speed * 0.35);
+  const currentTile = getIsometricDungeonTileAt(dungeonMap, keyboard.playerX, keyboard.playerZ);
+  const terrainSpeed = currentTile === "w" ? 0.65 : 1;
+  const step = delta * (2.4 + speed * 0.35) * terrainSpeed;
   const nextX = keyboard.playerX + worldX * step;
   const nextZ = keyboard.playerZ + worldZ * step;
 
-  if (isIsometricDungeonWalkable(nextX, keyboard.playerZ)) {
+  keyboard.facingX = worldX;
+  keyboard.facingZ = worldZ;
+
+  if (isIsometricDungeonWalkable(dungeonMap, nextX, keyboard.playerZ)) {
     keyboard.playerX = nextX;
   }
 
-  if (isIsometricDungeonWalkable(keyboard.playerX, nextZ)) {
+  if (isIsometricDungeonWalkable(dungeonMap, keyboard.playerX, nextZ)) {
     keyboard.playerZ = nextZ;
   }
 };
 
-const isIsometricDungeonWalkable = (x: number, z: number): boolean => {
-  const column = Math.floor(x + isometricDungeonMap[0].length / 2);
-  const row = Math.floor(z + isometricDungeonMap.length / 2);
-  const tile = isometricDungeonMap[row]?.[column] as IsometricDungeonTile | undefined;
+const updateIsometricDungeonInteractions = (
+  keyboard: KeyboardState,
+  dungeonMap: DungeonMapState,
+  delta: number
+): void => {
+  const nearestChest = findNearestDungeonTile(dungeonMap, keyboard, "C", 1);
+  const nearestDoor = findNearestOpenableDungeonDoor(dungeonMap, keyboard, 1.1);
+  const nearestStairsUp = findNearestDungeonTile(dungeonMap, keyboard, "u", 1);
+  const nearestStairsDown = findNearestDungeonTile(dungeonMap, keyboard, "d", 1);
+  const doorCells = findStringTileMapCells(dungeonMap, "D");
+  const activeDoorKeys = new Set<string>();
 
-  return tile !== undefined && tile !== "#";
+  if (nearestChest) {
+    keyboard.chestOpen = true;
+  }
+
+  doorCells.forEach((cell) => {
+    const key = getDungeonDoorKey(cell.column, cell.row);
+    const x = cell.x + 0.5;
+    const z = cell.z + 0.5;
+    const distance = Math.hypot(keyboard.playerX - x, keyboard.playerZ - z);
+    const shouldOpen = distance <= 1.1 && isDungeonDoorApproachOpen(dungeonMap, keyboard, cell);
+    const current = keyboard.doorOpenProgress.get(key) ?? 0;
+    const speed = shouldOpen ? 3.8 : 1.85;
+    const next = current + (shouldOpen ? 1 : -1) * delta * speed;
+
+    activeDoorKeys.add(key);
+    keyboard.doorOpenProgress.set(key, Math.max(0, Math.min(1, next)));
+  });
+  [...keyboard.doorOpenProgress.keys()].forEach((key) => {
+    if (!activeDoorKeys.has(key)) {
+      keyboard.doorOpenProgress.delete(key);
+    }
+  });
+
+  if (nearestStairsUp || nearestStairsDown) {
+    keyboard.stairsReached = true;
+  }
+
+  if (nearestDoor && (keyboard.doorOpenProgress.get(nearestDoor.key) ?? 0) > 0.65) {
+    keyboard.exitReached = true;
+  }
+
+  keyboard.interactionLabel = nearestChest
+    ? keyboard.chestOpen
+      ? "chest open"
+      : "chest"
+    : nearestDoor
+      ? (keyboard.doorOpenProgress.get(nearestDoor.key) ?? 0) > 0.65
+        ? "door open"
+        : "door opening"
+      : nearestStairsUp
+      ? "stairs up"
+      : nearestStairsDown
+        ? "stairs down"
+        : "none";
 };
+
+const isIsometricDungeonWalkable = (
+  dungeonMap: DungeonMapState,
+  x: number,
+  z: number
+): boolean => {
+  const tile = getIsometricDungeonTileAt(dungeonMap, x, z);
+
+  return tile !== undefined && isometricDungeonTiles[tile].walkable;
+};
+
+const getIsometricDungeonTileAt = (
+  dungeonMap: DungeonMapState,
+  x: number,
+  z: number
+): IsometricDungeonTile | undefined => {
+  return getStringTileMapCellFromCenteredPoint(dungeonMap, x, z)?.tile;
+};
+
+const findNearestDungeonTile = (
+  dungeonMap: DungeonMapState,
+  keyboard: KeyboardState,
+  tileKind: IsometricDungeonTile,
+  radius: number
+): { column: number; distance: number; key: string; row: number; x: number; z: number } | undefined => {
+  let nearest: { column: number; distance: number; key: string; row: number; x: number; z: number } | undefined;
+
+  findStringTileMapCells(dungeonMap, tileKind).forEach((cell) => {
+    const x = cell.x + 0.5;
+    const z = cell.z + 0.5;
+    const distance = Math.hypot(keyboard.playerX - x, keyboard.playerZ - z);
+
+    if (distance <= radius && (!nearest || distance < nearest.distance)) {
+      nearest = { column: cell.column, distance, key: getDungeonDoorKey(cell.column, cell.row), row: cell.row, x, z };
+    }
+  });
+
+  return nearest;
+};
+
+const findNearestOpenableDungeonDoor = (
+  dungeonMap: DungeonMapState,
+  keyboard: KeyboardState,
+  radius: number
+): { column: number; distance: number; key: string; row: number; x: number; z: number } | undefined => {
+  let nearest: { column: number; distance: number; key: string; row: number; x: number; z: number } | undefined;
+
+  findStringTileMapCells(dungeonMap, "D").forEach((cell) => {
+    if (!isDungeonDoorApproachOpen(dungeonMap, keyboard, cell)) {
+      return;
+    }
+
+    const x = cell.x + 0.5;
+    const z = cell.z + 0.5;
+    const distance = Math.hypot(keyboard.playerX - x, keyboard.playerZ - z);
+
+    if (distance <= radius && (!nearest || distance < nearest.distance)) {
+      nearest = { column: cell.column, distance, key: getDungeonDoorKey(cell.column, cell.row), row: cell.row, x, z };
+    }
+  });
+
+  return nearest;
+};
+
+const isDungeonDoorApproachOpen = (
+  dungeonMap: DungeonMapState,
+  keyboard: KeyboardState,
+  door: { column: number; row: number; x: number; z: number }
+): boolean => {
+  const doorCenterX = door.x + 0.5;
+  const doorCenterZ = door.z + 0.5;
+  const axis = getIsometricDungeonDoorAxis(dungeonMap, door.column, door.row);
+  const approachColumn = axis === "horizontal"
+    ? door.column + (keyboard.playerX < doorCenterX ? -1 : 1)
+    : door.column;
+  const approachRow = axis === "horizontal"
+    ? door.row
+    : door.row + (keyboard.playerZ < doorCenterZ ? -1 : 1);
+  const approachTile = getStringTileMapTile(dungeonMap, approachColumn, approachRow);
+
+  return approachTile !== undefined && isometricDungeonTiles[approachTile].walkable;
+};
+
+const getDungeonDoorKey = (column: number, row: number): string => `${column}:${row}`;
+
+const getIsometricDungeonPropFacing = (
+  dungeonMap: DungeonMapState,
+  column: number,
+  row: number,
+  tile: IsometricDungeonTile
+): IsometricDungeonDirection => {
+  if (tile === "D") {
+    return getIsometricDungeonDoorFacing(dungeonMap, column, row);
+  }
+
+  if (tile === "C") {
+    return getIsometricDungeonChestFacing(dungeonMap, column, row);
+  }
+
+  return "south";
+};
+
+const getIsometricDungeonDoorFacing = (
+  dungeonMap: DungeonMapState,
+  column: number,
+  row: number
+): IsometricDungeonDirection => {
+  const north = isIsometricDungeonCellWalkable(dungeonMap, column, row - 1);
+  const south = isIsometricDungeonCellWalkable(dungeonMap, column, row + 1);
+  const east = isIsometricDungeonCellWalkable(dungeonMap, column + 1, row);
+  const west = isIsometricDungeonCellWalkable(dungeonMap, column - 1, row);
+  const verticalWallSides =
+    Number(isIsometricDungeonWallAttachment(dungeonMap, column, row - 1)) +
+    Number(isIsometricDungeonWallAttachment(dungeonMap, column, row + 1));
+  const horizontalWallSides =
+    Number(isIsometricDungeonWallAttachment(dungeonMap, column - 1, row)) +
+    Number(isIsometricDungeonWallAttachment(dungeonMap, column + 1, row));
+
+  if (verticalWallSides > horizontalWallSides) {
+    return east ? "east" : "west";
+  }
+
+  if (horizontalWallSides > verticalWallSides) {
+    return south ? "south" : "north";
+  }
+
+  if (east && !west) {
+    return "east";
+  }
+
+  if (west && !east) {
+    return "west";
+  }
+
+  if (south && !north) {
+    return "south";
+  }
+
+  if (north && !south) {
+    return "north";
+  }
+
+  return "south";
+};
+
+const getIsometricDungeonDoorAxis = (
+  dungeonMap: DungeonMapState,
+  column: number,
+  row: number
+): "horizontal" | "vertical" => {
+  const verticalWallSides =
+    Number(isIsometricDungeonWallAttachment(dungeonMap, column, row - 1)) +
+    Number(isIsometricDungeonWallAttachment(dungeonMap, column, row + 1));
+  const horizontalWallSides =
+    Number(isIsometricDungeonWallAttachment(dungeonMap, column - 1, row)) +
+    Number(isIsometricDungeonWallAttachment(dungeonMap, column + 1, row));
+
+  if (verticalWallSides > horizontalWallSides) {
+    return "horizontal";
+  }
+
+  if (horizontalWallSides > verticalWallSides) {
+    return "vertical";
+  }
+
+  const verticalOpenings =
+    Number(isIsometricDungeonCellWalkable(dungeonMap, column, row - 1)) +
+    Number(isIsometricDungeonCellWalkable(dungeonMap, column, row + 1));
+  const horizontalOpenings =
+    Number(isIsometricDungeonCellWalkable(dungeonMap, column - 1, row)) +
+    Number(isIsometricDungeonCellWalkable(dungeonMap, column + 1, row));
+
+  return horizontalOpenings > verticalOpenings ? "horizontal" : "vertical";
+};
+
+const getIsometricDungeonChestFacing = (
+  dungeonMap: DungeonMapState,
+  column: number,
+  row: number
+): IsometricDungeonDirection => {
+  const candidates: Array<{ direction: IsometricDungeonDirection; open: boolean }> = [
+    { direction: "south", open: isIsometricDungeonCellWalkable(dungeonMap, column, row + 1) },
+    { direction: "east", open: isIsometricDungeonCellWalkable(dungeonMap, column + 1, row) },
+    { direction: "west", open: isIsometricDungeonCellWalkable(dungeonMap, column - 1, row) },
+    { direction: "north", open: isIsometricDungeonCellWalkable(dungeonMap, column, row - 1) },
+  ];
+
+  return candidates.find((candidate) => candidate.open)?.direction ?? "south";
+};
+
+const isIsometricDungeonCellWalkable = (
+  dungeonMap: DungeonMapState,
+  column: number,
+  row: number
+): boolean => {
+  const tile = getStringTileMapTile(dungeonMap, column, row);
+
+  return tile !== undefined && isometricDungeonTiles[tile].walkable;
+};
+
+const isIsometricDungeonCellBlocked = (
+  dungeonMap: DungeonMapState,
+  column: number,
+  row: number
+): boolean => {
+  const tile = getStringTileMapTile(dungeonMap, column, row);
+
+  return tile === undefined || !isometricDungeonTiles[tile].walkable;
+};
+
+const isIsometricDungeonWallAttachment = (
+  dungeonMap: DungeonMapState,
+  column: number,
+  row: number
+): boolean => getStringTileMapTile(dungeonMap, column, row) === "#";
 
 const projectRotatedIsometricPoint = (
   x: number,
   z: number,
   rotation: number,
-  isoOptions: Parameters<typeof projectIsometricPoint>[1]
+  isoOptions: Parameters<typeof projectIsometricPoint>[1],
+  camera: IsometricDungeonCamera
 ): ReturnType<typeof projectIsometricPoint> => {
   const cos = Math.cos(rotation);
   const sin = Math.sin(rotation);
+  const localX = x - camera.focusX;
+  const localZ = z - camera.focusZ;
 
   return projectIsometricPoint(
     {
-      x: x * cos - z * sin,
+      x: localX * cos - localZ * sin,
       y: 0,
-      z: x * sin + z * cos,
+      z: localX * sin + localZ * cos,
     },
     isoOptions
   );
@@ -696,12 +1454,13 @@ const getRotatedIsometricTileCorners = (
   x: number,
   z: number,
   rotation: number,
-  isoOptions: Parameters<typeof projectIsometricPoint>[1]
+  isoOptions: Parameters<typeof projectIsometricPoint>[1],
+  camera: IsometricDungeonCamera
 ): ReturnType<typeof getIsometricTileCorners> => [
-  projectRotatedIsometricPoint(x, z, rotation, isoOptions),
-  projectRotatedIsometricPoint(x + 1, z, rotation, isoOptions),
-  projectRotatedIsometricPoint(x + 1, z + 1, rotation, isoOptions),
-  projectRotatedIsometricPoint(x, z + 1, rotation, isoOptions),
+  projectRotatedIsometricPoint(x, z, rotation, isoOptions, camera),
+  projectRotatedIsometricPoint(x + 1, z, rotation, isoOptions, camera),
+  projectRotatedIsometricPoint(x + 1, z + 1, rotation, isoOptions, camera),
+  projectRotatedIsometricPoint(x, z + 1, rotation, isoOptions, camera),
 ];
 
 const getPolygonCenter = (
@@ -719,6 +1478,212 @@ const getPolygonCenter = (
     x: total.x / points.length,
     y: total.y / points.length,
   };
+};
+
+const getTileLocalPoint = (
+  { corners }: DungeonProjectedTile,
+  u: number,
+  v: number,
+  lift = 0
+): ReturnType<typeof projectIsometricPoint> => {
+  const [origin, xEdge, , zEdge] = corners;
+
+  return {
+    x: origin.x + (xEdge.x - origin.x) * u + (zEdge.x - origin.x) * v,
+    y: origin.y + (xEdge.y - origin.y) * u + (zEdge.y - origin.y) * v - lift,
+  };
+};
+
+const orientTileLocalCoordinates = (
+  facing: IsometricDungeonDirection,
+  u: number,
+  v: number
+): { u: number; v: number } => {
+  if (facing === "north") {
+    return { u: 1 - u, v: 1 - v };
+  }
+
+  if (facing === "east") {
+    return { u: v, v: 1 - u };
+  }
+
+  if (facing === "west") {
+    return { u: 1 - v, v: u };
+  }
+
+  return { u, v };
+};
+
+const getOrientedTileLocalPoint = (
+  tileInfo: DungeonProjectedTile,
+  u: number,
+  v: number,
+  lift = 0
+): ReturnType<typeof projectIsometricPoint> => {
+  const oriented = orientTileLocalCoordinates(tileInfo.facing, u, v);
+
+  return getTileLocalPoint(tileInfo, oriented.u, oriented.v, lift);
+};
+
+const getSwingingDoorLocalPoint = (
+  tileInfo: DungeonProjectedTile,
+  u: number,
+  v: number,
+  openProgress: number,
+  lift = 0
+): ReturnType<typeof projectIsometricPoint> => {
+  const hingeU = 0.18;
+  const hingeV = 0.5;
+  const angle = -openProgress * Math.PI * 0.48;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const localU = u - hingeU;
+  const localV = v - hingeV;
+
+  return getOrientedTileLocalPoint(
+    tileInfo,
+    hingeU + localU * cos - localV * sin,
+    hingeV + localU * sin + localV * cos,
+    lift
+  );
+};
+
+const getTileLocalQuad = (
+  tileInfo: DungeonProjectedTile,
+  fromU: number,
+  fromV: number,
+  toU: number,
+  toV: number,
+  lift = 0
+): ReturnType<typeof getIsometricTileCorners> => [
+  getTileLocalPoint(tileInfo, fromU, fromV, lift),
+  getTileLocalPoint(tileInfo, toU, fromV, lift),
+  getTileLocalPoint(tileInfo, toU, toV, lift),
+  getTileLocalPoint(tileInfo, fromU, toV, lift),
+];
+
+const getOrientedTileLocalQuad = (
+  tileInfo: DungeonProjectedTile,
+  fromU: number,
+  fromV: number,
+  toU: number,
+  toV: number,
+  lift = 0
+): ReturnType<typeof getIsometricTileCorners> => [
+  getOrientedTileLocalPoint(tileInfo, fromU, fromV, lift),
+  getOrientedTileLocalPoint(tileInfo, toU, fromV, lift),
+  getOrientedTileLocalPoint(tileInfo, toU, toV, lift),
+  getOrientedTileLocalPoint(tileInfo, fromU, toV, lift),
+];
+
+const getSwingingDoorLocalQuad = (
+  tileInfo: DungeonProjectedTile,
+  fromU: number,
+  fromV: number,
+  toU: number,
+  toV: number,
+  openProgress: number,
+  lift = 0
+): ReturnType<typeof getIsometricTileCorners> => [
+  getSwingingDoorLocalPoint(tileInfo, fromU, fromV, openProgress, lift),
+  getSwingingDoorLocalPoint(tileInfo, toU, fromV, openProgress, lift),
+  getSwingingDoorLocalPoint(tileInfo, toU, toV, openProgress, lift),
+  getSwingingDoorLocalPoint(tileInfo, fromU, toV, openProgress, lift),
+];
+
+const getRotatedWorldQuad = (
+  x: number,
+  z: number,
+  width: number,
+  depth: number,
+  rotation: number,
+  isoOptions: Parameters<typeof projectIsometricPoint>[1],
+  camera: IsometricDungeonCamera,
+  lift = 0
+): ReturnType<typeof getIsometricTileCorners> => {
+  const halfWidth = width / 2;
+  const halfDepth = depth / 2;
+
+  return [
+    projectRotatedIsometricPoint(x - halfWidth, z - halfDepth, rotation, isoOptions, camera),
+    projectRotatedIsometricPoint(x + halfWidth, z - halfDepth, rotation, isoOptions, camera),
+    projectRotatedIsometricPoint(x + halfWidth, z + halfDepth, rotation, isoOptions, camera),
+    projectRotatedIsometricPoint(x - halfWidth, z + halfDepth, rotation, isoOptions, camera),
+  ].map((point) => ({ x: point.x, y: point.y - lift }));
+};
+
+const drawIsometricCuboid = (
+  context: CanvasRenderingContext2D,
+  base: ReturnType<typeof getIsometricTileCorners>,
+  height: number,
+  colors: {
+    sideA: string;
+    sideB: string;
+    sideC: string;
+    sideD: string;
+    top: string;
+    stroke?: string;
+  }
+): void => {
+  const top = base.map((point) => ({ x: point.x, y: point.y - height }));
+  const sideColors = [colors.sideA, colors.sideB, colors.sideC, colors.sideD];
+  const faces = base.map((from, index) => {
+    const nextIndex = (index + 1) % base.length;
+    const to = base[nextIndex];
+    const topTo = top[nextIndex];
+    const topFrom = top[index];
+    const points = [from, to, topTo, topFrom] as ReturnType<typeof getIsometricTileCorners>;
+
+    return {
+      color: sideColors[index],
+      depth: getPolygonCenter(points).y,
+      points,
+    };
+  });
+
+  faces
+    .sort((first, second) => first.depth - second.depth)
+    .forEach((face) => {
+      drawCanvasPolygon(context, face.points, face.color, colors.stroke);
+    });
+  drawCanvasPolygon(context, top as ReturnType<typeof getIsometricTileCorners>, colors.top, colors.stroke);
+};
+
+const enqueueIsometricCuboidRenderables = (
+  addRenderable: (depth: number, draw: () => void) => void,
+  context: CanvasRenderingContext2D,
+  base: ReturnType<typeof getIsometricTileCorners>,
+  height: number,
+  colors: {
+    sideA: string;
+    sideB: string;
+    sideC: string;
+    sideD: string;
+    top: string;
+    stroke?: string;
+  }
+): void => {
+  const top = base.map((point) => ({ x: point.x, y: point.y - height }));
+  const sideColors = [colors.sideA, colors.sideB, colors.sideC, colors.sideD];
+  const sideDepths: number[] = [];
+
+  base.forEach((from, index) => {
+    const nextIndex = (index + 1) % base.length;
+    const to = base[nextIndex];
+    const topTo = top[nextIndex];
+    const topFrom = top[index];
+    const points = [from, to, topTo, topFrom] as ReturnType<typeof getIsometricTileCorners>;
+
+    const depth = getPolygonCenter(points).y;
+
+    sideDepths.push(depth);
+    addRenderable(depth, () => {
+      drawCanvasPolygon(context, points, sideColors[index], colors.stroke);
+    });
+  });
+  addRenderable(Math.max(...sideDepths) + 0.1, () => {
+    drawCanvasPolygon(context, top as ReturnType<typeof getIsometricTileCorners>, colors.top, colors.stroke);
+  });
 };
 
 const drawIsometricDungeonBackdrop = (
@@ -740,27 +1705,45 @@ const drawIsometricDungeonBackdrop = (
 
 const drawIsometricDungeonFloor = (
   context: CanvasRenderingContext2D,
-  corners: ReturnType<typeof getIsometricTileCorners>,
-  tileKind: IsometricDungeonTile,
-  xIndex: number,
-  zIndex: number
+  tileInfo: DungeonProjectedTile,
+  keyboard: KeyboardState
 ): void => {
-  const isWater = tileKind === "W";
+  const { corners, tileKind, xIndex, zIndex } = tileInfo;
+  const isWater = tileKind === "w";
   const isDoor = tileKind === "D";
+  const isStairs = tileKind === "u";
+  const isSpawn = tileKind === "S";
   const shade = (xIndex + zIndex) % 2 === 0 ? 0.92 : 1;
+  const exitGlow =
+    (keyboard.stairsReached || keyboard.interactionLabel.startsWith("stairs")) && isStairs;
+  const doorGlow = keyboard.interactionLabel === "door" && isDoor;
 
   drawCanvasPolygon(
     context,
     corners,
     isWater
-      ? "rgba(54, 117, 138, 0.72)"
+      ? "rgba(38, 96, 112, 0.74)"
       : isDoor
-        ? "rgba(87, 61, 42, 0.92)"
-        : `rgba(${Math.round(42 * shade)}, ${Math.round(43 * shade)}, ${Math.round(52 * shade)}, 0.95)`,
-    isWater ? "rgba(144, 205, 244, 0.42)" : "rgba(10, 11, 16, 0.7)"
+        ? doorGlow
+          ? "rgba(112, 84, 48, 0.95)"
+          : "rgba(87, 61, 42, 0.92)"
+        : exitGlow
+          ? "rgba(89, 110, 95, 0.96)"
+        : isSpawn
+          ? "rgba(45, 56, 58, 0.95)"
+          : `rgba(${Math.round(42 * shade)}, ${Math.round(43 * shade)}, ${Math.round(52 * shade)}, 0.95)`,
+    isWater
+      ? "rgba(144, 205, 244, 0.46)"
+      : doorGlow
+        ? "rgba(246, 224, 94, 0.45)"
+      : exitGlow
+        ? "rgba(246, 224, 94, 0.55)"
+        : isSpawn
+          ? "rgba(79, 209, 197, 0.32)"
+        : "rgba(10, 11, 16, 0.7)"
   );
 
-  if (!isWater && tileKind !== "D") {
+  if (tileKind !== "D") {
     const [top, right, bottom, left] = corners;
 
     drawCanvasLine(context, top, bottom, "rgba(255, 255, 255, 0.05)");
@@ -768,7 +1751,44 @@ const drawIsometricDungeonFloor = (
   }
 };
 
-const drawIsometricDungeonWall = (
+const drawIsometricDungeonTorchLight = (
+  context: CanvasRenderingContext2D,
+  center: { x: number; y: number },
+  tile: number,
+  elapsed: number,
+  args: Arcade3DStoryArgs
+): void => {
+  const flicker = 0.82 + Math.sin(elapsed * args.speed * 11 + center.x) * 0.12;
+  const gradient = context.createRadialGradient(center.x, center.y - tile * 0.25, 0, center.x, center.y - tile * 0.25, tile * 2.8);
+
+  gradient.addColorStop(0, colorWithAlpha(args.secondaryColor, 0.28 * flicker));
+  gradient.addColorStop(0.45, colorWithAlpha(args.secondaryColor, 0.1 * flicker));
+  gradient.addColorStop(1, "rgba(246, 224, 94, 0)");
+  context.fillStyle = gradient;
+  context.fillRect(center.x - tile * 3, center.y - tile * 3, tile * 6, tile * 6);
+};
+
+const getIsometricDungeonPropDepthOffset = (
+  tileKind: IsometricDungeonTile,
+  tile: number
+): number => {
+  if (tileKind === "o" || tileKind === "P") {
+    return tile * 1.1;
+  }
+
+  if (tileKind === "C") {
+    return tile * 0.8;
+  }
+
+  if (tileKind === "r") {
+    return tile * 0.55;
+  }
+
+  return tile * 0.45;
+};
+
+const enqueueIsometricDungeonWallRenderables = (
+  addRenderable: (depth: number, draw: () => void) => void,
   context: CanvasRenderingContext2D,
   corners: ReturnType<typeof getIsometricTileCorners>,
   height: number
@@ -781,16 +1801,96 @@ const drawIsometricDungeonWall = (
     "rgba(36, 32, 45, 0.98)",
   ];
 
-  getIsometricWallFaces(raised, height)
-    .sort((first, second) => first.depth - second.depth)
-    .forEach((face) => {
+  const faces = getIsometricWallFaces(raised, height);
+
+  faces.forEach((face) => {
+    addRenderable(face.depth, () => {
       drawCanvasPolygon(context, face.points, shades[face.index]);
     });
+  });
+  addRenderable(Math.max(...faces.map((face) => face.depth)) + 0.1, () => {
+    drawCanvasPolygon(context, raised as ReturnType<typeof getIsometricTileCorners>, "rgba(62, 55, 75, 0.98)", "rgba(148, 122, 176, 0.35)");
+    const [, right, , left] = raised;
 
-  drawCanvasPolygon(context, raised, "rgba(62, 55, 75, 0.98)", "rgba(148, 122, 176, 0.35)");
+    drawCanvasLine(context, left, right, "rgba(255, 255, 255, 0.08)");
+  });
+};
 
-  const [, right, , left] = raised;
-  drawCanvasLine(context, left, right, "rgba(255, 255, 255, 0.08)");
+const enqueueIsometricDungeonDoorRenderables = (
+  addRenderable: (depth: number, draw: () => void) => void,
+  context: CanvasRenderingContext2D,
+  tileInfo: DungeonProjectedTile,
+  keyboard: KeyboardState,
+  args: Arcade3DStoryArgs
+): void => {
+  const doorKey = getDungeonDoorKey(tileInfo.xIndex, tileInfo.zIndex);
+  const openProgress = keyboard.doorOpenProgress.get(doorKey) ?? 0;
+  const easedOpen = 1 - (1 - openProgress) ** 2;
+  const doorReady = keyboard.interactionLabel.startsWith("door");
+  const panel = getSwingingDoorLocalQuad(
+    tileInfo,
+    0.18,
+    0.42,
+    0.82,
+    0.58,
+    easedOpen
+  );
+  const handle = getSwingingDoorLocalPoint(tileInfo, 0.63, 0.59, easedOpen, 14);
+
+  enqueueIsometricCuboidRenderables(
+    addRenderable,
+    context,
+    getOrientedTileLocalQuad(tileInfo, 0.02, 0.36, 0.16, 0.64),
+    26,
+    {
+      sideA: "rgba(35, 24, 18, 0.94)",
+      sideB: "rgba(82, 53, 36, 0.94)",
+      sideC: "rgba(29, 21, 17, 0.94)",
+      sideD: "rgba(65, 43, 31, 0.94)",
+      top: "rgba(105, 70, 45, 0.96)",
+      stroke: doorReady ? "rgba(246, 224, 94, 0.48)" : "rgba(246, 224, 94, 0.14)",
+    }
+  );
+  enqueueIsometricCuboidRenderables(
+    addRenderable,
+    context,
+    getOrientedTileLocalQuad(tileInfo, 0.84, 0.36, 0.98, 0.64),
+    26,
+    {
+      sideA: "rgba(35, 24, 18, 0.94)",
+      sideB: "rgba(82, 53, 36, 0.94)",
+      sideC: "rgba(29, 21, 17, 0.94)",
+      sideD: "rgba(65, 43, 31, 0.94)",
+      top: "rgba(105, 70, 45, 0.96)",
+      stroke: doorReady ? "rgba(246, 224, 94, 0.62)" : "rgba(246, 224, 94, 0.18)",
+    }
+  );
+  enqueueIsometricCuboidRenderables(
+    addRenderable,
+    context,
+    getOrientedTileLocalQuad(tileInfo, 0.02, 0.36, 0.98, 0.48),
+    28,
+    {
+      sideA: "rgba(39, 27, 20, 0.96)",
+      sideB: "rgba(92, 59, 39, 0.96)",
+      sideC: "rgba(31, 22, 17, 0.96)",
+      sideD: "rgba(74, 48, 33, 0.96)",
+      top: "rgba(118, 78, 49, 0.96)",
+      stroke: doorReady ? "rgba(246, 224, 94, 0.5)" : "rgba(246, 224, 94, 0.12)",
+    }
+  );
+  enqueueIsometricCuboidRenderables(addRenderable, context, panel, 22, {
+    sideA: doorReady ? colorWithAlpha(args.secondaryColor, 0.22) : "rgba(55, 36, 26, 0.94)",
+    sideB: "rgba(112, 70, 42, 0.96)",
+    sideC: "rgba(37, 27, 22, 0.96)",
+    sideD: "rgba(92, 58, 38, 0.96)",
+    top: "rgba(133, 83, 48, 0.96)",
+    stroke: doorReady ? "rgba(246, 224, 94, 0.72)" : "rgba(246, 224, 94, 0.18)",
+  });
+  addRenderable(handle.y, () => {
+    context.fillStyle = colorWithAlpha(args.secondaryColor, doorReady ? 0.95 : 0.54);
+    context.fillRect(handle.x - 1, handle.y - 1, 3, 3);
+  });
 };
 
 const getIsometricWallFaces = (
@@ -816,74 +1916,225 @@ const getIsometricWallFaces = (
 
 const drawIsometricDungeonProp = (
   context: CanvasRenderingContext2D,
-  center: { x: number; y: number },
-  tileKind: IsometricDungeonTile,
+  tileInfo: DungeonProjectedTile,
+  keyboard: KeyboardState,
   elapsed: number,
   args: Arcade3DStoryArgs
 ): void => {
-  if (tileKind === "T") {
+  const { center, tileKind } = tileInfo;
+
+  if (tileKind === "o") {
     const flicker = 0.75 + Math.sin(elapsed * args.speed * 12 + center.x) * 0.15;
 
     context.fillStyle = "rgba(61, 42, 28, 0.9)";
-    context.fillRect(center.x - 2, center.y + 1, 4, 12);
+    context.fillRect(center.x - 2, center.y - 3, 4, 16);
+    context.fillStyle = "rgba(30, 22, 17, 0.88)";
+    context.fillRect(center.x - 6, center.y + 11, 12, 3);
     context.fillStyle = colorWithAlpha(args.secondaryColor, 0.52 * flicker);
     context.beginPath();
-    context.arc(center.x, center.y - 2, 10, 0, Math.PI * 2);
+    context.arc(center.x, center.y - 8, 11, 0, Math.PI * 2);
     context.fill();
     context.fillStyle = colorWithAlpha("#f6e05e", 0.92);
-    context.fillRect(center.x - 2, center.y - 8, 4, 7);
+    context.fillRect(center.x - 2, center.y - 14, 4, 8);
+    context.fillStyle = colorWithAlpha("#fc8181", 0.62);
+    context.fillRect(center.x - 1, center.y - 17, 2, 5);
     return;
   }
 
   if (tileKind === "P") {
+    const base = getTileLocalQuad(tileInfo, 0.2, 0.2, 0.8, 0.8, 0);
+
     context.fillStyle = "rgba(14, 15, 20, 0.48)";
-    context.fillRect(center.x - 8, center.y + 10, 16, 5);
-    context.fillStyle = "rgba(73, 67, 87, 0.96)";
-    context.fillRect(center.x - 6, center.y - 18, 12, 30);
-    context.fillStyle = "rgba(112, 100, 132, 0.96)";
-    context.fillRect(center.x - 8, center.y - 23, 16, 6);
-    context.fillRect(center.x - 8, center.y + 8, 16, 6);
+    context.beginPath();
+    context.ellipse(center.x, center.y + 8, 12, 5, 0, 0, Math.PI * 2);
+    context.fill();
+    drawIsometricCuboid(context, base, 28, {
+      sideA: "rgba(66, 60, 82, 0.98)",
+      sideB: "rgba(82, 74, 101, 0.98)",
+      sideC: "rgba(45, 41, 58, 0.98)",
+      sideD: "rgba(73, 67, 87, 0.98)",
+      top: "rgba(122, 111, 144, 0.98)",
+      stroke: "rgba(148, 122, 176, 0.24)",
+    });
+    drawCanvasPolygon(context, getTileLocalQuad(tileInfo, 0.12, 0.12, 0.88, 0.88), "rgba(88, 80, 105, 0.72)");
     return;
   }
 
   if (tileKind === "C") {
+    const base = getOrientedTileLocalQuad(tileInfo, 0.16, 0.28, 0.84, 0.74, 0);
+    const lock = getOrientedTileLocalPoint(tileInfo, 0.5, 0.74, 8);
+    const chestReady = keyboard.interactionLabel === "chest" || keyboard.interactionLabel === "chest open";
+
     context.fillStyle = "rgba(12, 11, 14, 0.45)";
     context.fillRect(center.x - 12, center.y + 11, 24, 5);
-    context.fillStyle = "rgba(99, 62, 34, 0.96)";
-    context.fillRect(center.x - 12, center.y - 7, 24, 17);
+    drawIsometricCuboid(context, base, 12, {
+      sideA: "rgba(76, 47, 29, 0.98)",
+      sideB: "rgba(112, 70, 38, 0.98)",
+      sideC: "rgba(55, 35, 25, 0.98)",
+      sideD: "rgba(99, 62, 34, 0.98)",
+      top: keyboard.chestOpen ? "rgba(30, 24, 21, 0.98)" : "rgba(132, 83, 43, 0.98)",
+      stroke: chestReady ? "rgba(246, 224, 94, 0.78)" : "rgba(246, 224, 94, 0.18)",
+    });
+    if (keyboard.chestOpen || chestReady) {
+      const glow = context.createRadialGradient(center.x, center.y - 10, 0, center.x, center.y - 10, 20);
+
+      gradientSafeAddColorStop(glow, [
+        [0, colorWithAlpha(args.secondaryColor, keyboard.chestOpen ? 0.44 + Math.sin(elapsed * 8) * 0.08 : 0.22)],
+        [1, "rgba(246, 224, 94, 0)"],
+      ]);
+      context.fillStyle = glow;
+      context.fillRect(center.x - 24, center.y - 30, 48, 40);
+    }
     context.fillStyle = colorWithAlpha(args.secondaryColor, 0.82);
-    context.fillRect(center.x - 2, center.y - 6, 4, 16);
-    context.fillRect(center.x - 12, center.y, 24, 3);
+    context.fillRect(lock.x - 2, lock.y - 2, 4, 5);
     return;
   }
 
   if (tileKind === "S") {
-    for (let step = 0; step < 4; step++) {
-      context.fillStyle = `rgba(75, 69, 88, ${0.88 - step * 0.08})`;
-      context.fillRect(center.x - 14 + step * 3, center.y - 4 + step * 5, 28 - step * 6, 4);
-    }
+    return;
   }
+
+  if (tileKind === "u") {
+    const stairsReady = keyboard.interactionLabel === (tileKind === "u" ? "stairs up" : "stairs down");
+    const pulse = keyboard.stairsReached || stairsReady ? 0.32 + Math.sin(elapsed * 8) * 0.08 : 0.12;
+
+    for (let step = 0; step < 4; step++) {
+      drawIsometricCuboid(
+        context,
+        getTileLocalQuad(tileInfo, 0.18 + step * 0.08, 0.18 + step * 0.12, 0.82 - step * 0.08, 0.34 + step * 0.12),
+        3 + step * 2,
+        {
+          sideA: `rgba(58, 54, 70, ${0.88 - step * 0.06})`,
+          sideB: `rgba(82, 76, 98, ${0.88 - step * 0.06})`,
+          sideC: `rgba(42, 39, 53, ${0.88 - step * 0.06})`,
+          sideD: `rgba(75, 69, 88, ${0.88 - step * 0.06})`,
+          top: `rgba(95, 88, 108, ${0.9 - step * 0.05})`,
+          stroke: stairsReady ? "rgba(246, 224, 94, 0.5)" : "rgba(255, 255, 255, 0.1)",
+        }
+      );
+    }
+    context.fillStyle = colorWithAlpha(args.secondaryColor, pulse);
+    context.beginPath();
+    context.ellipse(center.x, center.y + 10, 24, 8, 0, 0, Math.PI * 2);
+    context.fill();
+    return;
+  }
+
+  if (tileKind === "d") {
+    const stairsReady = keyboard.interactionLabel === "stairs down";
+    const pulse = keyboard.stairsReached || stairsReady ? 0.3 + Math.sin(elapsed * 8) * 0.06 : 0.08;
+    const opening = getTileLocalQuad(tileInfo, 0.16, 0.18, 0.84, 0.82);
+
+    drawCanvasPolygon(context, opening, "rgba(4, 5, 9, 0.98)", stairsReady ? "rgba(246, 224, 94, 0.52)" : "rgba(0, 0, 0, 0.72)");
+
+    for (let step = 0; step < 5; step++) {
+      const v = 0.24 + step * 0.1;
+      const tread = getTileLocalQuad(tileInfo, 0.23 + step * 0.045, v, 0.77 - step * 0.045, v + 0.055, -step * 3);
+
+      drawCanvasPolygon(
+        context,
+        tread,
+        `rgba(78, 72, 92, ${0.88 - step * 0.1})`,
+        stairsReady ? "rgba(246, 224, 94, 0.34)" : "rgba(255, 255, 255, 0.09)"
+      );
+      const front = [
+        tread[2],
+        tread[3],
+        { x: tread[3].x, y: tread[3].y + 5 + step * 2 },
+        { x: tread[2].x, y: tread[2].y + 5 + step * 2 },
+      ] as ReturnType<typeof getIsometricTileCorners>;
+
+      drawCanvasPolygon(context, front, `rgba(22, 21, 30, ${0.78 - step * 0.08})`);
+    }
+    context.fillStyle = colorWithAlpha(args.secondaryColor, pulse);
+    context.beginPath();
+    context.ellipse(center.x, center.y + 9, 22, 7, 0, 0, Math.PI * 2);
+    context.fill();
+    return;
+  }
+
+  if (tileKind === "r") {
+    const base = getTileLocalQuad(tileInfo, 0.24, 0.28, 0.74, 0.72, 0);
+
+    drawIsometricCuboid(context, base, 8, {
+      sideA: "rgba(50, 48, 58, 0.95)",
+      sideB: "rgba(72, 68, 82, 0.95)",
+      sideC: "rgba(36, 34, 44, 0.95)",
+      sideD: "rgba(60, 56, 70, 0.95)",
+      top: "rgba(99, 92, 112, 0.95)",
+      stroke: "rgba(255, 255, 255, 0.08)",
+    });
+    drawCanvasPolygon(context, getTileLocalQuad(tileInfo, 0.48, 0.18, 0.8, 0.42), "rgba(83, 79, 95, 0.88)");
+    return;
+  }
+
+};
+
+const gradientSafeAddColorStop = (
+  gradient: CanvasGradient,
+  stops: Array<[number, string]>
+): void => {
+  stops.forEach(([offset, color]) => gradient.addColorStop(offset, color));
 };
 
 const drawIsometricDungeonPlayer = (
   context: CanvasRenderingContext2D,
   isoOptions: Parameters<typeof projectIsometricPoint>[1],
   rotation: number,
+  camera: IsometricDungeonCamera,
   keyboard: KeyboardState,
   elapsed: number,
   args: Arcade3DStoryArgs
 ): void => {
-  const bob = Math.sin(elapsed * args.speed * 4) * 2;
-  const center = projectRotatedIsometricPoint(keyboard.playerX, keyboard.playerZ, rotation, isoOptions);
+  const bob = Math.max(0, Math.sin(elapsed * args.speed * 8)) * 2;
+  const center = projectRotatedIsometricPoint(keyboard.playerX, keyboard.playerZ, rotation, isoOptions, camera);
+  const bodyBase = getRotatedWorldQuad(keyboard.playerX, keyboard.playerZ, 0.38, 0.38, rotation, isoOptions, camera, bob);
+  const headBase = getRotatedWorldQuad(
+    keyboard.playerX,
+    keyboard.playerZ,
+    0.22,
+    0.22,
+    rotation,
+    isoOptions,
+    camera,
+    19 + bob
+  );
+  const facing = projectRotatedIsometricPoint(
+    keyboard.playerX + keyboard.facingX * 0.42,
+    keyboard.playerZ + keyboard.facingZ * 0.42,
+    rotation,
+    isoOptions,
+    camera
+  );
+  const armStart = { x: center.x, y: center.y - 15 + bob };
+  const armTarget = {
+    x: center.x + (facing.x - center.x) * 1.1,
+    y: center.y - 13 + (facing.y - center.y) * 1.1 + bob,
+  };
 
   context.fillStyle = "rgba(0, 0, 0, 0.34)";
-  context.fillRect(center.x - 9, center.y + 11, 18, 5);
-  context.fillStyle = colorWithAlpha(args.accentColor, 0.95);
-  context.fillRect(center.x - 6, center.y - 18 + bob, 12, 21);
-  context.fillStyle = "#e8d4b2";
-  context.fillRect(center.x - 5, center.y - 27 + bob, 10, 9);
-  context.fillStyle = colorWithAlpha(args.secondaryColor, 0.84);
-  context.fillRect(center.x + 4, center.y - 12 + bob, 12, 4);
+  context.beginPath();
+  context.ellipse(center.x, center.y + 10, 12, 5, 0, 0, Math.PI * 2);
+  context.fill();
+  drawIsometricCuboid(context, bodyBase, 20, {
+    sideA: colorWithAlpha(args.accentColor, 0.74),
+    sideB: colorWithAlpha(args.accentColor, 0.95),
+    sideC: colorWithAlpha(args.accentColor, 0.58),
+    sideD: colorWithAlpha(args.accentColor, 0.82),
+    top: colorWithAlpha("#90cdf4", 0.96),
+    stroke: colorWithAlpha("#ffffff", 0.16),
+  });
+  drawCanvasLine(context, armStart, armTarget, colorWithAlpha(args.secondaryColor, 0.9), 3);
+  drawIsometricCuboid(context, headBase, 8, {
+    sideA: "#c7a27c",
+    sideB: "#e8d4b2",
+    sideC: "#a77d5c",
+    sideD: "#d8b58f",
+    top: "#f2dfc3",
+    stroke: "rgba(5, 7, 10, 0.16)",
+  });
+  context.fillStyle = colorWithAlpha("#05070a", 0.62);
+  context.fillRect(center.x + Math.sign(facing.x - center.x) * 2, center.y - 24 + bob, 3, 2);
 };
 
 const drawHyperspaceGate = (
@@ -1459,10 +2710,15 @@ export const IsometricDungeonRoom: Story = {
   argTypes: isometricDungeonArgTypes,
   render: (args) =>
     createStoryShell("3D isometric dungeon room", args, drawIsometricDungeon, [
-      ["mode", "room"],
-      ["drag", "rotate"],
-      ["keys", "move"],
-    ], { enableArrowMovement: true, enableWheelZoom: true }),
+      ["player", "4, 6"],
+      ["nearby", "none"],
+      ["camera", "0deg / 1.00x"],
+    ], {
+      enableArrowMovement: true,
+      mapEditor: { initialText: defaultIsometricDungeonMapText },
+      enableWheelZoom: true,
+      updateStats: getIsometricDungeonStats,
+    }),
 };
 
 export const HyperspaceGate: Story = {

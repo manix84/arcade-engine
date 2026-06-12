@@ -71,6 +71,7 @@ helper systems could support other arcade-style browser games too.
   capped light bounces, and movable occluder lighting demos.
 - 2.5D projection helpers for perspective lanes, isometric tiles, depth loops,
   and pseudo-3D arcade camera effects.
+- String tile-map helpers for authoring board or room layouts as editable text.
 - Arcade motion helpers for first-person camera framing, side-scroller loops,
   jump arcs, and spatial audio pan/depth calculations.
 - Spatial audio math helpers for distance gain, pan, and listener/source mixes.

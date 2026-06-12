@@ -78,6 +78,9 @@ Audio must still be started by user gestures when browsers require it.
 - Spawn coordinates along an arc.
 - Radial collision and area-exit checks.
 - Object cloning.
+
+[string-tile-map.ts](string-tile-map.ts) parses text-authored tile maps and
+provides cell lookup helpers for grid, board, and room-style games.
 - Random colors.
 - Event binding and unbinding.
 

@@ -64,6 +64,19 @@ export {
   wrapDepth,
 } from "./arcade-3d.js";
 export {
+  findStringTileMapCell,
+  findStringTileMapCells,
+  getStringTileMapCellFromCenteredPoint,
+  getStringTileMapCenteredPoint,
+  getStringTileMapTile,
+  parseStringTileMap,
+} from "./string-tile-map.js";
+export type {
+  ParseStringTileMapOptions,
+  StringTileMap,
+  StringTileMapCell,
+} from "./string-tile-map.js";
+export {
   AtmosphericAshEmberEffect,
   AtmosphericRainEffect,
   AtmosphericSnowEffect,
