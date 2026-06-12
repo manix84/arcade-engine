@@ -1093,91 +1093,357 @@ const drawStarfighterRun = (
   { canvas, context, elapsed, pointer }: SceneContext,
   args: Arcade3DStoryArgs
 ): void => {
-  const centerX = canvas.width / 2 + pointer.x * 74;
-  const horizon = canvas.height * 0.46 + pointer.y * 46;
+  const viewport = { height: canvas.height, width: canvas.width };
+  const centerX = canvas.width / 2 + pointer.x * 84;
+  const horizon = canvas.height * 0.45 + pointer.y * 42;
+  const depth = Math.max(24, args.depth);
+  const project = (x: number, y: number, z: number, focalLength = 430) =>
+    projectPerspectivePoint({ x, y, z }, viewport, { centerX, focalLength, horizon });
 
-  fillCanvasWithTrail(context, canvas, args.backgroundColor, args.trailOpacity);
+  fillCanvasWithTrail(context, canvas, "#030611", Math.min(args.trailOpacity, 0.18));
+
+  const space = context.createLinearGradient(0, 0, 0, canvas.height);
+
+  space.addColorStop(0, "#08101f");
+  space.addColorStop(0.44, "#071426");
+  space.addColorStop(0.72, "#070817");
+  space.addColorStop(1, "#02040c");
+  context.fillStyle = space;
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
+  const nebula = context.createRadialGradient(
+    canvas.width * 0.28,
+    canvas.height * 0.28,
+    0,
+    canvas.width * 0.28,
+    canvas.height * 0.28,
+    canvas.width * 0.48
+  );
+
+  nebula.addColorStop(0, colorWithAlpha(args.accentColor, 0.12));
+  nebula.addColorStop(0.45, colorWithAlpha(args.secondaryColor, 0.04));
+  nebula.addColorStop(1, colorWithAlpha("#02040c", 0));
+  context.fillStyle = nebula;
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
+  for (let ring = 7; ring >= 0; ring--) {
+    const z = getLoopedDepth({
+      depth,
+      elapsedSeconds: elapsed,
+      index: ring,
+      spacing: 4.2,
+      speed: args.speed * 5.4,
+    });
+    const progress = getDepthProgress(z, depth);
+    const radiusX = 95 + progress * canvas.width * 0.58;
+    const radiusY = 42 + progress * canvas.height * 0.36;
+    const alpha = 0.04 + progress * 0.24;
+
+    context.strokeStyle = colorWithAlpha(ring % 2 === 0 ? args.accentColor : args.secondaryColor, alpha);
+    context.lineWidth = Math.max(1, progress * 3);
+    context.beginPath();
+    context.ellipse(centerX, horizon, radiusX, radiusY, 0, 0, Math.PI * 2);
+    context.stroke();
+  }
+
+  for (let spoke = 0; spoke < 14; spoke++) {
+    const angle = (Math.PI * 2 * spoke) / 14 + Math.sin(elapsed * 0.2) * 0.08;
+    const inner = {
+      x: centerX + Math.cos(angle) * 64,
+      y: horizon + Math.sin(angle) * 30,
+    };
+    const outer = {
+      x: centerX + Math.cos(angle) * canvas.width * 0.68,
+      y: horizon + Math.sin(angle) * canvas.height * 0.42,
+    };
+
+    drawCanvasLine(context, inner, outer, colorWithAlpha(args.accentColor, 0.08), 1);
+  }
 
   for (let index = 0; index < args.objectCount; index++) {
     const seed = index * 47.7;
     const z = getLoopedDepth({
-      depth: args.depth,
+      depth,
       elapsedSeconds: elapsed,
       offset: seed,
-      speed: args.speed * 14,
+      speed: args.speed * 15,
     });
     const angle = seed * 1.618;
-    const radius = 70 + (index % 9) * 38;
-    const point = projectPerspectivePoint(
-      {
-        x: Math.cos(angle) * radius,
-        y: Math.sin(angle * 1.4) * radius * 0.58,
-        z,
-      },
-      { height: canvas.height, width: canvas.width },
-      { centerX, focalLength: 440, horizon }
-    );
-    const tail = projectPerspectivePoint(
-      {
-        x: Math.cos(angle) * radius,
-        y: Math.sin(angle * 1.4) * radius * 0.58,
-        z: z + 1.8,
-      },
-      { height: canvas.height, width: canvas.width },
-      { centerX, focalLength: 440, horizon }
-    );
+    const radius = 80 + (index % 10) * 42;
+    const x = Math.cos(angle) * radius + Math.sin(elapsed * 0.18 + seed) * 28;
+    const y = Math.sin(angle * 1.35) * radius * 0.56;
+    const point = project(x, y, z, 450);
+    const tail = project(x * 1.03, y * 1.03, z + 2.4, 450);
+    const progress = getDepthProgress(z, depth);
 
     drawCanvasLine(
       context,
       tail,
       point,
-      colorWithAlpha(index % 5 === 0 ? args.secondaryColor : args.accentColor, 0.18 + point.scale),
-      Math.max(1, 4 * point.scale)
+      colorWithAlpha(index % 7 === 0 ? args.secondaryColor : "#dbeafe", 0.14 + progress * 0.62),
+      Math.max(1, 1 + progress * 4)
     );
   }
 
-  for (let index = 0; index < Math.min(8, args.objectCount); index++) {
+  const enemies = Array.from({ length: Math.min(10, Math.max(4, Math.floor(args.objectCount / 7))) }, (_, index) => {
     const z = getLoopedDepth({
-      depth: args.depth,
+      depth,
       elapsedSeconds: elapsed,
       index,
-      offset: 6,
-      spacing: 3.9,
-      speed: args.speed * 4.2,
+      offset: 7,
+      spacing: 4.8,
+      speed: args.speed * 5.1,
     });
-    const orbit = elapsed * 0.9 + index;
-    const target = projectPerspectivePoint(
-      {
-        x: Math.sin(orbit * 0.8) * 220,
-        y: Math.cos(orbit * 1.1) * 90,
-        z,
-      },
-      { height: canvas.height, width: canvas.width },
-      { centerX, focalLength: 420, horizon }
-    );
-    const radius = 32 * target.scale;
+    const orbit = elapsed * 0.72 + index * 1.7;
 
-    context.strokeStyle = colorWithAlpha(index % 2 === 0 ? args.secondaryColor : args.accentColor, 0.85);
-    context.lineWidth = Math.max(1, 3 * target.scale);
-    context.beginPath();
-    context.arc(target.x, target.y, radius, 0, Math.PI * 2);
-    context.moveTo(target.x - radius * 1.45, target.y);
-    context.lineTo(target.x + radius * 1.45, target.y);
-    context.moveTo(target.x, target.y - radius * 1.45);
-    context.lineTo(target.x, target.y + radius * 1.45);
-    context.stroke();
+    return {
+      index,
+      point: project(Math.sin(orbit * 0.9) * 235, Math.cos(orbit * 1.15) * 95, z, 420),
+      roll: Math.sin(orbit) * 0.7,
+      z,
+    };
+  });
+
+  enemies
+    .sort((a, b) => b.z - a.z)
+    .forEach(({ index, point, roll, z }) => {
+      const progress = getDepthProgress(z, depth);
+      const radius = 24 * point.scale;
+
+      drawStarfighterBogey(context, point.x, point.y, Math.max(0.25, point.scale), roll, {
+        body: index % 2 === 0 ? args.secondaryColor : "#f472b6",
+        glow: args.accentColor,
+        outline: colorWithAlpha("#f8fafc", 0.18 + progress * 0.58),
+      });
+
+      context.strokeStyle = colorWithAlpha(index % 2 === 0 ? args.secondaryColor : args.accentColor, 0.3 + progress * 0.5);
+      context.lineWidth = Math.max(1, 2 * point.scale);
+      context.beginPath();
+      context.arc(point.x, point.y, radius * 1.75, 0, Math.PI * 2);
+      context.moveTo(point.x - radius * 2.25, point.y);
+      context.lineTo(point.x - radius * 1.15, point.y);
+      context.moveTo(point.x + radius * 1.15, point.y);
+      context.lineTo(point.x + radius * 2.25, point.y);
+      context.moveTo(point.x, point.y - radius * 2.25);
+      context.lineTo(point.x, point.y - radius * 1.15);
+      context.moveTo(point.x, point.y + radius * 1.15);
+      context.lineTo(point.x, point.y + radius * 2.25);
+      context.stroke();
+    });
+
+  const playerX = canvas.width / 2 + pointer.x * 42;
+  const playerY = canvas.height - 52 + pointer.y * 10;
+  const roll = pointer.x * 0.42 + Math.sin(elapsed * args.speed * 1.6) * 0.04;
+
+  drawStarfighterPlayerShip(context, playerX, playerY, 1.05, roll, {
+    accent: args.accentColor,
+    canopy: "#dbeafe",
+    hull: "#cbd5e1",
+    shadow: colorWithAlpha("#02040c", 0.62),
+    trim: args.secondaryColor,
+  });
+};
+
+const rotatePoint = (
+  origin: { x: number; y: number },
+  point: { x: number; y: number },
+  angle: number
+): { x: number; y: number } => {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const x = point.x - origin.x;
+  const y = point.y - origin.y;
+
+  return {
+    x: origin.x + x * cos - y * sin,
+    y: origin.y + x * sin + y * cos,
+  };
+};
+
+const transformShipPoints = (
+  x: number,
+  y: number,
+  scale: number,
+  roll: number,
+  points: Array<{ x: number; y: number }>
+): Array<{ x: number; y: number }> =>
+  points.map((point) => rotatePoint({ x, y }, { x: x + point.x * scale, y: y + point.y * scale }, roll));
+
+const drawStarfighterPlayerShip = (
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  scale: number,
+  roll: number,
+  colors: {
+    accent: string;
+    canopy: string;
+    hull: string;
+    shadow: string;
+    trim: string;
   }
-
-  context.strokeStyle = colorWithAlpha("#ffffff", 0.7);
-  context.lineWidth = 2;
+): void => {
+  context.fillStyle = colors.shadow;
   context.beginPath();
-  context.moveTo(canvas.width / 2 - 24 + pointer.x * 24, canvas.height - 70);
-  context.lineTo(canvas.width / 2 + pointer.x * 10, canvas.height - 116 + pointer.y * 12);
-  context.lineTo(canvas.width / 2 + 24 + pointer.x * 24, canvas.height - 70);
-  context.moveTo(canvas.width / 2 - 70 + pointer.x * 34, canvas.height - 52);
-  context.lineTo(canvas.width / 2 + pointer.x * 10, canvas.height - 86 + pointer.y * 10);
-  context.lineTo(canvas.width / 2 + 70 + pointer.x * 34, canvas.height - 52);
-  context.stroke();
+  context.ellipse(x, y + 12 * scale, 106 * scale, 16 * scale, roll * 0.35, 0, Math.PI * 2);
+  context.fill();
+
+  const drawFace = (
+    points: Array<{ x: number; y: number }>,
+    fill: string,
+    stroke = colorWithAlpha("#f8fafc", 0.42)
+  ): void => {
+    drawCanvasPolygon(context, transformShipPoints(x, y, scale, roll, points), fill, stroke);
+  };
+
+  drawFace(
+    [
+      { x: -18, y: -88 },
+      { x: 0, y: -122 },
+      { x: 18, y: -88 },
+      { x: 10, y: -28 },
+      { x: -10, y: -28 },
+    ],
+    colorWithAlpha(colors.hull, 0.92)
+  );
+  drawFace(
+    [
+      { x: -10, y: -82 },
+      { x: 0, y: -105 },
+      { x: 10, y: -82 },
+      { x: 7, y: -54 },
+      { x: -7, y: -54 },
+    ],
+    colorWithAlpha(colors.canopy, 0.78),
+    colorWithAlpha(colors.canopy, 0.86)
+  );
+  drawFace(
+    [
+      { x: -14, y: -30 },
+      { x: 0, y: -54 },
+      { x: 14, y: -30 },
+      { x: 28, y: 10 },
+      { x: -28, y: 10 },
+    ],
+    colorWithAlpha("#64748b", 0.84)
+  );
+  drawFace(
+    [
+      { x: -18, y: -42 },
+      { x: -108, y: -16 },
+      { x: -142, y: 26 },
+      { x: -38, y: 8 },
+    ],
+    colorWithAlpha(colors.accent, 0.72),
+    colorWithAlpha(colors.accent, 0.9)
+  );
+  drawFace(
+    [
+      { x: 18, y: -42 },
+      { x: 108, y: -16 },
+      { x: 142, y: 26 },
+      { x: 38, y: 8 },
+    ],
+    colorWithAlpha(colors.accent, 0.58),
+    colorWithAlpha(colors.accent, 0.84)
+  );
+  drawFace(
+    [
+      { x: -92, y: -10 },
+      { x: -136, y: -34 },
+      { x: -116, y: 18 },
+    ],
+    colorWithAlpha(colors.trim, 0.86),
+    colorWithAlpha(colors.trim, 0.9)
+  );
+  drawFace(
+    [
+      { x: 92, y: -10 },
+      { x: 136, y: -34 },
+      { x: 116, y: 18 },
+    ],
+    colorWithAlpha(colors.trim, 0.74),
+    colorWithAlpha(colors.trim, 0.88)
+  );
+  drawFace(
+    [
+      { x: -28, y: 4 },
+      { x: -8, y: 24 },
+      { x: -34, y: 34 },
+      { x: -58, y: 12 },
+    ],
+    colorWithAlpha("#111827", 0.88),
+    colorWithAlpha(colors.accent, 0.74)
+  );
+  drawFace(
+    [
+      { x: 28, y: 4 },
+      { x: 8, y: 24 },
+      { x: 34, y: 34 },
+      { x: 58, y: 12 },
+    ],
+    colorWithAlpha("#111827", 0.88),
+    colorWithAlpha(colors.trim, 0.7)
+  );
+
+  const leftEngine = transformShipPoints(x, y, scale, roll, [
+    { x: -58, y: 18 },
+    { x: -44, y: 32 },
+    { x: -78, y: 64 },
+    { x: -88, y: 28 },
+  ]);
+  const rightEngine = transformShipPoints(x, y, scale, roll, [
+    { x: 58, y: 18 },
+    { x: 44, y: 32 },
+    { x: 78, y: 64 },
+    { x: 88, y: 28 },
+  ]);
+
+  drawCanvasPolygon(context, leftEngine, colorWithAlpha(colors.accent, 0.34), colorWithAlpha(colors.accent, 0.58));
+  drawCanvasPolygon(context, rightEngine, colorWithAlpha(colors.trim, 0.3), colorWithAlpha(colors.trim, 0.52));
+};
+
+const drawStarfighterBogey = (
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  scale: number,
+  roll: number,
+  colors: {
+    body: string;
+    glow: string;
+    outline: string;
+  }
+): void => {
+  const drawFace = (points: Array<{ x: number; y: number }>, fill: string): void => {
+    drawCanvasPolygon(context, transformShipPoints(x, y, scale, roll, points), fill, colors.outline);
+  };
+
+  drawFace(
+    [
+      { x: 0, y: -38 },
+      { x: 16, y: 8 },
+      { x: 0, y: 24 },
+      { x: -16, y: 8 },
+    ],
+    colorWithAlpha(colors.body, 0.72)
+  );
+  drawFace(
+    [
+      { x: -12, y: 4 },
+      { x: -52, y: 20 },
+      { x: -18, y: 30 },
+    ],
+    colorWithAlpha(colors.glow, 0.5)
+  );
+  drawFace(
+    [
+      { x: 12, y: 4 },
+      { x: 52, y: 20 },
+      { x: 18, y: 30 },
+    ],
+    colorWithAlpha(colors.glow, 0.42)
+  );
 };
 
 const drawIsometricDungeon = (
