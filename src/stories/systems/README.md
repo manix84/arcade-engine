@@ -84,6 +84,24 @@ The story demonstrates:
 Use this pattern for space, sky, hyperspace, asteroid-field, or cloud-like
 background prop layers where the renderer owns the final art style.
 
+## 💡 Ray-Traced Apartment
+
+`RayTracedApartment` shows 2D ray-traced lighting in a top-down apartment scene.
+
+The story demonstrates:
+
+- `traceVisibilityPolygon`.
+- `createRayTracingRectangle`.
+- A blue window light, warm lamp light, and monochrome TV-static light.
+- Separate intensity controls for the window, lamp, and TV.
+- Draggable room objects, including the sofa, coffee table, TV, plant, shelf,
+  rug, and lamp.
+- Live occluder rebuilding so moved furniture changes the light and shadows.
+
+Use this pattern for Canvas 2D lighting, line-of-sight previews, vision cones,
+fog-of-war masks, or stealth visibility where the renderer owns the final color
+and blend mode.
+
 ## 🏆 Achievements
 
 `Achievements` shows local achievement definition, progress, unlock, and status

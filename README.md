@@ -67,6 +67,8 @@ helper systems could support other arcade-style browser games too.
 - Gravity and lightweight 2D/3D ragdoll helpers for arcade physics effects.
 - Canvas rendering helpers for trails, lines, polygons, hex color parsing, and
   shading.
+- 2D ray tracing helpers for visibility polygons, line-segment ray hits, and
+  movable occluder lighting demos.
 - 2.5D projection helpers for perspective lanes, isometric tiles, depth loops,
   and pseudo-3D arcade camera effects.
 - Arcade motion helpers for first-person camera framing, side-scroller loops,
@@ -464,6 +466,23 @@ available to games:
 `fillCanvasWithTrail` accepts any valid CSS color string. Hex-specific helpers
 require 3 or 6 digit hex colors.
 
+### Ray Tracing
+
+Ray tracing helpers calculate 2D visibility polygons from a light or viewpoint
+against rectangular bounds and polygon occluders:
+
+- `createRayTracingRectangle(x, y, width, height)`.
+- `createRayTracingBoundsPolygon(bounds)`.
+- `getRayTracingPolygonSegments(polygon)`.
+- `getRayTracingSegments(bounds, occluders?)`.
+- `traceRay(origin, angle, segments)`.
+- `traceVisibilityPolygon(origin, bounds, occluders?)`.
+
+Use them for Canvas 2D lighting, line-of-sight, fog-of-war, stealth vision
+cones, or visibility previews. See the `Engine/Systems/Presentation/Ray Traced
+Apartment` Storybook story for draggable furniture, a movable lamp, separate
+light-intensity controls, and monochrome TV-static flicker.
+
 ### 2.5D Projection
 
 The `arcade-3d` helpers are renderer-agnostic math functions for arcade-style
@@ -538,7 +557,8 @@ Storybook contains live demos for the engine surface:
 - **Systems**: input actions, local multiplayer, user options, achievements,
   achievement notifications, high scores, display filters, sprite animation,
   follow cameras, procedural background stars, player screen effects,
-  environment screen effects, atmospheric effects, and spatial-audio math.
+  environment screen effects, atmospheric effects, ray-traced apartment
+  lighting, and spatial-audio math.
 - **Audio**: master controls, effects, music, spatial panning, and global
   playback behavior.
 - **3D**: cube-cluster pickups and modular level pieces.

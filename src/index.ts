@@ -128,6 +128,14 @@ export {
   shadeHexColor,
 } from "./canvas-rendering.js";
 export {
+  createRayTracingBoundsPolygon,
+  createRayTracingRectangle,
+  getRayTracingPolygonSegments,
+  getRayTracingSegments,
+  traceRay,
+  traceVisibilityPolygon,
+} from "./ray-tracing.js";
+export {
   defaultCustomDisplayFilterSettings,
   defaultDisplayFilterMode,
   defaultDisplayFilterRuntimeBoosts,
@@ -439,6 +447,13 @@ export type {
   SpatialAudioMixOptions,
 } from "./spatial-audio.js";
 export type { RgbColor } from "./canvas-rendering.js";
+export type {
+  RayTracingBounds,
+  RayTracingHit,
+  RayTracingPoint,
+  RayTracingPolygon,
+  RayTracingSegment,
+} from "./ray-tracing.js";
 export type {
   GravityOptions,
   PhysicsBody2D,

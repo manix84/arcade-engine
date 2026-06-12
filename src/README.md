@@ -331,6 +331,20 @@ helpers used by the visual demos:
 `fillCanvasWithTrail` accepts normal CSS colors. The color conversion helpers
 expect 3 or 6 digit hex strings.
 
+## 💡 Ray Tracing
+
+[ray-tracing.ts](ray-tracing.ts) contains renderer-agnostic 2D visibility
+helpers:
+
+- Rectangle and bounds polygon creation.
+- Polygon-to-segment conversion.
+- Nearest ray/segment intersection.
+- Sorted visibility polygon tracing from a light or viewpoint.
+
+Use these helpers for canvas lighting, vision cones, line-of-sight previews,
+fog-of-war shapes, or stealth visibility. The helpers return geometry only;
+games still own gradients, color blending, shadow styling, and interaction.
+
 ## 🕹️ 2.5D Projection
 
 [arcade-3d.ts](arcade-3d.ts) contains math helpers for pseudo-3D and isometric

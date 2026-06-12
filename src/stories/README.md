@@ -68,8 +68,8 @@ focused helper stories live in [helpers/README.md](helpers/README.md).
 system-level helpers for input actions, local multiplayer, sprite animation,
 follow cameras, user options, display filters, achievements, achievement
 notifications, high scores, procedural background stars, player screen effects,
-environment screen effects, atmospheric effects, gravity, 2D/3D ragdolls, and
-spatial-audio math.
+environment screen effects, atmospheric effects, ray-traced apartment lighting,
+gravity, 2D/3D ragdolls, and spatial-audio math.
 See [systems/README.md](systems/README.md).
 
 Screen-effect and atmospheric demos share [fps-demo-scene.ts](fps-demo-scene.ts),

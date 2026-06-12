@@ -34,6 +34,8 @@ import {
   screenPoisonEffectId,
   screenShockEffectId,
   screenSpeedBoostEffectId,
+  colorWithAlpha,
+  createRayTracingRectangle,
   drawCanvasLine,
   drawCanvasPolygon,
   fillCanvasWithTrail,
@@ -64,6 +66,11 @@ import {
   type RagdollConstraint,
   type RagdollPoint2D,
   type RagdollPoint3D,
+  type RayTracingBounds,
+  type RayTracingHit,
+  type RayTracingPoint,
+  type RayTracingPolygon,
+  traceVisibilityPolygon,
 } from "../../index.js";
 import {
   appendStyles,
@@ -85,6 +92,7 @@ type SystemsStoryArgs = {
   displayFilterMode?: DisplayFilterMode;
   displayFilterBoost?: number;
   highScoreValue?: number;
+  lampLightIntensity?: number;
   lowScoreValue?: number;
   maxAcceptedScore?: number;
   onAchievementProgress?: (id: DemoAchievementId) => void;
@@ -132,7 +140,9 @@ type SystemsStoryArgs = {
   ashEmberMotionPreset?: AtmosphericMotionPreset;
   onUserOptionsChange?: (options: Record<string, unknown>) => void;
   precisionGoal?: number;
+  tvLightIntensity?: number;
   waveGoal?: number;
+  windowLightIntensity?: number;
 };
 
 type Story = StoryObj<SystemsStoryArgs>;
@@ -2707,6 +2717,633 @@ export const Ragdoll3D: Story = {
 
     animationFrame = window.requestAnimationFrame(render);
     onRemove(shell, () => window.cancelAnimationFrame(animationFrame));
+
+    return shell;
+  },
+};
+
+type ApartmentLight = {
+  color: string;
+  id: "lamp" | "tv" | "window";
+  phase: number;
+  position: RayTracingPoint;
+  radius: number;
+  strength: number;
+  temperature: string;
+};
+
+type ApartmentObjectKind =
+  | "coffee-table"
+  | "console"
+  | "lamp"
+  | "plant"
+  | "rug"
+  | "shelf"
+  | "sofa";
+
+type ApartmentObject = {
+  blocksLight: boolean;
+  fill: string;
+  height: number;
+  id: string;
+  kind: ApartmentObjectKind;
+  movable: boolean;
+  stroke?: string;
+  width: number;
+  x: number;
+  y: number;
+};
+
+type ApartmentDrag = {
+  index: number;
+  offsetX: number;
+  offsetY: number;
+};
+
+const apartmentBounds: RayTracingBounds = {
+  height: 332,
+  width: 612,
+  x: 54,
+  y: 34,
+};
+
+const createApartmentObjects = (): ApartmentObject[] => [
+  {
+    blocksLight: true,
+    fill: "#343945",
+    height: 92,
+    id: "sofa",
+    kind: "sofa",
+    movable: true,
+    width: 192,
+    x: 166,
+    y: 212,
+  },
+  {
+    blocksLight: true,
+    fill: "#5f4a38",
+    height: 62,
+    id: "coffee table",
+    kind: "coffee-table",
+    movable: true,
+    stroke: "rgba(255, 236, 180, 0.2)",
+    width: 120,
+    x: 256,
+    y: 170,
+  },
+  {
+    blocksLight: true,
+    fill: "#544437",
+    height: 74,
+    id: "lamp",
+    kind: "lamp",
+    movable: true,
+    stroke: "rgba(255, 222, 142, 0.2)",
+    width: 60,
+    x: 468,
+    y: 202,
+  },
+  {
+    blocksLight: true,
+    fill: "#101913",
+    height: 30,
+    id: "tv",
+    kind: "console",
+    movable: true,
+    stroke: "rgba(94, 255, 122, 0.28)",
+    width: 138,
+    x: 422,
+    y: 68,
+  },
+  {
+    blocksLight: true,
+    fill: "#423f37",
+    height: 40,
+    id: "shelf",
+    kind: "shelf",
+    movable: true,
+    stroke: "rgba(245, 247, 251, 0.12)",
+    width: 116,
+    x: 102,
+    y: 68,
+  },
+  {
+    blocksLight: true,
+    fill: "#29352d",
+    height: 50,
+    id: "plant",
+    kind: "plant",
+    movable: true,
+    stroke: "rgba(144, 205, 244, 0.12)",
+    width: 52,
+    x: 84,
+    y: 296,
+  },
+  {
+    blocksLight: false,
+    fill: "rgba(245, 247, 251, 0.09)",
+    height: 56,
+    id: "rug",
+    kind: "rug",
+    movable: true,
+    stroke: "rgba(245, 247, 251, 0.06)",
+    width: 74,
+    x: 376,
+    y: 244,
+  },
+];
+
+const drawApartmentPath = (
+  context: CanvasRenderingContext2D,
+  points: readonly RayTracingPoint[]
+): void => {
+  context.beginPath();
+  points.forEach((point, index) => {
+    if (index === 0) {
+      context.moveTo(point.x, point.y);
+      return;
+    }
+
+    context.lineTo(point.x, point.y);
+  });
+  context.closePath();
+};
+
+const fillApartmentRectangle = (
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  fill: string,
+  stroke = "rgba(245, 247, 251, 0.14)"
+): void => {
+  context.fillStyle = fill;
+  context.fillRect(x, y, width, height);
+  context.strokeStyle = stroke;
+  context.lineWidth = 2;
+  context.strokeRect(x, y, width, height);
+};
+
+const getApartmentObjectPolygon = (object: ApartmentObject): RayTracingPolygon =>
+  createRayTracingRectangle(object.x, object.y, object.width, object.height);
+
+const getApartmentObjectCenter = (object: ApartmentObject): RayTracingPoint => ({
+  x: object.x + object.width / 2,
+  y: object.y + object.height / 2,
+});
+
+const getApartmentOccluders = (
+  objects: readonly ApartmentObject[],
+  origin?: RayTracingPoint
+): RayTracingPolygon[] =>
+  objects
+    .filter(
+      (object) =>
+        object.blocksLight &&
+        (!origin ||
+          origin.x < object.x ||
+          origin.x > object.x + object.width ||
+          origin.y < object.y ||
+          origin.y > object.y + object.height)
+    )
+    .map((object) => getApartmentObjectPolygon(object));
+
+const getApartmentObjectById = (
+  objects: readonly ApartmentObject[],
+  id: string
+): ApartmentObject | undefined => objects.find((object) => object.id === id);
+
+const getTvStaticColor = (frame: number): string => {
+  const colors = ["#d9dde5", "#c7ced8", "#e6e9ef", "#b9c1cc", "#d0d6df", "#edf0f5"];
+  const step = Math.floor(frame / 8);
+  const jitter = Math.floor(Math.abs(Math.sin(frame * 0.37) * 2));
+
+  return colors[(step + jitter) % colors.length] ?? "#f5f7fb";
+};
+
+const getApartmentLights = (
+  objects: readonly ApartmentObject[],
+  frame: number
+): ApartmentLight[] => {
+  const lamp = getApartmentObjectById(objects, "lamp");
+  const tv = getApartmentObjectById(objects, "tv");
+
+  return [
+    {
+      color: "#7ec8ff",
+      id: "window",
+      phase: 0,
+      position: { x: 78, y: 136 },
+      radius: 340,
+      strength: 0.36,
+      temperature: "cool blue",
+    },
+    {
+      color: "#ffd36f",
+      id: "lamp",
+      phase: 1.6,
+      position: lamp ? getApartmentObjectCenter(lamp) : { x: 498, y: 216 },
+      radius: 230,
+      strength: 0.42,
+      temperature: "warm yellow",
+    },
+    {
+      color: getTvStaticColor(frame),
+      id: "tv",
+      phase: 3.1,
+      position: tv
+        ? { x: tv.x + tv.width / 2, y: tv.y + tv.height + 6 }
+        : { x: 492, y: 104 },
+      radius: 260,
+      strength: 0.54,
+      temperature: "static flicker",
+    },
+  ];
+};
+
+const drawApartmentObject = (
+  context: CanvasRenderingContext2D,
+  object: ApartmentObject,
+  isDragging: boolean
+): void => {
+  fillApartmentRectangle(
+    context,
+    object.x,
+    object.y,
+    object.width,
+    object.height,
+    object.fill,
+    isDragging ? "rgba(245, 247, 251, 0.72)" : object.stroke
+  );
+
+  if (object.kind === "sofa") {
+    fillApartmentRectangle(
+      context,
+      object.x + 18,
+      object.y + 20,
+      68,
+      48,
+      "#48505f",
+      "rgba(245, 247, 251, 0.11)"
+    );
+    fillApartmentRectangle(
+      context,
+      object.x + object.width - 86,
+      object.y + 20,
+      68,
+      48,
+      "#48505f",
+      "rgba(245, 247, 251, 0.11)"
+    );
+  }
+
+  if (object.kind === "coffee-table") {
+    fillApartmentRectangle(
+      context,
+      object.x + 30,
+      object.y + 18,
+      60,
+      24,
+      "#7a6048",
+      "rgba(255, 236, 180, 0.2)"
+    );
+  }
+
+  if (object.kind === "console") {
+    context.fillStyle = "rgba(245, 247, 251, 0.68)";
+    context.fillRect(object.x + 22, object.y + 8, object.width - 44, 10);
+    context.fillStyle = "rgba(255, 255, 255, 0.46)";
+    context.fillRect(object.x + 22, object.y + 8, object.width - 62, 4);
+    context.fillStyle = "rgba(148, 163, 184, 0.44)";
+    context.fillRect(object.x + 38, object.y + 14, object.width - 66, 3);
+  }
+
+  if (object.kind === "lamp") {
+    const center = getApartmentObjectCenter(object);
+
+    context.fillStyle = "rgba(255, 217, 116, 0.78)";
+    context.beginPath();
+    context.arc(center.x, center.y, 12, 0, Math.PI * 2);
+    context.fill();
+  }
+};
+
+const drawApartmentBase = (
+  context: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
+  objects: readonly ApartmentObject[],
+  draggingIndex?: number
+): void => {
+  context.fillStyle = "#07080b";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
+  const floor = context.createLinearGradient(
+    apartmentBounds.x ?? 0,
+    apartmentBounds.y ?? 0,
+    (apartmentBounds.x ?? 0) + apartmentBounds.width,
+    (apartmentBounds.y ?? 0) + apartmentBounds.height
+  );
+  floor.addColorStop(0, "#22201d");
+  floor.addColorStop(0.5, "#181b1e");
+  floor.addColorStop(1, "#1d1b20");
+  context.fillStyle = floor;
+  context.fillRect(
+    apartmentBounds.x ?? 0,
+    apartmentBounds.y ?? 0,
+    apartmentBounds.width,
+    apartmentBounds.height
+  );
+
+  context.strokeStyle = "rgba(245, 247, 251, 0.26)";
+  context.lineWidth = 10;
+  context.strokeRect(
+    apartmentBounds.x ?? 0,
+    apartmentBounds.y ?? 0,
+    apartmentBounds.width,
+    apartmentBounds.height
+  );
+
+  context.strokeStyle = "rgba(120, 190, 255, 0.85)";
+  context.lineWidth = 8;
+  context.beginPath();
+  context.moveTo(58, 96);
+  context.lineTo(58, 178);
+  context.stroke();
+
+  context.strokeStyle = "rgba(246, 224, 94, 0.18)";
+  context.lineWidth = 1;
+  for (let x = 80; x < 650; x += 32) {
+    drawCanvasLine(context, { x, y: 44 }, { x, y: 356 }, "rgba(245, 247, 251, 0.035)");
+  }
+  for (let y = 58; y < 350; y += 32) {
+    drawCanvasLine(context, { x: 64, y }, { x: 656, y }, "rgba(245, 247, 251, 0.032)");
+  }
+
+  objects.forEach((object, index) => {
+    if (object.kind === "rug") {
+      drawApartmentObject(context, object, index === draggingIndex);
+    }
+  });
+  objects.forEach((object, index) => {
+    if (object.kind !== "rug") {
+      drawApartmentObject(context, object, index === draggingIndex);
+    }
+  });
+};
+
+const drawApartmentLight = (
+  context: CanvasRenderingContext2D,
+  light: ApartmentLight,
+  frame: number,
+  occluders: readonly RayTracingPolygon[],
+  intensity: number
+): RayTracingHit[] => {
+  const pulse = 0.9 + Math.sin(frame / 42 + light.phase) * 0.08;
+  const strength = light.strength * intensity;
+  const hits = traceVisibilityPolygon(
+    light.position,
+    apartmentBounds,
+    occluders
+  );
+  const gradient = context.createRadialGradient(
+    light.position.x,
+    light.position.y,
+    2,
+    light.position.x,
+    light.position.y,
+    light.radius
+  );
+
+  gradient.addColorStop(0, colorWithAlpha(light.color, strength * pulse));
+  gradient.addColorStop(0.46, colorWithAlpha(light.color, strength * 0.42 * pulse));
+  gradient.addColorStop(1, colorWithAlpha(light.color, 0));
+
+  context.save();
+  drawApartmentPath(context, hits);
+  context.clip();
+  context.globalCompositeOperation = "lighter";
+  context.fillStyle = gradient;
+  context.fillRect(
+    (apartmentBounds.x ?? 0) - 8,
+    (apartmentBounds.y ?? 0) - 8,
+    apartmentBounds.width + 16,
+    apartmentBounds.height + 16
+  );
+  context.restore();
+
+  context.save();
+  drawApartmentPath(context, hits);
+  context.strokeStyle = colorWithAlpha(light.color, 0.18);
+  context.lineWidth = 1;
+  context.stroke();
+  context.restore();
+
+  return hits;
+};
+
+const drawApartmentFixtures = (
+  context: CanvasRenderingContext2D,
+  lights: readonly ApartmentLight[]
+): void => {
+  context.save();
+  context.globalCompositeOperation = "source-over";
+  lights.forEach((light) => {
+    context.fillStyle = colorWithAlpha(light.color, 0.92);
+    context.beginPath();
+    context.arc(light.position.x, light.position.y, 7, 0, Math.PI * 2);
+    context.fill();
+    context.strokeStyle = colorWithAlpha("#ffffff", 0.68);
+    context.lineWidth = 2;
+    context.stroke();
+  });
+  context.restore();
+};
+
+const getApartmentPointerPoint = (
+  canvas: HTMLCanvasElement,
+  event: PointerEvent
+): RayTracingPoint => {
+  const bounds = canvas.getBoundingClientRect();
+
+  return {
+    x: ((event.clientX - bounds.left) / bounds.width) * canvas.width,
+    y: ((event.clientY - bounds.top) / bounds.height) * canvas.height,
+  };
+};
+
+const findApartmentObjectAt = (
+  objects: readonly ApartmentObject[],
+  point: RayTracingPoint
+): number => {
+  for (let index = objects.length - 1; index >= 0; index -= 1) {
+    const object = objects[index];
+
+    if (
+      object?.movable &&
+      point.x >= object.x &&
+      point.x <= object.x + object.width &&
+      point.y >= object.y &&
+      point.y <= object.y + object.height
+    ) {
+      return index;
+    }
+  }
+
+  return -1;
+};
+
+const moveApartmentObject = (
+  object: ApartmentObject,
+  point: RayTracingPoint,
+  drag: ApartmentDrag
+): void => {
+  const left = apartmentBounds.x ?? 0;
+  const top = apartmentBounds.y ?? 0;
+  const maxX = left + apartmentBounds.width - object.width;
+  const maxY = top + apartmentBounds.height - object.height;
+
+  object.x = Math.max(left, Math.min(maxX, point.x - drag.offsetX));
+  object.y = Math.max(top, Math.min(maxY, point.y - drag.offsetY));
+};
+
+export const RayTracedApartment: Story = {
+  args: {
+    lampLightIntensity: 0.65,
+    tvLightIntensity: 0.65,
+    windowLightIntensity: 0.65,
+  },
+  argTypes: {
+    lampLightIntensity: { control: { max: 1.2, min: 0.05, step: 0.05, type: "range" } },
+    tvLightIntensity: { control: { max: 1.2, min: 0.05, step: 0.05, type: "range" } },
+    windowLightIntensity: { control: { max: 1.2, min: 0.05, step: 0.05, type: "range" } },
+  },
+  render: (args) => {
+    const { canvas, metrics, shell } = createSystemsLayout("Ray-traced apartment");
+    const context = canvas.getContext("2d");
+    const windowValue = createValue("window", "blue cool");
+    const lampValue = createValue("lamp", "warm yellow");
+    const tvValue = createValue("tv", "static flicker");
+    const raysValue = createValue("rays");
+    const selectedValue = createValue("selected", "none");
+    const windowIntensityValue = createValue("window intensity", args.windowLightIntensity ?? 0.65);
+    const lampIntensityValue = createValue("lamp intensity", args.lampLightIntensity ?? 0.65);
+    const tvIntensityValue = createValue("tv intensity", args.tvLightIntensity ?? 0.65);
+    const objects = createApartmentObjects();
+    let drag: ApartmentDrag | undefined;
+    let animationFrame = 0;
+    let frame = 0;
+
+    resizeCanvas(canvas, 720, 420);
+    canvas.style.cursor = "grab";
+    metrics.append(
+      windowValue,
+      lampValue,
+      tvValue,
+      raysValue,
+      selectedValue,
+      windowIntensityValue,
+      lampIntensityValue,
+      tvIntensityValue,
+      createValue("movable", String(objects.filter((object) => object.movable).length))
+    );
+
+    const pointerDown = (event: PointerEvent): void => {
+      const point = getApartmentPointerPoint(canvas, event);
+      const index = findApartmentObjectAt(objects, point);
+      const object = objects[index];
+
+      if (!object) {
+        setValue(selectedValue, "none");
+        return;
+      }
+
+      drag = {
+        index,
+        offsetX: point.x - object.x,
+        offsetY: point.y - object.y,
+      };
+      canvas.setPointerCapture(event.pointerId);
+      canvas.style.cursor = "grabbing";
+      setValue(selectedValue, object.id);
+    };
+
+    const pointerMove = (event: PointerEvent): void => {
+      const point = getApartmentPointerPoint(canvas, event);
+
+      if (!drag) {
+        canvas.style.cursor =
+          findApartmentObjectAt(objects, point) >= 0 ? "grab" : "default";
+        return;
+      }
+
+      const object = objects[drag.index];
+
+      if (object) {
+        moveApartmentObject(object, point, drag);
+        setValue(selectedValue, object.id);
+      }
+    };
+
+    const pointerUp = (event: PointerEvent): void => {
+      if (canvas.hasPointerCapture(event.pointerId)) {
+        canvas.releasePointerCapture(event.pointerId);
+      }
+
+      drag = undefined;
+      canvas.style.cursor = "grab";
+    };
+
+    canvas.addEventListener("pointerdown", pointerDown);
+    canvas.addEventListener("pointermove", pointerMove);
+    canvas.addEventListener("pointerup", pointerUp);
+    canvas.addEventListener("pointercancel", pointerUp);
+
+    const render = (): void => {
+      if (!context) {
+        return;
+      }
+
+      frame += 1;
+      const lights = getApartmentLights(objects, frame);
+      const intensityByLight = {
+        lamp: Math.max(0, Math.min(1.5, args.lampLightIntensity ?? 0.65)),
+        tv: Math.max(0, Math.min(1.5, args.tvLightIntensity ?? 0.65)),
+        window: Math.max(0, Math.min(1.5, args.windowLightIntensity ?? 0.65)),
+      };
+      drawApartmentBase(context, canvas, objects, drag?.index);
+      const hitCount = lights.reduce(
+        (count, light) =>
+          count +
+          drawApartmentLight(
+            context,
+            light,
+            frame,
+            getApartmentOccluders(objects, light.position),
+            intensityByLight[light.id]
+          ).length,
+        0
+      );
+      drawApartmentFixtures(context, lights);
+
+      setValue(windowValue, lights[0]?.temperature ?? "");
+      setValue(lampValue, lights[1]?.temperature ?? "");
+      setValue(tvValue, lights[2]?.temperature ?? "");
+      setValue(raysValue, hitCount);
+      setValue(windowIntensityValue, intensityByLight.window.toFixed(2));
+      setValue(lampIntensityValue, intensityByLight.lamp.toFixed(2));
+      setValue(tvIntensityValue, intensityByLight.tv.toFixed(2));
+      animationFrame = window.requestAnimationFrame(render);
+    };
+
+    animationFrame = window.requestAnimationFrame(render);
+    onRemove(shell, () => {
+      window.cancelAnimationFrame(animationFrame);
+      canvas.removeEventListener("pointerdown", pointerDown);
+      canvas.removeEventListener("pointermove", pointerMove);
+      canvas.removeEventListener("pointerup", pointerUp);
+      canvas.removeEventListener("pointercancel", pointerUp);
+    });
 
     return shell;
   },
