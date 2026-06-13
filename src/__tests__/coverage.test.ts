@@ -779,6 +779,7 @@ describe("coverage-focused engine branches", () => {
       "findStringTileMapCell",
       "findStringTileMapCells",
       "formatZoomPercent",
+      "generateSeededIsoMap",
       "getAchievementStatuses",
       "getAnimatedSpriteFrame",
       "getAvailableLocalStorage",

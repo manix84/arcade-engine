@@ -11,6 +11,7 @@ import {
   getIsometricTileCorners,
   getLoopedScrollerPosition,
   getLoopedDepth,
+  generateSeededIsoMap,
   getStringTileMapCellFromCenteredPoint,
   getStringTileMapCenteredPoint,
   getStringTileMapTile,
@@ -19,6 +20,7 @@ import {
   parseStringTileMap,
   getSideScrollerActorPosition,
   getSideScrollerJumpY,
+  type GeneratedRoom,
   type StringTileMap,
   Ticker,
 } from "../index.js";
@@ -197,6 +199,112 @@ const defaultIsometricDungeonMapText = `
 #               #
 #################
 `.trim();
+
+const getDungeonRoomCenter = (room: GeneratedRoom): { x: number; y: number } => ({
+  x: Math.floor(room.x + room.width / 2),
+  y: Math.floor(room.y + room.height / 2),
+});
+
+const findDungeonRoomFloor = (
+  grid: Array<Array<IsometricDungeonTile>>,
+  room: GeneratedRoom
+): { x: number; y: number } | undefined => {
+  for (let y = room.y; y < room.y + room.height; y++) {
+    for (let x = room.x; x < room.x + room.width; x++) {
+      if (grid[y]?.[x] === " ") {
+        return { x, y };
+      }
+    }
+  }
+
+  return undefined;
+};
+
+const placeDungeonTileIfFloor = (
+  grid: Array<Array<IsometricDungeonTile>>,
+  x: number,
+  y: number,
+  tile: IsometricDungeonTile
+): boolean => {
+  if (grid[y]?.[x] !== " ") {
+    return false;
+  }
+
+  grid[y][x] = tile;
+  return true;
+};
+
+const generateIsometricDungeonMapFromSeed = (
+  seedText: string,
+  level: number
+): { mapText: string; numericSeed: number } => {
+  const levelIndex = Math.max(1, Math.min(99, Math.floor(level)));
+  const generated = generateSeededIsoMap(`${seedText}+lvl${levelIndex}`, {
+    chestChance: 0.72,
+    height: 27,
+    maxRoomSize: 8,
+    maxRooms: 9,
+    minRoomSize: 4,
+    minRooms: 7,
+    tiles: {
+      chest: "C",
+      door: "D",
+      empty: "_",
+      floor: " ",
+      player: "S",
+      wall: "#",
+    },
+    width: 35,
+  });
+  const grid = generated.rows.map((row) => [...row] as IsometricDungeonTile[]);
+  const sortedRooms = generated.rooms
+    .slice()
+    .sort((left, right) => getDungeonRoomCenter(left).x - getDungeonRoomCenter(right).x);
+  const upstairs = findDungeonRoomFloor(grid, sortedRooms[Math.min(1, sortedRooms.length - 1)]);
+  const downstairs = findDungeonRoomFloor(grid, sortedRooms[sortedRooms.length - 1]);
+
+  if (upstairs) {
+    placeDungeonTileIfFloor(grid, upstairs.x, upstairs.y, "u");
+  }
+
+  if (downstairs) {
+    placeDungeonTileIfFloor(grid, downstairs.x, downstairs.y, "d");
+  }
+
+  sortedRooms.forEach((room, index) => {
+    const center = getDungeonRoomCenter(room);
+
+    if (index % 2 === 0) {
+      placeDungeonTileIfFloor(grid, room.x + 1, room.y + 1, "o");
+    }
+
+    if (index > 1 && index % 3 === 0) {
+      placeDungeonTileIfFloor(grid, center.x - 1, center.y, "C");
+    }
+
+    if (room.width >= 7 && room.height >= 6) {
+      placeDungeonTileIfFloor(grid, room.x + room.width - 2, room.y + 1, "P");
+      placeDungeonTileIfFloor(grid, room.x + 1, room.y + room.height - 2, "P");
+    }
+
+    if (index > 0 && generated.numericSeed % (index + 3) > 1) {
+      placeDungeonTileIfFloor(grid, center.x + 1, center.y + 1, "r");
+    }
+
+    if (index > 1 && generated.numericSeed % (index + 5) > 2) {
+      for (let y = center.y - 1; y <= center.y + 1; y++) {
+        for (let x = center.x - 1; x <= center.x + 1; x++) {
+          placeDungeonTileIfFloor(grid, x, y, "w");
+        }
+      }
+    }
+  });
+
+  return {
+    mapText: grid.map((row) => row.join("")).join("\n"),
+    numericSeed: generated.numericSeed,
+  };
+};
 
 const isometricDungeonTiles = {
   " ": { label: "floor", role: "floor", walkable: true },
@@ -522,11 +630,84 @@ const isTextEditingTarget = (target: EventTarget | null): boolean =>
 
 const createIsometricDungeonMapEditor = (initialText: string): DungeonMapEditorSurface => {
   const surface = document.createElement("div");
+  const generator = document.createElement("div");
+  const seedLabel = document.createElement("label");
+  const seedInput = document.createElement("input");
+  const levelLabel = document.createElement("label");
+  const levelInput = document.createElement("input");
+  const generateButton = document.createElement("button");
+  const generatedSeed = document.createElement("output");
   const editor = document.createElement("textarea");
   const legend = createIsometricDungeonMapLegend();
 
   surface.style.position = "relative";
   surface.style.marginTop = "18px";
+
+  generator.style.display = "grid";
+  generator.style.gridTemplateColumns = "minmax(0, 1fr) 92px auto";
+  generator.style.gap = "8px";
+  generator.style.alignItems = "end";
+  generator.style.marginBottom = "10px";
+
+  seedLabel.textContent = "Seed";
+  seedLabel.style.display = "grid";
+  seedLabel.style.gap = "5px";
+  seedLabel.style.color = "#cbd5e1";
+  seedLabel.style.font = "700 12px Inter, ui-sans-serif, system-ui, sans-serif";
+
+  seedInput.type = "text";
+  seedInput.value = "arcade";
+  seedInput.setAttribute("aria-label", "Dungeon seed");
+  seedInput.style.boxSizing = "border-box";
+  seedInput.style.width = "100%";
+  seedInput.style.height = "34px";
+  seedInput.style.padding = "0 10px";
+  seedInput.style.border = "1px solid rgba(148, 163, 184, 0.28)";
+  seedInput.style.borderRadius = "6px";
+  seedInput.style.background = "rgba(5, 7, 10, 0.72)";
+  seedInput.style.color = "#dbeafe";
+
+  levelLabel.textContent = "Level";
+  levelLabel.style.display = "grid";
+  levelLabel.style.gap = "5px";
+  levelLabel.style.color = "#cbd5e1";
+  levelLabel.style.font = "700 12px Inter, ui-sans-serif, system-ui, sans-serif";
+
+  levelInput.type = "number";
+  levelInput.value = "1";
+  levelInput.min = "1";
+  levelInput.max = "99";
+  levelInput.step = "1";
+  levelInput.setAttribute("aria-label", "Dungeon level");
+  levelInput.style.boxSizing = "border-box";
+  levelInput.style.width = "100%";
+  levelInput.style.height = "34px";
+  levelInput.style.padding = "0 8px";
+  levelInput.style.border = "1px solid rgba(148, 163, 184, 0.28)";
+  levelInput.style.borderRadius = "6px";
+  levelInput.style.background = "rgba(5, 7, 10, 0.72)";
+  levelInput.style.color = "#dbeafe";
+
+  generateButton.type = "button";
+  generateButton.textContent = "Generate";
+  generateButton.style.height = "34px";
+  generateButton.style.padding = "0 12px";
+  generateButton.style.border = "1px solid rgba(79, 209, 197, 0.52)";
+  generateButton.style.borderRadius = "6px";
+  generateButton.style.background = "rgba(79, 209, 197, 0.16)";
+  generateButton.style.color = "#f8fafc";
+  generateButton.style.cursor = "pointer";
+  generateButton.style.font = "700 12px Inter, ui-sans-serif, system-ui, sans-serif";
+
+  generatedSeed.style.gridColumn = "1 / -1";
+  generatedSeed.style.minHeight = "16px";
+  generatedSeed.style.color = "#94a3b8";
+  generatedSeed.style.font = "11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+
+  seedLabel.append(seedInput);
+  levelLabel.append(levelInput);
+  generator.append(seedLabel, levelLabel, generateButton, generatedSeed);
+
   editor.value = initialText;
   editor.setAttribute("aria-label", "Dungeon map editor");
   editor.spellcheck = false;
@@ -544,7 +725,18 @@ const createIsometricDungeonMapEditor = (initialText: string): DungeonMapEditorS
   editor.style.whiteSpace = "pre";
   editor.style.overflow = "auto";
 
-  surface.append(editor);
+  const applyGeneratedMap = (): void => {
+    const level = Number.parseInt(levelInput.value, 10);
+    const generated = generateIsometricDungeonMapFromSeed(seedInput.value, Number.isFinite(level) ? level : 1);
+
+    editor.value = generated.mapText;
+    generatedSeed.value = `seed ${generated.numericSeed} from "${seedInput.value || "arcade"}+lvl${Math.max(1, Math.floor(level || 1))}"`;
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+  };
+
+  generateButton.addEventListener("click", applyGeneratedMap);
+
+  surface.append(generator, editor);
 
   return { editor, element: surface, legend: legend.element, resetLegendPosition: legend.resetPosition };
 };

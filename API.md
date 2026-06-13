@@ -124,6 +124,7 @@ centered world coordinates.
 | `getStringTileMapTile` | Read one tile by column and row. |
 | `getStringTileMapCenteredPoint` | Convert a column/row into centered `x`/`z` coordinates. |
 | `getStringTileMapCellFromCenteredPoint` | Convert centered `x`/`z` coordinates back into a cell. |
+| `generateSeededIsoMap` | Generate a deterministic, connected room graph as an engine-compatible string map. |
 
 ```ts
 const map = parseStringTileMap(
@@ -135,6 +136,39 @@ const map = parseStringTileMap(
 `.trim()
 );
 const spawn = findStringTileMapCell(map, "S");
+```
+
+Seeded maps use a deterministic PRNG and validate the generated layout before
+returning it. The generator builds connected rectangular rooms and corridors,
+places doors and chests only on reachable tiles, and retries with deterministic
+attempt seeds if validation fails.
+
+```ts
+const generated = generateSeededIsoMap("forest-1", {
+  width: 36,
+  height: 26,
+  minRooms: 6,
+  maxRooms: 9,
+});
+
+console.log(generated.text);
+```
+
+Use `tiles` when a game uses different string-map characters:
+
+```ts
+const dungeon = generateSeededIsoMap("abc+lvl1", {
+  width: 35,
+  height: 27,
+  tiles: {
+    chest: "C",
+    door: "D",
+    empty: "_",
+    floor: " ",
+    player: "S",
+    wall: "#",
+  },
+});
 ```
 
 The isometric dungeon demo uses this editable legend on top of the generic

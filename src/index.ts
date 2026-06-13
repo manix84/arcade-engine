@@ -76,6 +76,13 @@ export type {
   StringTileMap,
   StringTileMapCell,
 } from "./string-tile-map.js";
+export { generateSeededIsoMap } from "./seeded-iso-map.js";
+export type {
+  GeneratedMap,
+  GeneratedRoom,
+  GenerateMapOptions,
+  SeededIsoMapTiles,
+} from "./seeded-iso-map.js";
 export {
   AtmosphericAshEmberEffect,
   AtmosphericRainEffect,
