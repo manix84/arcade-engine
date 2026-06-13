@@ -189,15 +189,15 @@ string map parser:
 | `space` | Floor | Walkable floor |
 | `#` | Stone wall | Blocking wall |
 | `.` | Floor marker | Walkable floor marker |
+| `^` | Stairs up | Walkable level transition |
+| `v` | Stairs down | Walkable level transition |
 | `C` | Chest | Interactable prop |
 | `D` | Door | Interactable doorway |
 | `E` | Enemy spawn | Enemy |
 | `P` | Pillar | Blocking prop |
 | `S` | Player spawn | Spawn point |
-| `d` | Stairs down | Interactable stairs |
 | `o` | Light source | Light |
 | `r` | Rubble | Blocking prop |
-| `u` | Stairs up | Interactable stairs |
 | `w` | Water | Walkable slow floor |
 
 Ragged rows can be padded with an internal empty tile such as `_`; the dungeon

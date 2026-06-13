@@ -72,6 +72,13 @@ type KeyboardState = {
   stairsReached: boolean;
 };
 
+type DungeonLevelOptions = {
+  maxLevel?: number;
+  minLevel?: number;
+};
+
+type DungeonStairDirection = "down" | "up";
+
 type DungeonBloodMarker = {
   createdAt: number;
   x: number;
@@ -104,15 +111,33 @@ type SceneContext = {
   frame: number;
   keyboard: KeyboardState;
   pointer: PointerState;
+  transitionDungeonLevel: (direction: DungeonStairDirection) => boolean;
 };
 
-type IsometricDungeonTile = "#" | " " | "." | "_" | "C" | "D" | "E" | "P" | "S" | "d" | "o" | "r" | "u" | "w";
+type IsometricDungeonTile =
+  | "#"
+  | " "
+  | "."
+  | "_"
+  | "^"
+  | "C"
+  | "D"
+  | "E"
+  | "P"
+  | "S"
+  | "d"
+  | "o"
+  | "r"
+  | "u"
+  | "v"
+  | "w";
 type IsometricDungeonTileRole = "blocked" | "enemy" | "floor" | "interactable" | "light" | "prop" | "spawn" | "void";
 
 type StoryShellOptions = {
   enableArrowMovement?: boolean;
   mapEditor?: {
     initialText: string;
+    levelOptions?: DungeonLevelOptions;
   };
   enableWheelZoom?: boolean;
   updateStats?: (scene: SceneContext, args: Arcade3DStoryArgs) => Array<string | number>;
@@ -120,8 +145,15 @@ type StoryShellOptions = {
 
 type DungeonMapState = StringTileMap<IsometricDungeonTile> & {
   enemies: DungeonEnemyState[];
+  level: number;
   spawnX: number;
   spawnZ: number;
+};
+
+type DungeonMapGenerationResult = {
+  level: number;
+  mapText: string;
+  numericSeed: number;
 };
 
 type IsometricDungeonCamera = {
@@ -134,6 +166,9 @@ type IsometricDungeonDirection = "east" | "north" | "south" | "west";
 type DungeonMapEditorSurface = {
   editor: HTMLTextAreaElement;
   element: HTMLElement;
+  generateLevel: (level: number, options?: { dispatchInput?: boolean }) => DungeonMapGenerationResult;
+  getLevel: () => number;
+  getSeed: () => string;
   legend: HTMLElement;
   resetLegendPosition: () => void;
 };
@@ -227,6 +262,23 @@ const defaultIsometricDungeonMapText = `
 `.trim();
 const defaultIsometricDungeonSeed = "arcade";
 const defaultIsometricDungeonLevel = 1;
+const defaultIsometricDungeonLevelOptions = {
+  maxLevel: 3,
+  minLevel: 1,
+} satisfies Required<DungeonLevelOptions>;
+
+const normalizeDungeonLevel = (
+  level: number,
+  options: DungeonLevelOptions = {}
+): number => {
+  const minLevel = options.minLevel ?? 1;
+  const resolvedLevel = Number.isFinite(level) ? Math.floor(level) : minLevel;
+  const minClampedLevel = Math.max(minLevel, resolvedLevel);
+
+  return options.maxLevel === undefined
+    ? minClampedLevel
+    : Math.min(options.maxLevel, minClampedLevel);
+};
 
 const getDungeonRoomCenter = (room: GeneratedRoom): { x: number; y: number } => ({
   x: Math.floor(room.x + room.width / 2),
@@ -264,10 +316,12 @@ const placeDungeonTileIfFloor = (
 
 const generateIsometricDungeonMapFromSeed = (
   seedText: string,
-  level: number
-): { mapText: string; numericSeed: number } => {
-  const levelIndex = Math.max(1, Math.min(99, Math.floor(level)));
-  const generated = generateSeededIsoMap(`${seedText}+lvl${levelIndex}`, {
+  level: number,
+  levelOptions: DungeonLevelOptions = {}
+): DungeonMapGenerationResult => {
+  const levelIndex = normalizeDungeonLevel(level, levelOptions);
+  const minLevel = levelOptions.minLevel ?? 1;
+  const generated = generateSeededIsoMap(`${seedText || defaultIsometricDungeonSeed}+LVL${levelIndex}`, {
     chestChance: 0.72,
     enemyChance: 0.62,
     height: 27,
@@ -294,12 +348,12 @@ const generateIsometricDungeonMapFromSeed = (
   const upstairs = findDungeonRoomFloor(grid, sortedRooms[Math.min(1, sortedRooms.length - 1)]);
   const downstairs = findDungeonRoomFloor(grid, sortedRooms[sortedRooms.length - 1]);
 
-  if (upstairs) {
-    placeDungeonTileIfFloor(grid, upstairs.x, upstairs.y, "u");
+  if (upstairs && (levelOptions.maxLevel === undefined || levelIndex < levelOptions.maxLevel)) {
+    placeDungeonTileIfFloor(grid, upstairs.x, upstairs.y, "^");
   }
 
-  if (downstairs) {
-    placeDungeonTileIfFloor(grid, downstairs.x, downstairs.y, "d");
+  if (downstairs && levelIndex > minLevel) {
+    placeDungeonTileIfFloor(grid, downstairs.x, downstairs.y, "v");
   }
 
   sortedRooms.forEach((room, index) => {
@@ -332,19 +386,22 @@ const generateIsometricDungeonMapFromSeed = (
   });
 
   return {
+    level: levelIndex,
     mapText: grid.map((row) => row.join("")).join("\n"),
     numericSeed: generated.numericSeed,
   };
 };
 const defaultGeneratedIsometricDungeonMap = generateIsometricDungeonMapFromSeed(
   defaultIsometricDungeonSeed,
-  defaultIsometricDungeonLevel
+  defaultIsometricDungeonLevel,
+  defaultIsometricDungeonLevelOptions
 );
 
 const isometricDungeonTiles = {
   " ": { label: "floor", role: "floor", walkable: true },
   "#": { label: "stone wall", role: "blocked", walkable: false },
   ".": { label: "floor marker", role: "floor", walkable: true },
+  "^": { label: "stairs up", role: "interactable", walkable: true },
   _: { label: "empty", role: "void", walkable: false },
   C: { label: "chest", role: "interactable", walkable: true },
   D: { label: "door", role: "interactable", walkable: true },
@@ -355,6 +412,7 @@ const isometricDungeonTiles = {
   o: { label: "light source", role: "light", walkable: true },
   r: { label: "rubble", role: "prop", walkable: false },
   u: { label: "stairs up", role: "interactable", walkable: true },
+  v: { label: "stairs down", role: "interactable", walkable: true },
   w: { label: "water", role: "floor", walkable: true },
 } satisfies Record<
   IsometricDungeonTile,
@@ -367,12 +425,97 @@ const isometricDungeonTiles = {
 
 let isometricDungeonCanvas: HTMLCanvasElement | undefined;
 
-const parseIsometricDungeonMap = (text: string): DungeonMapState => {
+const isSafeDungeonSpawnTile = (tile: IsometricDungeonTile | undefined): boolean =>
+  tile === " " || tile === "." || tile === "S" || tile === "w";
+
+const getCenteredDungeonSpawnPoint = (
+  map: StringTileMap<IsometricDungeonTile>,
+  column: number,
+  row: number
+): { x: number; z: number } => {
+  const point = getStringTileMapCenteredPoint(map, column, row);
+
+  return { x: point.x + 0.5, z: point.z + 0.5 };
+};
+
+const findSafeDungeonSpawnNearTile = (
+  map: StringTileMap<IsometricDungeonTile>,
+  preferredTile: IsometricDungeonTile
+): { x: number; z: number } | undefined => {
+  const starts = findStringTileMapCells(map, preferredTile);
+  const visited = new Set<string>();
+  const queue = starts.map((cell) => ({
+    column: cell.column,
+    distance: 0,
+    row: cell.row,
+  }));
+
+  while (queue.length > 0) {
+    const point = queue.shift();
+
+    if (!point) {
+      continue;
+    }
+
+    const key = `${point.column}:${point.row}`;
+    const tile = getStringTileMapTile(map, point.column, point.row);
+
+    if (visited.has(key) || tile === undefined || !isometricDungeonTiles[tile].walkable) {
+      continue;
+    }
+
+    visited.add(key);
+
+    if (point.distance > 0 && isSafeDungeonSpawnTile(tile)) {
+      return getCenteredDungeonSpawnPoint(map, point.column, point.row);
+    }
+
+    queue.push(
+      { column: point.column + 1, distance: point.distance + 1, row: point.row },
+      { column: point.column - 1, distance: point.distance + 1, row: point.row },
+      { column: point.column, distance: point.distance + 1, row: point.row + 1 },
+      { column: point.column, distance: point.distance + 1, row: point.row - 1 }
+    );
+  }
+
+  const fallback = starts[0];
+
+  return fallback ? getCenteredDungeonSpawnPoint(map, fallback.column, fallback.row) : undefined;
+};
+
+const getDungeonSpawnPoint = (
+  map: StringTileMap<IsometricDungeonTile>,
+  preferredTile?: IsometricDungeonTile
+): { x: number; z: number } => {
+  const preferredSpawn = preferredTile
+    ? findSafeDungeonSpawnNearTile(map, preferredTile)
+    : undefined;
+  const spawn = findStringTileMapCell(map, "S");
+  const fallbackSpawn = getStringTileMapCenteredPoint(
+    map,
+    Math.floor(map.width / 2),
+    Math.floor(map.height / 2)
+  );
+
+  if (preferredSpawn) {
+    return preferredSpawn;
+  }
+
+  return {
+    x: (spawn?.x ?? fallbackSpawn.x) + 0.5,
+    z: (spawn?.z ?? fallbackSpawn.z) + 0.5,
+  };
+};
+
+const parseIsometricDungeonMap = (
+  text: string,
+  level = defaultIsometricDungeonLevel,
+  preferredSpawnTile?: IsometricDungeonTile
+): DungeonMapState => {
   const map = parseStringTileMap<IsometricDungeonTile>(text, {
     emptyTile: "_",
     normalizeTile: parseIsometricDungeonTile,
   });
-  const spawn = findStringTileMapCell(map, "S");
   const enemies = findStringTileMapCells(map, "E").map((cell, index): DungeonEnemyState => {
     const x = cell.x + 0.5;
     const z = cell.z + 0.5;
@@ -392,17 +535,14 @@ const parseIsometricDungeonMap = (text: string): DungeonMapState => {
       z,
     };
   });
-  const fallbackSpawn = getStringTileMapCenteredPoint(
-    map,
-    Math.floor(map.width / 2),
-    Math.floor(map.height / 2)
-  );
+  const spawn = getDungeonSpawnPoint(map, preferredSpawnTile);
 
   return {
     ...map,
     enemies,
-    spawnX: (spawn?.x ?? fallbackSpawn.x) + 0.5,
-    spawnZ: (spawn?.z ?? fallbackSpawn.z) + 0.5,
+    level,
+    spawnX: spawn.x,
+    spawnZ: spawn.z,
   };
 };
 
@@ -461,7 +601,12 @@ const createStoryShell = (
   const valueItems = stats.map(([label, value]) => createValue(label, value));
   const fpsValue = createValue("fps", "0");
   const ticker = new Ticker();
-  let dungeonMap = parseIsometricDungeonMap(options.mapEditor?.initialText ?? defaultIsometricDungeonMapText);
+  const levelOptions = options.mapEditor?.levelOptions ?? {};
+  let dungeonLevel = normalizeDungeonLevel(defaultIsometricDungeonLevel, levelOptions);
+  let dungeonMap = parseIsometricDungeonMap(
+    options.mapEditor?.initialText ?? defaultIsometricDungeonMapText,
+    dungeonLevel
+  );
   const keyboard: KeyboardState = {
     bloodMarkers: [],
     chestOpen: false,
@@ -503,14 +648,23 @@ const createStoryShell = (
   stage.appendChild(canvas);
   values.append(...valueItems, fpsValue);
   const mapEditorSurface = options.mapEditor
-    ? createIsometricDungeonMapEditor(options.mapEditor.initialText)
+    ? createIsometricDungeonMapEditor(options.mapEditor.initialText, levelOptions)
     : undefined;
   const mapEditor = mapEditorSurface?.editor;
   const telemetryHeading = telemetryPanel.querySelector("h2");
 
-  mapEditor?.addEventListener("input", () => {
-    dungeonMap = parseIsometricDungeonMap(mapEditor.value);
+  const setDungeonMap = (
+    mapText: string,
+    level: number,
+    preferredSpawnTile?: IsometricDungeonTile
+  ): void => {
+    dungeonLevel = normalizeDungeonLevel(level, levelOptions);
+    dungeonMap = parseIsometricDungeonMap(mapText, dungeonLevel, preferredSpawnTile);
     resetIsometricDungeonPlayer(keyboard, dungeonMap);
+  };
+
+  mapEditor?.addEventListener("input", () => {
+    setDungeonMap(mapEditor.value, mapEditorSurface?.getLevel() ?? dungeonLevel);
   });
 
   if (mapEditorSurface) {
@@ -652,6 +806,24 @@ const createStoryShell = (
       frame,
       keyboard,
       pointer,
+      transitionDungeonLevel: (direction: DungeonStairDirection): boolean => {
+        if (!mapEditorSurface) {
+          return false;
+        }
+
+        const nextLevel = dungeonLevel + (direction === "up" ? 1 : -1);
+        const normalizedLevel = normalizeDungeonLevel(nextLevel, levelOptions);
+
+        if (normalizedLevel !== nextLevel) {
+          return false;
+        }
+
+        const generated = mapEditorSurface.generateLevel(normalizedLevel, { dispatchInput: false });
+        const spawnTile = direction === "up" ? "v" : "^";
+
+        setDungeonMap(generated.mapText, generated.level, spawnTile);
+        return true;
+      },
     };
 
     renderScene(scene, args);
@@ -688,7 +860,10 @@ const isArrowKey = (key: string): boolean =>
 const isTextEditingTarget = (target: EventTarget | null): boolean =>
   target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement;
 
-const createIsometricDungeonMapEditor = (initialText: string): DungeonMapEditorSurface => {
+const createIsometricDungeonMapEditor = (
+  initialText: string,
+  levelOptions: DungeonLevelOptions = {}
+): DungeonMapEditorSurface => {
   const surface = document.createElement("div");
   const generator = document.createElement("div");
   const seedLabel = document.createElement("label");
@@ -734,9 +909,11 @@ const createIsometricDungeonMapEditor = (initialText: string): DungeonMapEditorS
   levelLabel.style.font = "700 12px Inter, ui-sans-serif, system-ui, sans-serif";
 
   levelInput.type = "number";
-  levelInput.value = String(defaultIsometricDungeonLevel);
-  levelInput.min = "1";
-  levelInput.max = "99";
+  levelInput.value = String(normalizeDungeonLevel(defaultIsometricDungeonLevel, levelOptions));
+  levelInput.min = String(levelOptions.minLevel ?? 1);
+  if (levelOptions.maxLevel !== undefined) {
+    levelInput.max = String(levelOptions.maxLevel);
+  }
   levelInput.step = "1";
   levelInput.setAttribute("aria-label", "Dungeon level");
   levelInput.style.boxSizing = "border-box";
@@ -785,21 +962,43 @@ const createIsometricDungeonMapEditor = (initialText: string): DungeonMapEditorS
   editor.style.whiteSpace = "pre";
   editor.style.overflow = "auto";
 
-  const applyGeneratedMap = (): void => {
-    const level = Number.parseInt(levelInput.value, 10);
-    const generated = generateIsometricDungeonMapFromSeed(seedInput.value, Number.isFinite(level) ? level : 1);
+  const generateLevel = (
+    level: number,
+    options: { dispatchInput?: boolean } = {}
+  ): DungeonMapGenerationResult => {
+    const generated = generateIsometricDungeonMapFromSeed(seedInput.value, level, levelOptions);
 
+    levelInput.value = String(generated.level);
     editor.value = generated.mapText;
-    generatedSeed.value = `seed ${generated.numericSeed} from "${seedInput.value || "arcade"}+lvl${Math.max(1, Math.floor(level || 1))}"`;
-    editor.dispatchEvent(new Event("input", { bubbles: true }));
+    generatedSeed.value = `seed ${generated.numericSeed} from "${seedInput.value || "arcade"}+LVL${generated.level}"`;
+
+    if (options.dispatchInput ?? true) {
+      editor.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    return generated;
   };
 
-  generatedSeed.value = `seed ${defaultGeneratedIsometricDungeonMap.numericSeed} from "${defaultIsometricDungeonSeed}+lvl${defaultIsometricDungeonLevel}"`;
+  const applyGeneratedMap = (): void => {
+    const level = Number.parseInt(levelInput.value, 10);
+
+    generateLevel(Number.isFinite(level) ? level : (levelOptions.minLevel ?? 1));
+  };
+
+  generatedSeed.value = `seed ${defaultGeneratedIsometricDungeonMap.numericSeed} from "${defaultIsometricDungeonSeed}+LVL${defaultIsometricDungeonLevel}"`;
   generateButton.addEventListener("click", applyGeneratedMap);
 
   surface.append(generator, editor);
 
-  return { editor, element: surface, legend: legend.element, resetLegendPosition: legend.resetPosition };
+  return {
+    editor,
+    element: surface,
+    generateLevel,
+    getLevel: () => normalizeDungeonLevel(Number.parseInt(levelInput.value, 10), levelOptions),
+    getSeed: () => seedInput.value || defaultIsometricDungeonSeed,
+    legend: legend.element,
+    resetLegendPosition: legend.resetPosition,
+  };
 };
 
 const createIsometricDungeonMapLegend = (): DungeonMapLegendSurface => {
@@ -1005,6 +1204,7 @@ const getIsometricDungeonStats = (
   const row = getIsometricDungeonRow(keyboard.playerZ, dungeonMap.height);
 
   return [
+    dungeonMap.level,
     `${column}, ${row}`,
     keyboard.interactionLabel,
     `${Math.round(pointer.x * 180)}deg / ${pointer.zoom.toFixed(2)}x`,
@@ -1700,7 +1900,7 @@ const drawStarfighterBogey = (
 };
 
 const drawIsometricDungeon = (
-  { canvas, context, delta, dungeonMap, elapsed, keyboard, pointer }: SceneContext,
+  { canvas, context, delta, dungeonMap, elapsed, keyboard, pointer, transitionDungeonLevel }: SceneContext,
   args: Arcade3DStoryArgs
 ): void => {
   const pixelScale = 2;
@@ -1722,6 +1922,7 @@ const drawIsometricDungeon = (
     height,
     keyboard,
     pointer,
+    transitionDungeonLevel,
     width,
   });
 
@@ -1753,10 +1954,11 @@ const drawIsometricDungeonScene = (
     height: number;
     keyboard: KeyboardState;
     pointer: PointerState;
+    transitionDungeonLevel: (direction: DungeonStairDirection) => boolean;
     width: number;
   }
 ): void => {
-  const { args, delta, dungeonMap, elapsed, height, keyboard, pointer, width } = options;
+  const { args, delta, dungeonMap, elapsed, height, keyboard, pointer, transitionDungeonLevel, width } = options;
   const tile = Math.max(12, Math.round(18 * pointer.zoom));
   const origin = {
     x: width / 2,
@@ -1766,6 +1968,16 @@ const drawIsometricDungeonScene = (
   const rotation = pointer.x * Math.PI;
 
   updateIsometricDungeonPlayer(keyboard, dungeonMap, rotation, delta, args.speed);
+  const stairTile = getIsometricDungeonTileAt(dungeonMap, keyboard.playerX, keyboard.playerZ);
+
+  if ((stairTile === "^" || stairTile === "u") && transitionDungeonLevel("up")) {
+    return;
+  }
+
+  if ((stairTile === "v" || stairTile === "d") && transitionDungeonLevel("down")) {
+    return;
+  }
+
   updateIsometricDungeonEnemies(keyboard, dungeonMap, elapsed, delta);
   updateIsometricDungeonInteractions(keyboard, dungeonMap, delta);
   drawIsometricDungeonBackdrop(context, width, height, args.backgroundColor);
@@ -2042,8 +2254,8 @@ const updateIsometricDungeonInteractions = (
 ): void => {
   const nearestChest = findNearestDungeonTile(dungeonMap, keyboard, "C", 1);
   const nearestDoor = findNearestOpenableDungeonDoor(dungeonMap, keyboard, 1.1);
-  const nearestStairsUp = findNearestDungeonTile(dungeonMap, keyboard, "u", 1);
-  const nearestStairsDown = findNearestDungeonTile(dungeonMap, keyboard, "d", 1);
+  const nearestStairsUp = findNearestDungeonTiles(dungeonMap, keyboard, ["^", "u"], 1);
+  const nearestStairsDown = findNearestDungeonTiles(dungeonMap, keyboard, ["v", "d"], 1);
   const doorCells = findStringTileMapCells(dungeonMap, "D");
   const activeDoorKeys = new Set<string>();
 
@@ -2130,6 +2342,18 @@ const findNearestDungeonTile = (
   });
 
   return nearest;
+};
+
+const findNearestDungeonTiles = (
+  dungeonMap: DungeonMapState,
+  keyboard: KeyboardState,
+  tileKinds: IsometricDungeonTile[],
+  radius: number
+): { column: number; distance: number; key: string; row: number; x: number; z: number } | undefined => {
+  return tileKinds
+    .map((tileKind) => findNearestDungeonTile(dungeonMap, keyboard, tileKind, radius))
+    .filter((tile): tile is NonNullable<typeof tile> => tile !== undefined)
+    .sort((left, right) => left.distance - right.distance)[0];
 };
 
 const findNearestOpenableDungeonDoor = (
@@ -2591,7 +2815,7 @@ const drawIsometricDungeonFloor = (
   const { corners, tileKind, xIndex, zIndex } = tileInfo;
   const isWater = tileKind === "w";
   const isDoor = tileKind === "D";
-  const isStairs = tileKind === "u";
+  const isStairs = tileKind === "^" || tileKind === "u" || tileKind === "v" || tileKind === "d";
   const isSpawn = tileKind === "S";
   const shade = (xIndex + zIndex) % 2 === 0 ? 0.92 : 1;
   const exitGlow =
@@ -2874,8 +3098,8 @@ const drawIsometricDungeonProp = (
     return;
   }
 
-  if (tileKind === "u") {
-    const stairsReady = keyboard.interactionLabel === (tileKind === "u" ? "stairs up" : "stairs down");
+  if (tileKind === "^" || tileKind === "u") {
+    const stairsReady = keyboard.interactionLabel === "stairs up";
     const pulse = keyboard.stairsReached || stairsReady ? 0.32 + Math.sin(elapsed * 8) * 0.08 : 0.12;
 
     for (let step = 0; step < 4; step++) {
@@ -2900,7 +3124,7 @@ const drawIsometricDungeonProp = (
     return;
   }
 
-  if (tileKind === "d") {
+  if (tileKind === "v" || tileKind === "d") {
     const stairsReady = keyboard.interactionLabel === "stairs down";
     const pulse = keyboard.stairsReached || stairsReady ? 0.3 + Math.sin(elapsed * 8) * 0.06 : 0.08;
     const opening = getTileLocalQuad(tileInfo, 0.16, 0.18, 0.84, 0.82);
@@ -3640,12 +3864,16 @@ export const IsometricDungeonRoom: Story = {
   argTypes: isometricDungeonArgTypes,
   render: (args) =>
     createStoryShell("3D isometric dungeon room", args, drawIsometricDungeon, [
+      ["level", defaultIsometricDungeonLevel],
       ["player", "4, 6"],
       ["nearby", "none"],
       ["camera", "0deg / 1.00x"],
     ], {
       enableArrowMovement: true,
-      mapEditor: { initialText: defaultGeneratedIsometricDungeonMap.mapText },
+      mapEditor: {
+        initialText: defaultGeneratedIsometricDungeonMap.mapText,
+        levelOptions: defaultIsometricDungeonLevelOptions,
+      },
       enableWheelZoom: true,
       updateStats: getIsometricDungeonStats,
     }),
