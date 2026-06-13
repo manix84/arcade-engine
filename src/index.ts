@@ -78,6 +78,7 @@ export type {
 } from "./string-tile-map.js";
 export { generateSeededIsoMap } from "./seeded-iso-map.js";
 export type {
+  EnemySpawn,
   GeneratedMap,
   GeneratedRoom,
   GenerateMapOptions,

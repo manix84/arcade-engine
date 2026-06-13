@@ -58,8 +58,10 @@ type PointerState = {
 };
 
 type KeyboardState = {
+  bloodMarkers: DungeonBloodMarker[];
   chestOpen: boolean;
   doorOpenProgress: Map<string, number>;
+  enemies: DungeonEnemyState[];
   exitReached: boolean;
   facingX: number;
   facingZ: number;
@@ -68,6 +70,29 @@ type KeyboardState = {
   playerZ: number;
   pressed: Set<string>;
   stairsReached: boolean;
+};
+
+type DungeonBloodMarker = {
+  createdAt: number;
+  x: number;
+  z: number;
+};
+
+type DungeonEnemyState = {
+  aggro: boolean;
+  deadAt?: number;
+  deathX: number;
+  deathZ: number;
+  id: string;
+  nextDecision: number;
+  respawnAt?: number;
+  seed: number;
+  spawnX: number;
+  spawnZ: number;
+  targetX: number;
+  targetZ: number;
+  x: number;
+  z: number;
 };
 
 type SceneContext = {
@@ -81,8 +106,8 @@ type SceneContext = {
   pointer: PointerState;
 };
 
-type IsometricDungeonTile = "#" | " " | "." | "_" | "C" | "D" | "P" | "S" | "d" | "o" | "r" | "u" | "w";
-type IsometricDungeonTileRole = "blocked" | "floor" | "interactable" | "light" | "prop" | "spawn" | "void";
+type IsometricDungeonTile = "#" | " " | "." | "_" | "C" | "D" | "E" | "P" | "S" | "d" | "o" | "r" | "u" | "w";
+type IsometricDungeonTileRole = "blocked" | "enemy" | "floor" | "interactable" | "light" | "prop" | "spawn" | "void";
 
 type StoryShellOptions = {
   enableArrowMovement?: boolean;
@@ -94,6 +119,7 @@ type StoryShellOptions = {
 };
 
 type DungeonMapState = StringTileMap<IsometricDungeonTile> & {
+  enemies: DungeonEnemyState[];
   spawnX: number;
   spawnZ: number;
 };
@@ -199,6 +225,8 @@ const defaultIsometricDungeonMapText = `
 #               #
 #################
 `.trim();
+const defaultIsometricDungeonSeed = "arcade";
+const defaultIsometricDungeonLevel = 1;
 
 const getDungeonRoomCenter = (room: GeneratedRoom): { x: number; y: number } => ({
   x: Math.floor(room.x + room.width / 2),
@@ -241,7 +269,9 @@ const generateIsometricDungeonMapFromSeed = (
   const levelIndex = Math.max(1, Math.min(99, Math.floor(level)));
   const generated = generateSeededIsoMap(`${seedText}+lvl${levelIndex}`, {
     chestChance: 0.72,
+    enemyChance: 0.62,
     height: 27,
+    maxEnemies: 5,
     maxRoomSize: 8,
     maxRooms: 9,
     minRoomSize: 4,
@@ -250,6 +280,7 @@ const generateIsometricDungeonMapFromSeed = (
       chest: "C",
       door: "D",
       empty: "_",
+      enemy: "E",
       floor: " ",
       player: "S",
       wall: "#",
@@ -305,6 +336,10 @@ const generateIsometricDungeonMapFromSeed = (
     numericSeed: generated.numericSeed,
   };
 };
+const defaultGeneratedIsometricDungeonMap = generateIsometricDungeonMapFromSeed(
+  defaultIsometricDungeonSeed,
+  defaultIsometricDungeonLevel
+);
 
 const isometricDungeonTiles = {
   " ": { label: "floor", role: "floor", walkable: true },
@@ -313,6 +348,7 @@ const isometricDungeonTiles = {
   _: { label: "empty", role: "void", walkable: false },
   C: { label: "chest", role: "interactable", walkable: true },
   D: { label: "door", role: "interactable", walkable: true },
+  E: { label: "enemy spawn", role: "enemy", walkable: true },
   P: { label: "pillar", role: "prop", walkable: false },
   S: { label: "player spawn", role: "spawn", walkable: true },
   d: { label: "stairs down", role: "interactable", walkable: true },
@@ -337,6 +373,25 @@ const parseIsometricDungeonMap = (text: string): DungeonMapState => {
     normalizeTile: parseIsometricDungeonTile,
   });
   const spawn = findStringTileMapCell(map, "S");
+  const enemies = findStringTileMapCells(map, "E").map((cell, index): DungeonEnemyState => {
+    const x = cell.x + 0.5;
+    const z = cell.z + 0.5;
+
+    return {
+      aggro: false,
+      deathX: x,
+      deathZ: z,
+      id: `enemy-${index + 1}`,
+      nextDecision: 0,
+      seed: (cell.column + 1) * 73856093 ^ (cell.row + 1) * 19349663,
+      spawnX: x,
+      spawnZ: z,
+      targetX: x,
+      targetZ: z,
+      x,
+      z,
+    };
+  });
   const fallbackSpawn = getStringTileMapCenteredPoint(
     map,
     Math.floor(map.width / 2),
@@ -345,6 +400,7 @@ const parseIsometricDungeonMap = (text: string): DungeonMapState => {
 
   return {
     ...map,
+    enemies,
     spawnX: (spawn?.x ?? fallbackSpawn.x) + 0.5,
     spawnZ: (spawn?.z ?? fallbackSpawn.z) + 0.5,
   };
@@ -375,7 +431,9 @@ const resetIsometricDungeonPlayer = (
   dungeonMap: DungeonMapState
 ): void => {
   keyboard.chestOpen = false;
+  keyboard.bloodMarkers = [];
   keyboard.doorOpenProgress.clear();
+  keyboard.enemies = dungeonMap.enemies.map((enemy) => ({ ...enemy }));
   keyboard.exitReached = false;
   keyboard.facingX = 1;
   keyboard.facingZ = 0;
@@ -405,8 +463,10 @@ const createStoryShell = (
   const ticker = new Ticker();
   let dungeonMap = parseIsometricDungeonMap(options.mapEditor?.initialText ?? defaultIsometricDungeonMapText);
   const keyboard: KeyboardState = {
+    bloodMarkers: [],
     chestOpen: false,
     doorOpenProgress: new Map<string, number>(),
+    enemies: dungeonMap.enemies.map((enemy) => ({ ...enemy })),
     exitReached: false,
     facingX: 1,
     facingZ: 0,
@@ -656,7 +716,7 @@ const createIsometricDungeonMapEditor = (initialText: string): DungeonMapEditorS
   seedLabel.style.font = "700 12px Inter, ui-sans-serif, system-ui, sans-serif";
 
   seedInput.type = "text";
-  seedInput.value = "arcade";
+  seedInput.value = defaultIsometricDungeonSeed;
   seedInput.setAttribute("aria-label", "Dungeon seed");
   seedInput.style.boxSizing = "border-box";
   seedInput.style.width = "100%";
@@ -674,7 +734,7 @@ const createIsometricDungeonMapEditor = (initialText: string): DungeonMapEditorS
   levelLabel.style.font = "700 12px Inter, ui-sans-serif, system-ui, sans-serif";
 
   levelInput.type = "number";
-  levelInput.value = "1";
+  levelInput.value = String(defaultIsometricDungeonLevel);
   levelInput.min = "1";
   levelInput.max = "99";
   levelInput.step = "1";
@@ -734,6 +794,7 @@ const createIsometricDungeonMapEditor = (initialText: string): DungeonMapEditorS
     editor.dispatchEvent(new Event("input", { bubbles: true }));
   };
 
+  generatedSeed.value = `seed ${defaultGeneratedIsometricDungeonMap.numericSeed} from "${defaultIsometricDungeonSeed}+lvl${defaultIsometricDungeonLevel}"`;
   generateButton.addEventListener("click", applyGeneratedMap);
 
   surface.append(generator, editor);
@@ -1705,6 +1766,7 @@ const drawIsometricDungeonScene = (
   const rotation = pointer.x * Math.PI;
 
   updateIsometricDungeonPlayer(keyboard, dungeonMap, rotation, delta, args.speed);
+  updateIsometricDungeonEnemies(keyboard, dungeonMap, elapsed, delta);
   updateIsometricDungeonInteractions(keyboard, dungeonMap, delta);
   drawIsometricDungeonBackdrop(context, width, height, args.backgroundColor);
 
@@ -1761,13 +1823,31 @@ const drawIsometricDungeonScene = (
         return;
       }
 
-      if (tileInfo.tileKind !== " " && tileInfo.tileKind !== "S") {
+      if (tileInfo.tileKind !== " " && tileInfo.tileKind !== "S" && tileInfo.tileKind !== "E") {
         addRenderable(
           tileInfo.center.y + getIsometricDungeonPropDepthOffset(tileInfo.tileKind, tile),
           () => drawIsometricDungeonProp(context, tileInfo, keyboard, elapsed, args)
         );
       }
     });
+
+  keyboard.bloodMarkers.forEach((marker) => {
+    addRenderable(
+      projectRotatedIsometricPoint(marker.x, marker.z, rotation, isoOptions, camera).y + tile * 0.14,
+      () => drawIsometricDungeonBloodMarker(context, isoOptions, rotation, camera, marker, elapsed)
+    );
+  });
+
+  keyboard.enemies.forEach((enemy) => {
+    if (enemy.respawnAt !== undefined) {
+      return;
+    }
+
+    addRenderable(
+      projectRotatedIsometricPoint(enemy.x, enemy.z, rotation, isoOptions, camera).y + tile * 0.64,
+      () => drawIsometricDungeonEnemy(context, isoOptions, rotation, camera, enemy, elapsed, args)
+    );
+  });
 
   addRenderable(
     projectRotatedIsometricPoint(keyboard.playerX, keyboard.playerZ, rotation, isoOptions, camera).y + tile * 0.7,
@@ -1832,6 +1912,127 @@ const updateIsometricDungeonPlayer = (
   if (isIsometricDungeonWalkable(dungeonMap, keyboard.playerX, nextZ)) {
     keyboard.playerZ = nextZ;
   }
+};
+
+const getDungeonEnemyRandom = (enemy: DungeonEnemyState): number => {
+  enemy.seed = (Math.imul(enemy.seed ^ (enemy.seed >>> 15), 1 | enemy.seed) + 0x6d2b79f5) >>> 0;
+
+  return ((enemy.seed ^ (enemy.seed >>> 14)) >>> 0) / 4294967296;
+};
+
+const getDungeonEnemyPatrolTargets = (
+  dungeonMap: DungeonMapState,
+  enemy: DungeonEnemyState
+): Array<{ x: number; z: number }> => {
+  const originColumn = getIsometricDungeonColumn(enemy.spawnX, dungeonMap.width);
+  const originRow = getIsometricDungeonRow(enemy.spawnZ, dungeonMap.height);
+  const targets: Array<{ x: number; z: number }> = [];
+
+  for (let row = originRow - 2; row <= originRow + 2; row++) {
+    for (let column = originColumn - 2; column <= originColumn + 2; column++) {
+      if (Math.abs(column - originColumn) + Math.abs(row - originRow) > 2) {
+        continue;
+      }
+
+      const tile = getStringTileMapTile(dungeonMap, column, row);
+
+      if (tile === " " || tile === "E" || tile === "w") {
+        const point = getStringTileMapCenteredPoint(dungeonMap, column, row);
+
+        targets.push({ x: point.x + 0.5, z: point.z + 0.5 });
+      }
+    }
+  }
+
+  return targets;
+};
+
+const moveDungeonEnemyToward = (
+  enemy: DungeonEnemyState,
+  targetX: number,
+  targetZ: number,
+  dungeonMap: DungeonMapState,
+  step: number
+): void => {
+  const dx = targetX - enemy.x;
+  const dz = targetZ - enemy.z;
+  const distance = Math.hypot(dx, dz);
+
+  if (distance < 0.04) {
+    return;
+  }
+
+  const nextX = enemy.x + (dx / distance) * Math.min(step, distance);
+  const nextZ = enemy.z + (dz / distance) * Math.min(step, distance);
+
+  if (isIsometricDungeonWalkable(dungeonMap, nextX, enemy.z)) {
+    enemy.x = nextX;
+  }
+
+  if (isIsometricDungeonWalkable(dungeonMap, enemy.x, nextZ)) {
+    enemy.z = nextZ;
+  }
+};
+
+const updateIsometricDungeonEnemies = (
+  keyboard: KeyboardState,
+  dungeonMap: DungeonMapState,
+  elapsed: number,
+  delta: number
+): void => {
+  keyboard.bloodMarkers = keyboard.bloodMarkers.filter((marker) => elapsed - marker.createdAt <= 3);
+
+  keyboard.enemies.forEach((enemy) => {
+    if (enemy.respawnAt !== undefined) {
+      if (elapsed < enemy.respawnAt) {
+        return;
+      }
+
+      enemy.aggro = false;
+      delete enemy.deadAt;
+      enemy.deathX = enemy.spawnX;
+      enemy.deathZ = enemy.spawnZ;
+      delete enemy.respawnAt;
+      enemy.targetX = enemy.spawnX;
+      enemy.targetZ = enemy.spawnZ;
+      enemy.x = enemy.spawnX;
+      enemy.z = enemy.spawnZ;
+      enemy.nextDecision = elapsed + 0.3;
+    }
+
+    const playerDistance = Math.hypot(keyboard.playerX - enemy.x, keyboard.playerZ - enemy.z);
+
+    if (playerDistance <= 0.48) {
+      enemy.aggro = false;
+      enemy.deadAt = elapsed;
+      enemy.deathX = enemy.x;
+      enemy.deathZ = enemy.z;
+      enemy.respawnAt = elapsed + 10;
+      keyboard.bloodMarkers.push({ createdAt: elapsed, x: enemy.x, z: enemy.z });
+      return;
+    }
+
+    enemy.aggro = playerDistance <= 3;
+
+    if (enemy.aggro) {
+      moveDungeonEnemyToward(enemy, keyboard.playerX, keyboard.playerZ, dungeonMap, delta * 1.55);
+      return;
+    }
+
+    if (elapsed >= enemy.nextDecision || Math.hypot(enemy.targetX - enemy.x, enemy.targetZ - enemy.z) < 0.08) {
+      const targets = getDungeonEnemyPatrolTargets(dungeonMap, enemy);
+      const target = targets[Math.floor(getDungeonEnemyRandom(enemy) * targets.length)] ?? {
+        x: enemy.spawnX,
+        z: enemy.spawnZ,
+      };
+
+      enemy.targetX = target.x;
+      enemy.targetZ = target.z;
+      enemy.nextDecision = elapsed + 0.8 + getDungeonEnemyRandom(enemy) * 1.4;
+    }
+
+    moveDungeonEnemyToward(enemy, enemy.targetX, enemy.targetZ, dungeonMap, delta * 0.82);
+  });
 };
 
 const updateIsometricDungeonInteractions = (
@@ -2756,6 +2957,56 @@ const gradientSafeAddColorStop = (
   stops.forEach(([offset, color]) => gradient.addColorStop(offset, color));
 };
 
+const drawIsometricDungeonBloodMarker = (
+  context: CanvasRenderingContext2D,
+  isoOptions: Parameters<typeof projectIsometricPoint>[1],
+  rotation: number,
+  camera: IsometricDungeonCamera,
+  marker: DungeonBloodMarker,
+  elapsed: number
+): void => {
+  const age = elapsed - marker.createdAt;
+  const alpha = Math.max(0, 1 - age / 3);
+  const center = projectRotatedIsometricPoint(marker.x, marker.z, rotation, isoOptions, camera);
+  const stain = getRotatedWorldQuad(marker.x, marker.z, 0.58, 0.36, rotation, isoOptions, camera, 0);
+
+  drawCanvasPolygon(context, stain, colorWithAlpha("#7f1d1d", 0.58 * alpha), colorWithAlpha("#ef4444", 0.22 * alpha));
+  context.fillStyle = colorWithAlpha("#dc2626", 0.24 * alpha);
+  context.beginPath();
+  context.ellipse(center.x + 4, center.y + 1, 7, 3, 0.4, 0, Math.PI * 2);
+  context.fill();
+};
+
+const drawIsometricDungeonEnemy = (
+  context: CanvasRenderingContext2D,
+  isoOptions: Parameters<typeof projectIsometricPoint>[1],
+  rotation: number,
+  camera: IsometricDungeonCamera,
+  enemy: DungeonEnemyState,
+  elapsed: number,
+  args: Arcade3DStoryArgs
+): void => {
+  const center = projectRotatedIsometricPoint(enemy.x, enemy.z, rotation, isoOptions, camera);
+  const bob = Math.sin(elapsed * args.speed * 6 + enemy.spawnX) * 1.2;
+  const base = getRotatedWorldQuad(enemy.x, enemy.z, 0.36, 0.36, rotation, isoOptions, camera, bob);
+  const alert = enemy.aggro ? 0.9 : 0.56 + Math.sin(elapsed * args.speed * 7 + center.x) * 0.1;
+
+  context.fillStyle = "rgba(12, 6, 8, 0.42)";
+  context.beginPath();
+  context.ellipse(center.x, center.y + 8, 13, 5, 0, 0, Math.PI * 2);
+  context.fill();
+  drawIsometricCuboid(context, base, 14, {
+    sideA: colorWithAlpha("#7f1d1d", 0.94),
+    sideB: colorWithAlpha("#b91c1c", 0.92),
+    sideC: colorWithAlpha("#450a0a", 0.94),
+    sideD: colorWithAlpha("#991b1b", 0.9),
+    stroke: colorWithAlpha(enemy.aggro ? "#fecaca" : "#fca5a5", enemy.aggro ? 0.76 : 0.38),
+    top: colorWithAlpha("#ef4444", 0.9),
+  });
+  context.fillStyle = colorWithAlpha("#fca5a5", alert);
+  context.fillRect(center.x - 6, center.y - 18 + bob, 12, 3);
+};
+
 const drawIsometricDungeonPlayer = (
   context: CanvasRenderingContext2D,
   isoOptions: Parameters<typeof projectIsometricPoint>[1],
@@ -3394,7 +3645,7 @@ export const IsometricDungeonRoom: Story = {
       ["camera", "0deg / 1.00x"],
     ], {
       enableArrowMovement: true,
-      mapEditor: { initialText: defaultIsometricDungeonMapText },
+      mapEditor: { initialText: defaultGeneratedIsometricDungeonMap.mapText },
       enableWheelZoom: true,
       updateStats: getIsometricDungeonStats,
     }),

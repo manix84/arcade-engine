@@ -140,8 +140,8 @@ const spawn = findStringTileMapCell(map, "S");
 
 Seeded maps use a deterministic PRNG and validate the generated layout before
 returning it. The generator builds connected rectangular rooms and corridors,
-places doors and chests only on reachable tiles, and retries with deterministic
-attempt seeds if validation fails.
+places doors, chests, and optional enemy spawns only on reachable tiles, and
+retries with deterministic attempt seeds if validation fails.
 
 ```ts
 const generated = generateSeededIsoMap("forest-1", {
@@ -149,9 +149,12 @@ const generated = generateSeededIsoMap("forest-1", {
   height: 26,
   minRooms: 6,
   maxRooms: 9,
+  enemyChance: 0.4,
+  maxEnemies: 4,
 });
 
 console.log(generated.text);
+console.log(generated.enemies);
 ```
 
 Use `tiles` when a game uses different string-map characters:
@@ -164,6 +167,7 @@ const dungeon = generateSeededIsoMap("abc+lvl1", {
     chest: "C",
     door: "D",
     empty: "_",
+    enemy: "E",
     floor: " ",
     player: "S",
     wall: "#",
@@ -181,6 +185,7 @@ string map parser:
 | `.` | Floor marker | Walkable floor marker |
 | `C` | Chest | Interactable prop |
 | `D` | Door | Interactable doorway |
+| `E` | Enemy spawn | Enemy |
 | `P` | Pillar | Blocking prop |
 | `S` | Player spawn | Spawn point |
 | `d` | Stairs down | Interactable stairs |

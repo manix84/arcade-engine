@@ -63,7 +63,7 @@ describe("seeded iso map generation", () => {
 
     expect(spawn).toBeDefined();
 
-    const reachable = getReachableTiles(map.rows, spawn, new Set([".", "+", "C", "P"]));
+    const reachable = getReachableTiles(map.rows, spawn, new Set([".", "+", "C", "E", "P"]));
 
     expect(map.rooms.length).toBeGreaterThanOrEqual(6);
     expect(map.rows.some((row) => row.includes("+"))).toBe(true);
@@ -97,6 +97,7 @@ describe("seeded iso map generation", () => {
         chest: "C",
         door: "D",
         empty: "_",
+        enemy: "E",
         floor: " ",
         player: "S",
         wall: "#",
@@ -118,13 +119,67 @@ describe("seeded iso map generation", () => {
           return;
         }
 
-        const horizontalPassage = [" ", "S", "C"].includes(row[x - 1] ?? "") && [" ", "S", "C"].includes(row[x + 1] ?? "");
+        const walkableDungeonTiles = [" ", "S", "C", "E"];
+        const horizontalPassage = walkableDungeonTiles.includes(row[x - 1] ?? "") && walkableDungeonTiles.includes(row[x + 1] ?? "");
         const verticalPassage =
-          [" ", "S", "C"].includes(map.rows[y - 1]?.[x] ?? "") &&
-          [" ", "S", "C"].includes(map.rows[y + 1]?.[x] ?? "");
+          walkableDungeonTiles.includes(map.rows[y - 1]?.[x] ?? "") &&
+          walkableDungeonTiles.includes(map.rows[y + 1]?.[x] ?? "");
 
         expect(horizontalPassage || verticalPassage).toBe(true);
       });
+    });
+  });
+
+  it("places deterministic reachable enemy spawns away from the starting room", () => {
+    const options = {
+      chestChance: 1,
+      enemyChance: 1,
+      height: 28,
+      maxEnemies: 4,
+      minRooms: 7,
+      width: 38,
+    };
+    const map = generateSeededIsoMap("enemy-seed", options);
+    const repeated = generateSeededIsoMap("enemy-seed", options);
+    const spawn = map.rows.flatMap((row, y) => {
+      const x = row.indexOf("P");
+
+      return x === -1 ? [] : [{ x, y }];
+    })[0];
+    const reachable = getReachableTiles(map.rows, spawn, new Set([".", "+", "C", "E", "P"]));
+    const startRoom = map.rooms[0];
+
+    expect(map.enemies).toEqual(repeated.enemies);
+    expect(map.enemies.length).toBeGreaterThan(0);
+    expect(map.enemies.length).toBeLessThanOrEqual(4);
+
+    map.enemies.forEach((enemy) => {
+      expect(enemy).toMatchObject({
+        aggroRange: 3,
+        patrolRadius: 2,
+        spawnX: enemy.x,
+        spawnY: enemy.y,
+      });
+      expect(reachable.has(`${enemy.x}:${enemy.y}`)).toBe(true);
+      expect(map.rows[enemy.y][enemy.x]).toBe("E");
+      expect(
+        enemy.x >= startRoom.x &&
+          enemy.x < startRoom.x + startRoom.width &&
+          enemy.y >= startRoom.y &&
+          enemy.y < startRoom.y + startRoom.height
+      ).toBe(false);
+
+      let hasPatrolTarget = false;
+
+      for (let y = enemy.y - enemy.patrolRadius; y <= enemy.y + enemy.patrolRadius; y++) {
+        for (let x = enemy.x - enemy.patrolRadius; x <= enemy.x + enemy.patrolRadius; x++) {
+          if (Math.abs(x - enemy.x) + Math.abs(y - enemy.y) <= enemy.patrolRadius && map.rows[y]?.[x] === ".") {
+            hasPatrolTarget = true;
+          }
+        }
+      }
+
+      expect(hasPatrolTarget).toBe(true);
     });
   });
 });

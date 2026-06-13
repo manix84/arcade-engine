@@ -2,6 +2,7 @@ export type SeededIsoMapTiles = {
   chest: string;
   door: string;
   empty: string;
+  enemy: string;
   floor: string;
   player: string;
   wall: string;
@@ -16,6 +17,7 @@ export type GeneratedRoom = {
 };
 
 export type GeneratedMap = {
+  enemies: EnemySpawn[];
   height: number;
   numericSeed: number;
   rooms: GeneratedRoom[];
@@ -25,10 +27,23 @@ export type GeneratedMap = {
   width: number;
 };
 
+export type EnemySpawn = {
+  aggroRange: number;
+  id: string;
+  patrolRadius: number;
+  spawnX: number;
+  spawnY: number;
+  x: number;
+  y: number;
+};
+
 export type GenerateMapOptions = {
   chestChance?: number;
+  enemyChance?: number;
+  enemyDefaults?: Partial<Pick<EnemySpawn, "aggroRange" | "patrolRadius">>;
   height: number;
   maxAttempts?: number;
+  maxEnemies?: number;
   maxRooms?: number;
   maxRoomSize?: number;
   minRooms?: number;
@@ -51,6 +66,7 @@ const defaultSeededIsoMapTiles = {
   chest: "C",
   door: "+",
   empty: " ",
+  enemy: "E",
   floor: ".",
   player: "P",
   wall: "#",
@@ -95,6 +111,12 @@ const getRoomCenter = (room: GeneratedRoom): Point => ({
   x: Math.floor(room.x + room.width / 2),
   y: Math.floor(room.y + room.height / 2),
 });
+
+const isPointInsideRoom = (point: Point, room: GeneratedRoom): boolean =>
+  point.x >= room.x &&
+  point.x < room.x + room.width &&
+  point.y >= room.y &&
+  point.y < room.y + room.height;
 
 const doRoomsOverlap = (room: GeneratedRoom, otherRoom: GeneratedRoom): boolean =>
   room.x < otherRoom.x + otherRoom.width + 2 &&
@@ -195,7 +217,7 @@ const addWallsAroundWalkableTiles = (
   tiles: SeededIsoMapTiles
 ): void => {
   const wallCandidates: Point[] = [];
-  const walkableTiles = new Set([tiles.chest, tiles.door, tiles.floor, tiles.player]);
+  const walkableTiles = new Set([tiles.chest, tiles.door, tiles.enemy, tiles.floor, tiles.player]);
 
   for (let y = 0; y < grid.length; y++) {
     for (let x = 0; x < grid[y].length; x++) {
@@ -290,7 +312,7 @@ const validateGeneratedMap = (
   rooms: GeneratedRoom[],
   tiles: SeededIsoMapTiles
 ): boolean => {
-  const walkableTiles = new Set([tiles.chest, tiles.door, tiles.floor, tiles.player]);
+  const walkableTiles = new Set([tiles.chest, tiles.door, tiles.enemy, tiles.floor, tiles.player]);
   let spawn: Point | undefined;
   const requiredPoints: Point[] = [];
 
@@ -302,7 +324,7 @@ const validateGeneratedMap = (
         spawn = { x, y };
       }
 
-      if (tile === tiles.chest || tile === tiles.door) {
+      if (tile === tiles.chest || tile === tiles.door || tile === tiles.enemy) {
         requiredPoints.push({ x, y });
       }
     }
@@ -341,9 +363,102 @@ const validateGeneratedMap = (
   });
 };
 
+const getReachableRoomDistance = (startRoom: GeneratedRoom, room: GeneratedRoom): number => {
+  const start = getRoomCenter(startRoom);
+  const center = getRoomCenter(room);
+
+  return Math.abs(center.x - start.x) + Math.abs(center.y - start.y);
+};
+
+const hasPatrolTarget = (
+  grid: string[][],
+  point: Point,
+  patrolRadius: number,
+  floor: string
+): boolean => {
+  for (let y = point.y - patrolRadius; y <= point.y + patrolRadius; y++) {
+    for (let x = point.x - patrolRadius; x <= point.x + patrolRadius; x++) {
+      if (x === point.x && y === point.y) {
+        continue;
+      }
+
+      if (Math.abs(x - point.x) + Math.abs(y - point.y) <= patrolRadius && grid[y]?.[x] === floor) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+};
+
+const placeEnemies = (
+  grid: string[][],
+  rooms: GeneratedRoom[],
+  random: () => number,
+  options: Required<Omit<GenerateMapOptions, "tiles" | "enemyDefaults">> & {
+    enemyDefaults: Required<Pick<EnemySpawn, "aggroRange" | "patrolRadius">>;
+    tiles: SeededIsoMapTiles;
+  }
+): EnemySpawn[] => {
+  const startRoom = rooms[0];
+  const candidateRooms = rooms
+    .slice(1)
+    .filter((room) => random() <= options.enemyChance)
+    .sort(
+      (left, right) =>
+        getReachableRoomDistance(startRoom, right) -
+        getReachableRoomDistance(startRoom, left)
+    );
+  const enemies: EnemySpawn[] = [];
+
+  for (const room of candidateRooms) {
+    if (enemies.length >= options.maxEnemies) {
+      break;
+    }
+
+    const candidates: Point[] = [];
+
+    for (let y = room.y + 1; y < room.y + room.height - 1; y++) {
+      for (let x = room.x + 1; x < room.x + room.width - 1; x++) {
+        const point = { x, y };
+
+        if (
+          grid[y][x] === options.tiles.floor &&
+          !isPointInsideRoom(point, startRoom) &&
+          hasPatrolTarget(grid, point, options.enemyDefaults.patrolRadius, options.tiles.floor)
+        ) {
+          candidates.push(point);
+        }
+      }
+    }
+
+    if (candidates.length === 0) {
+      continue;
+    }
+
+    const point = candidates[getRandomInt(random, 0, candidates.length - 1)];
+
+    grid[point.y][point.x] = options.tiles.enemy;
+    enemies.push({
+      aggroRange: options.enemyDefaults.aggroRange,
+      id: `enemy-${enemies.length + 1}`,
+      patrolRadius: options.enemyDefaults.patrolRadius,
+      spawnX: point.x,
+      spawnY: point.y,
+      x: point.x,
+      y: point.y,
+    });
+  }
+
+  return enemies;
+};
+
 const generateSeededIsoMapAttempt = (
   seed: string,
-  options: Required<Omit<GenerateMapOptions, "tiles">> & { tiles: SeededIsoMapTiles }
+  options: Required<Omit<GenerateMapOptions, "tiles" | "enemyDefaults">> & {
+    enemyDefaults: Required<Pick<EnemySpawn, "aggroRange" | "patrolRadius">>;
+    tiles: SeededIsoMapTiles;
+  }
 ): GeneratedMap | undefined => {
   const numericSeed = hashSeedText(seed);
   const random = createSeededRandom(numericSeed);
@@ -429,9 +544,16 @@ const generateSeededIsoMapAttempt = (
     return undefined;
   }
 
+  const enemies = placeEnemies(grid, rooms, random, options);
+
+  if (!validateGeneratedMap(grid, rooms, options.tiles)) {
+    return undefined;
+  }
+
   const rows = grid.map((row) => row.join(""));
 
   return {
+    enemies,
     height: options.height,
     numericSeed,
     rooms,
@@ -448,8 +570,14 @@ export const generateSeededIsoMap = (
 ): GeneratedMap => {
   const resolved = {
     chestChance: options.chestChance ?? 0.7,
+    enemyChance: options.enemyChance ?? 0,
+    enemyDefaults: {
+      aggroRange: options.enemyDefaults?.aggroRange ?? 3,
+      patrolRadius: options.enemyDefaults?.patrolRadius ?? 2,
+    },
     height: options.height,
     maxAttempts: options.maxAttempts ?? 24,
+    maxEnemies: options.maxEnemies ?? 6,
     maxRooms: options.maxRooms ?? 8,
     maxRoomSize: options.maxRoomSize ?? 8,
     minRooms: options.minRooms ?? 5,
