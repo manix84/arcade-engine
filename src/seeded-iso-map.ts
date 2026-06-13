@@ -16,7 +16,16 @@ export type GeneratedRoom = {
   y: number;
 };
 
+export type DoorOrientation = "east-west" | "north-south";
+
+export type DoorTile = {
+  orientation: DoorOrientation;
+  x: number;
+  y: number;
+};
+
 export type GeneratedMap = {
+  doors: DoorTile[];
   enemies: EnemySpawn[];
   height: number;
   numericSeed: number;
@@ -60,6 +69,11 @@ type Point = {
 type RoomEdge = {
   from: number;
   to: number;
+};
+
+type DoorConnection = {
+  corridorStart: Point;
+  door: Point;
 };
 
 const defaultSeededIsoMapTiles = {
@@ -178,23 +192,35 @@ const carveCorridor = (
   carveLine(grid, corner, to, floor);
 };
 
-const getRoomExitPoint = (
+const getRoomDoorConnection = (
   room: GeneratedRoom,
   target: Point,
   direction: "horizontal" | "vertical"
-): Point => {
+): DoorConnection => {
   const center = getRoomCenter(room);
 
   if (direction === "horizontal") {
-    return {
-      x: target.x >= center.x ? room.x + room.width - 1 : room.x,
+    const step = target.x >= center.x ? 1 : -1;
+    const door = {
+      x: step > 0 ? room.x + room.width : room.x - 1,
       y: center.y,
+    };
+
+    return {
+      corridorStart: { x: door.x + step, y: door.y },
+      door,
     };
   }
 
-  return {
+  const step = target.y >= center.y ? 1 : -1;
+  const door = {
     x: center.x,
-    y: target.y >= center.y ? room.y + room.height - 1 : room.y,
+    y: step > 0 ? room.y + room.height : room.y - 1,
+  };
+
+  return {
+    corridorStart: { x: door.x, y: door.y + step },
+    door,
   };
 };
 
@@ -240,17 +266,77 @@ const addWallsAroundWalkableTiles = (
   });
 };
 
-const isDoorConnectedToPassage = (
+const getDoorOrientation = (
   grid: string[][],
   point: Point,
-  walkableTiles: Set<string>
-): boolean => {
-  const left = walkableTiles.has(grid[point.y]?.[point.x - 1] ?? "");
-  const right = walkableTiles.has(grid[point.y]?.[point.x + 1] ?? "");
-  const up = walkableTiles.has(grid[point.y - 1]?.[point.x] ?? "");
-  const down = walkableTiles.has(grid[point.y + 1]?.[point.x] ?? "");
+  tiles: SeededIsoMapTiles
+): DoorOrientation | undefined => {
+  const walkableTiles = new Set([tiles.chest, tiles.enemy, tiles.floor, tiles.player]);
+  const left = grid[point.y]?.[point.x - 1] ?? "";
+  const right = grid[point.y]?.[point.x + 1] ?? "";
+  const up = grid[point.y - 1]?.[point.x] ?? "";
+  const down = grid[point.y + 1]?.[point.x] ?? "";
+  const northSouth =
+    left === tiles.wall &&
+    right === tiles.wall &&
+    walkableTiles.has(up) &&
+    walkableTiles.has(down);
+  const eastWest =
+    up === tiles.wall &&
+    down === tiles.wall &&
+    walkableTiles.has(left) &&
+    walkableTiles.has(right);
 
-  return (left && right) || (up && down);
+  if (northSouth === eastWest) {
+    return undefined;
+  }
+
+  return northSouth ? "north-south" : "east-west";
+};
+
+const getValidDoorTile = (
+  grid: string[][],
+  point: Point,
+  tiles: SeededIsoMapTiles
+): DoorTile | undefined => {
+  if (grid[point.y]?.[point.x] !== tiles.wall && grid[point.y]?.[point.x] !== tiles.door) {
+    return undefined;
+  }
+
+  const orientation = getDoorOrientation(grid, point, tiles);
+
+  return orientation ? { orientation, x: point.x, y: point.y } : undefined;
+};
+
+const findNearestValidDoorTile = (
+  grid: string[][],
+  point: Point,
+  tiles: SeededIsoMapTiles,
+  blockedDoorKeys: Set<string>
+): DoorTile | undefined => {
+  const candidates: DoorTile[] = [];
+
+  for (let y = 1; y < grid.length - 1; y++) {
+    for (let x = 1; x < grid[y].length - 1; x++) {
+      if (blockedDoorKeys.has(`${x}:${y}`)) {
+        continue;
+      }
+
+      const door = getValidDoorTile(grid, { x, y }, tiles);
+
+      if (door) {
+        candidates.push(door);
+      }
+    }
+  }
+
+  return candidates
+    .sort((left, right) => {
+      const leftDistance = Math.abs(left.x - point.x) + Math.abs(left.y - point.y);
+      const rightDistance = Math.abs(right.x - point.x) + Math.abs(right.y - point.y);
+
+      return leftDistance - rightDistance || left.y - right.y || left.x - right.x;
+    })[0];
 };
 
 const findRoomFloor = (
@@ -344,7 +430,7 @@ const validateGeneratedMap = (
     requiredPoints.some(
       (point) =>
         grid[point.y][point.x] === tiles.door &&
-        !isDoorConnectedToPassage(grid, point, walkableTiles)
+        getValidDoorTile(grid, point, tiles) === undefined
     )
   ) {
     return false;
@@ -495,6 +581,7 @@ const generateSeededIsoMapAttempt = (
   });
 
   const roomById = new Map(rooms.map((room) => [room.id, room]));
+  const reservedDoors: Point[] = [];
 
   createRoomGraph(rooms).forEach((edge) => {
     const fromRoom = roomById.get(edge.from);
@@ -507,22 +594,42 @@ const generateSeededIsoMapAttempt = (
     const fromCenter = getRoomCenter(fromRoom);
     const toCenter = getRoomCenter(toRoom);
     const horizontalFirst = random() > 0.5;
-    const fromDoor = getRoomExitPoint(fromRoom, toCenter, horizontalFirst ? "horizontal" : "vertical");
-    const toDoor = getRoomExitPoint(toRoom, fromCenter, horizontalFirst ? "vertical" : "horizontal");
+    const fromConnection = getRoomDoorConnection(fromRoom, toCenter, horizontalFirst ? "horizontal" : "vertical");
+    const toConnection = getRoomDoorConnection(toRoom, fromCenter, horizontalFirst ? "vertical" : "horizontal");
 
     carveCorridor(
       grid,
-      fromCenter,
-      toCenter,
+      fromConnection.corridorStart,
+      toConnection.corridorStart,
       options.tiles.floor,
       horizontalFirst
     );
-
-    grid[fromDoor.y][fromDoor.x] = options.tiles.door;
-    grid[toDoor.y][toDoor.x] = options.tiles.door;
+    reservedDoors.push(fromConnection.door, toConnection.door);
   });
 
   addWallsAroundWalkableTiles(grid, options.tiles);
+
+  const doors: DoorTile[] = [];
+  const doorKeys = new Set<string>();
+
+  for (const door of reservedDoors) {
+    const reservedDoorKey = `${door.x}:${door.y}`;
+    if (doorKeys.has(reservedDoorKey)) {
+      continue;
+    }
+
+    const doorTile =
+      getValidDoorTile(grid, door, options.tiles) ??
+      findNearestValidDoorTile(grid, door, options.tiles, doorKeys);
+
+    if (!doorTile) {
+      return undefined;
+    }
+
+    grid[doorTile.y][doorTile.x] = options.tiles.door;
+    doorKeys.add(`${doorTile.x}:${doorTile.y}`);
+    doors.push(doorTile);
+  }
 
   const spawn = getRoomCenter(rooms[0]);
 
@@ -553,6 +660,7 @@ const generateSeededIsoMapAttempt = (
   const rows = grid.map((row) => row.join(""));
 
   return {
+    doors,
     enemies,
     height: options.height,
     numericSeed,

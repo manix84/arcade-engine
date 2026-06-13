@@ -37,6 +37,27 @@ const getReachableTiles = (
   return visited;
 };
 
+const getDoorOrientation = (
+  rows: string[],
+  x: number,
+  y: number,
+  tiles: { floor: string; wall: string }
+): "east-west" | "north-south" | undefined => {
+  const walkable = new Set([tiles.floor, "C", "E", "P", "S"]);
+  const left = rows[y]?.[x - 1] ?? "";
+  const right = rows[y]?.[x + 1] ?? "";
+  const up = rows[y - 1]?.[x] ?? "";
+  const down = rows[y + 1]?.[x] ?? "";
+  const northSouth = left === tiles.wall && right === tiles.wall && walkable.has(up) && walkable.has(down);
+  const eastWest = up === tiles.wall && down === tiles.wall && walkable.has(left) && walkable.has(right);
+
+  if (northSouth === eastWest) {
+    return undefined;
+  }
+
+  return northSouth ? "north-south" : "east-west";
+};
+
 describe("seeded iso map generation", () => {
   it("generates the same map for the same seed", () => {
     const options = { height: 24, width: 32 };
@@ -67,6 +88,7 @@ describe("seeded iso map generation", () => {
 
     expect(map.rooms.length).toBeGreaterThanOrEqual(6);
     expect(map.rows.some((row) => row.includes("+"))).toBe(true);
+    expect(map.doors.length).toBeGreaterThan(0);
     expect(map.rows.some((row) => row.includes("C"))).toBe(true);
 
     map.rows.forEach((row, y) => {
@@ -74,8 +96,18 @@ describe("seeded iso map generation", () => {
         if (tile === "+" || tile === "C") {
           expect(reachable.has(`${x}:${y}`)).toBe(true);
         }
+
+        if (tile === "+") {
+          expect(getDoorOrientation(map.rows, x, y, { floor: ".", wall: "#" })).toBeDefined();
+        }
       });
     });
+
+    map.doors.forEach((door) => {
+      expect(map.rows[door.y][door.x]).toBe("+");
+      expect(getDoorOrientation(map.rows, door.x, door.y, { floor: ".", wall: "#" })).toBe(door.orientation);
+    });
+    expect(new Set(map.doors.map((door) => `${door.x}:${door.y}`)).size).toBe(map.doors.length);
 
     for (const room of map.rooms) {
       let reachableRoomTile = false;
@@ -119,14 +151,42 @@ describe("seeded iso map generation", () => {
           return;
         }
 
-        const walkableDungeonTiles = [" ", "S", "C", "E"];
-        const horizontalPassage = walkableDungeonTiles.includes(row[x - 1] ?? "") && walkableDungeonTiles.includes(row[x + 1] ?? "");
-        const verticalPassage =
-          walkableDungeonTiles.includes(map.rows[y - 1]?.[x] ?? "") &&
-          walkableDungeonTiles.includes(map.rows[y + 1]?.[x] ?? "");
-
-        expect(horizontalPassage || verticalPassage).toBe(true);
+        expect(getDoorOrientation(map.rows, x, y, { floor: " ", wall: "#" })).toBeDefined();
       });
+    });
+
+    map.doors.forEach((door) => {
+      expect(getDoorOrientation(map.rows, door.x, door.y, { floor: " ", wall: "#" })).toBe(door.orientation);
+    });
+    expect(new Set(map.doors.map((door) => `${door.x}:${door.y}`)).size).toBe(map.doors.length);
+  });
+
+  it("generates valid doors for the default dungeon demo seed", () => {
+    const map = generateSeededIsoMap("arcade+lvl1", {
+      chestChance: 0.72,
+      enemyChance: 0.62,
+      height: 27,
+      maxEnemies: 5,
+      maxRoomSize: 8,
+      maxRooms: 9,
+      minRoomSize: 4,
+      minRooms: 7,
+      tiles: {
+        chest: "C",
+        door: "D",
+        empty: "_",
+        enemy: "E",
+        floor: " ",
+        player: "S",
+        wall: "#",
+      },
+      width: 35,
+    });
+
+    expect(map.doors.length).toBeGreaterThan(0);
+    expect(new Set(map.doors.map((door) => `${door.x}:${door.y}`)).size).toBe(map.doors.length);
+    map.doors.forEach((door) => {
+      expect(getDoorOrientation(map.rows, door.x, door.y, { floor: " ", wall: "#" })).toBe(door.orientation);
     });
   });
 

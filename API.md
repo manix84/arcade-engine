@@ -140,8 +140,9 @@ const spawn = findStringTileMapCell(map, "S");
 
 Seeded maps use a deterministic PRNG and validate the generated layout before
 returning it. The generator builds connected rectangular rooms and corridors,
-places doors, chests, and optional enemy spawns only on reachable tiles, and
-retries with deterministic attempt seeds if validation fails.
+builds walls around carved floor, then replaces valid wall tiles with doors.
+Chests and optional enemy spawns are placed only on reachable tiles, and the
+generator retries with deterministic attempt seeds if validation fails.
 
 ```ts
 const generated = generateSeededIsoMap("forest-1", {
@@ -154,8 +155,13 @@ const generated = generateSeededIsoMap("forest-1", {
 });
 
 console.log(generated.text);
+console.log(generated.doors);
 console.log(generated.enemies);
 ```
+
+Every generated door includes orientation metadata. A valid door has exactly two
+opposite wall neighbours and exactly two opposite walkable neighbours, so doors
+act as wall openings rather than decorative floor tiles.
 
 Use `tiles` when a game uses different string-map characters:
 
